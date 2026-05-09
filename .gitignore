@@ -14,3 +14,4 @@ server
 todo-app
 .DS_Store
 Thumbs.db
+.claude/
