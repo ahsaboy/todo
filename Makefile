@@ -1,4 +1,4 @@
-.PHONY: check-swag fix-swagger-docs swag build build-linux build-windows build-darwin run test dev clean docker-build docker-up docker-down docker-logs
+.PHONY: frontend-install frontend-build frontend-clean check-swag fix-swagger-docs swag build build-linux build-windows build-darwin run test dev clean docker-build docker-up docker-down docker-logs
 
 GOOS   ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
@@ -37,6 +37,33 @@ define upx_compress
 endef
 endif
 
+# 前端依赖安装
+frontend-install:
+ifeq ($(OS),Windows_NT)
+	cd /d frontend && npm ci
+else
+	cd frontend && npm ci
+endif
+
+# 前端构建
+frontend-build: frontend-install
+ifeq ($(OS),Windows_NT)
+	cd /d frontend && npm run build
+	if exist web\dist rmdir /s /q web\dist
+	xcopy /E /I /Y frontend\dist web\dist
+else
+	cd frontend && npm run build && cd .. && rm -rf web/dist && cp -r frontend/dist web/dist
+endif
+
+# 前端清理
+frontend-clean:
+ifeq ($(OS),Windows_NT)
+	if exist frontend\dist rmdir /s /q frontend\dist
+	if exist web\dist rmdir /s /q web\dist
+else
+	rm -rf frontend/dist web/dist
+endif
+
 check-swag:
 ifeq ($(OS),Windows_NT)
 	where swag >nul 2>nul || (echo swag is not installed. Install it with: go install github.com/swaggo/swag/cmd/swag@latest && exit /b 1)
@@ -54,7 +81,7 @@ swag: check-swag
 	$(MAKE) fix-swagger-docs
 
 # 编译当前平台
-build: swag
+build: frontend-build swag
 ifeq ($(OS),Windows_NT)
 	set "GOOS=$(GOOS)" && set "GOARCH=$(GOARCH)" && go build $(BUILDFLAGS) -o "bin\$(APP)-$(GOOS)-$(GOARCH)$(EXT)" ".\cmd\server"
 else
@@ -63,7 +90,7 @@ endif
 	$(call upx_compress,bin/$(APP)-$(GOOS)-$(GOARCH)$(EXT))
 
 # 交叉编译 Linux
-build-linux: swag
+build-linux: frontend-build swag
 ifeq ($(OS),Windows_NT)
 	set "GOOS=linux" && set "GOARCH=amd64" && go build $(BUILDFLAGS) -o "bin\$(APP)-linux-amd64" ".\cmd\server"
 else
@@ -72,7 +99,7 @@ endif
 	$(call upx_compress,bin/$(APP)-linux-amd64)
 
 # 交叉编译 Windows
-build-windows: swag
+build-windows: frontend-build swag
 ifeq ($(OS),Windows_NT)
 	set "GOOS=windows" && set "GOARCH=amd64" && go build $(BUILDFLAGS) -o "bin\$(APP)-windows-amd64.exe" ".\cmd\server"
 else
@@ -81,7 +108,7 @@ endif
 	$(call upx_compress,bin/$(APP)-windows-amd64.exe)
 
 # 交叉编译 macOS
-build-darwin: swag
+build-darwin: frontend-build swag
 ifeq ($(OS),Windows_NT)
 	set "GOOS=darwin" && set "GOARCH=arm64" && go build $(BUILDFLAGS) -o "bin\$(APP)-darwin-arm64" ".\cmd\server"
 else
@@ -95,7 +122,7 @@ run: build
 test:
 	go test -v ./...
 
-dev: swag
+dev: frontend-build swag
 	go run ./cmd/server -c config.yaml
 
 clean:
@@ -103,6 +130,8 @@ clean:
 	if exist data\*.db del /q data\*.db
 	if exist data\*.db-shm del /q data\*.db-shm
 	if exist data\*.db-wal del /q data\*.db-wal
+	if exist frontend\dist rmdir /s /q frontend\dist
+	if exist web\dist rmdir /s /q web\dist
 
 docker-build:
 	docker build -t todo-app:latest .
