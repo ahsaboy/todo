@@ -14,6 +14,29 @@ else
 	EXT :=
 endif
 
+# 检测 UPX 是否可用
+ifeq ($(OS),Windows_NT)
+	HAS_UPX := $(shell where upx >nul 2>nul && echo 1 || echo 0)
+else
+	HAS_UPX := $(shell command -v upx >/dev/null 2>&1 && echo 1 || echo 0)
+endif
+
+# UPX 压缩（如果系统安装了 UPX 则自动压缩）
+ifeq ($(OS),Windows_NT)
+define upx_compress
+	@if "$(HAS_UPX)"=="1" (echo UPX found, compressing... && upx --best --lzma "$(1)" 2>nul) else (echo UPX not found, skipping compression)
+endef
+else
+define upx_compress
+	@if [ "$(HAS_UPX)" = "1" ]; then \
+		echo "UPX found, compressing..."; \
+		upx --best --lzma $(1) 2>/dev/null || true; \
+	else \
+		echo "UPX not found, skipping compression"; \
+	fi
+endef
+endif
+
 check-swag:
 ifeq ($(OS),Windows_NT)
 	where swag >nul 2>nul || (echo swag is not installed. Install it with: go install github.com/swaggo/swag/cmd/swag@latest && exit /b 1)
@@ -37,6 +60,7 @@ ifeq ($(OS),Windows_NT)
 else
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(BUILDFLAGS) -o "bin/$(APP)-$(GOOS)-$(GOARCH)$(EXT)" ./cmd/server
 endif
+	$(call upx_compress,bin/$(APP)-$(GOOS)-$(GOARCH)$(EXT))
 
 # 交叉编译 Linux
 build-linux: swag
@@ -45,6 +69,7 @@ ifeq ($(OS),Windows_NT)
 else
 	GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o "bin/$(APP)-linux-amd64" ./cmd/server
 endif
+	$(call upx_compress,bin/$(APP)-linux-amd64)
 
 # 交叉编译 Windows
 build-windows: swag
@@ -53,6 +78,7 @@ ifeq ($(OS),Windows_NT)
 else
 	GOOS=windows GOARCH=amd64 go build $(BUILDFLAGS) -o "bin/$(APP)-windows-amd64.exe" ./cmd/server
 endif
+	$(call upx_compress,bin/$(APP)-windows-amd64.exe)
 
 # 交叉编译 macOS
 build-darwin: swag
@@ -61,6 +87,7 @@ ifeq ($(OS),Windows_NT)
 else
 	GOOS=darwin GOARCH=arm64 go build $(BUILDFLAGS) -o "bin/$(APP)-darwin-arm64" ./cmd/server
 endif
+	$(call upx_compress,bin/$(APP)-darwin-arm64)
 
 run: build
 	.\bin\$(APP)-$(GOOS)-$(GOARCH)$(EXT)

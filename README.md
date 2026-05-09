@@ -24,14 +24,38 @@
 ### 本地运行
 
 ```bash
-# 编译
+# 编译（自动生成 Swagger 文档）
 make build
 
 # 运行
 make run
 
-# 或直接运行
+# 或直接运行（go run，不生成二进制）
 make dev
+```
+
+### 交叉编译
+
+编译输出文件名自动带 OS-ARCH 后缀（如 `server-linux-amd64`）。
+
+```bash
+make build           # 编译当前平台
+make build-linux     # 交叉编译 Linux (amd64)
+make build-windows   # 交叉编译 Windows (amd64)
+make build-darwin    # 交叉编译 macOS (arm64)
+```
+
+> 项目使用纯 Go SQLite 驱动（modernc.org/sqlite），无需 CGO，所有平台均可直接交叉编译。
+
+### UPX 压缩
+
+编译时会自动检测系统是否安装了 [UPX](https://upx.github.io/)。如果已安装，会自动对二进制文件进行压缩（约减少 60% 体积）。
+
+```bash
+# 安装 UPX（可选）
+# Windows: choco install upx
+# macOS:   brew install upx
+# Linux:   apt install upx   或  yum install upx
 ```
 
 ### Docker 部署
@@ -85,7 +109,7 @@ curl -H "api-key: <api_key>" http://localhost:8080/api/v1/tasks
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/v1/tasks` | 创建任务（要求至少一个已启用提醒渠道） |
+| POST | `/api/v1/tasks` | 创建任务（设置 remind_at 时要求至少一个已启用提醒渠道） |
 | GET | `/api/v1/tasks` | 获取任务列表 |
 | GET | `/api/v1/tasks/:id` | 获取单个任务 |
 | PUT | `/api/v1/tasks/:id` | 更新任务 |
@@ -118,12 +142,12 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 # 返回 user 信息和 api_key（明文，仅此一次显示）
 ```
 
-**登录：**
+**登录（支持用户名或邮箱）：**
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "demo", "password": "123456"}'
+  -d '{"account": "demo", "password": "123456"}'
 ```
 
 **先配置提醒渠道：**
@@ -232,7 +256,8 @@ logging:
 
 ## 业务约束
 
-- 用户必须先创建并启用至少一个提醒渠道，才能创建任务。
+- 创建任务时如果设置了提醒时间（`remind_at`），则必须存在至少一个已启用的提醒渠道。
+- 未设置 `remind_at` 的任务不需要提醒渠道，可直接创建。
 - 禁用某个用户的全部提醒渠道后，该用户任务不会回退到任何全局 webhook。
 - 提醒只有在该任务的所有已启用渠道都发送成功后，才会标记为已发送。
 - 注册接口在并发下如果用户名冲突，会稳定返回 `409 Conflict`。
@@ -278,7 +303,10 @@ TODO/
 ## Makefile 命令
 
 ```bash
-make build          # 编译（自动生成 Swagger 文档）
+make build          # 编译当前平台（自动生成 Swagger 文档，支持 UPX 压缩）
+make build-linux    # 交叉编译 Linux amd64
+make build-windows  # 交叉编译 Windows amd64
+make build-darwin   # 交叉编译 macOS arm64
 make run            # 编译并运行
 make test           # 运行测试
 make dev            # 本地开发（go run，自动生成 Swagger 文档）
@@ -294,7 +322,7 @@ make docker-logs    # 查看 Docker 日志
 
 - **语言**: Go
 - **Web 框架**: Gin
-- **数据库**: SQLite (CGO)
+- **数据库**: SQLite（纯 Go 驱动，无需 CGO）
 - **日志**: zap
 - **配置**: YAML
 - **API 文档**: Swagger (swaggo)
