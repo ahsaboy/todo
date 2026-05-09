@@ -13,5 +13,6 @@ data/*.db-wal
 todo-app
 .DS_Store
 Thumbs.db
+nul
 .claude/
 .codex-cache/
