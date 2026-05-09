@@ -9,35 +9,49 @@ import (
 )
 
 type TaskService struct {
-	repo *repository.TaskRepo
+	repo               *repository.TaskRepo
+	reminderConfigRepo *repository.ReminderConfigRepo
 }
 
-func NewTaskService(repo *repository.TaskRepo) *TaskService {
-	return &TaskService{repo: repo}
+func NewTaskService(repo *repository.TaskRepo, reminderConfigRepo *repository.ReminderConfigRepo) *TaskService {
+	return &TaskService{
+		repo:               repo,
+		reminderConfigRepo: reminderConfigRepo,
+	}
 }
 
-func (s *TaskService) Create(ctx context.Context, req models.CreateTaskRequest) (*models.Task, error) {
-	return s.repo.Create(ctx, req)
+func (s *TaskService) Create(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error) {
+	// 仅当设置了提醒时间时，才要求存在已启用的提醒通道
+	if req.RemindAt != nil && *req.RemindAt != "" {
+		hasEnabledReminder, err := s.reminderConfigRepo.HasEnabledByUserID(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		if !hasEnabledReminder {
+			return nil, ErrReminderChannelMissing
+		}
+	}
+	return s.repo.Create(ctx, userID, req)
 }
 
-func (s *TaskService) GetByID(ctx context.Context, id int64) (*models.Task, error) {
-	return s.repo.GetByID(ctx, id)
+func (s *TaskService) GetByID(ctx context.Context, userID, id int64) (*models.Task, error) {
+	return s.repo.GetByID(ctx, userID, id)
 }
 
-func (s *TaskService) List(ctx context.Context, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error) {
-	return s.repo.List(ctx, filters, page, limit, sortField, sortOrder)
+func (s *TaskService) List(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error) {
+	return s.repo.List(ctx, userID, filters, page, limit, sortField, sortOrder)
 }
 
-func (s *TaskService) Update(ctx context.Context, id int64, req models.UpdateTaskRequest) (*models.Task, error) {
-	return s.repo.Update(ctx, id, req)
+func (s *TaskService) Update(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error) {
+	return s.repo.Update(ctx, userID, id, req)
 }
 
-func (s *TaskService) Delete(ctx context.Context, id int64) (bool, error) {
-	return s.repo.Delete(ctx, id)
+func (s *TaskService) Delete(ctx context.Context, userID, id int64) (bool, error) {
+	return s.repo.Delete(ctx, userID, id)
 }
 
-func (s *TaskService) ToggleComplete(ctx context.Context, id int64) (*models.Task, error) {
-	task, err := s.repo.GetByID(ctx, id)
+func (s *TaskService) ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error) {
+	task, err := s.repo.GetByID(ctx, userID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -45,12 +59,11 @@ func (s *TaskService) ToggleComplete(ctx context.Context, id int64) (*models.Tas
 		return nil, nil
 	}
 
-	updated, err := s.repo.ToggleComplete(ctx, id)
+	updated, err := s.repo.ToggleComplete(ctx, userID, id)
 	if err != nil {
 		return nil, err
 	}
 
-	// 完成时自动生成下一次重复任务
 	if updated.Completed && task.RepeatType != "none" {
 		if err := s.createNextOccurrence(ctx, task); err != nil {
 			return updated, fmt.Errorf("create next occurrence: %w", err)
@@ -72,7 +85,6 @@ func (s *TaskService) createNextOccurrence(ctx context.Context, t *models.Task) 
 		nextRemind = &next
 	}
 
-	// 检查是否超过结束日期
 	if t.RepeatEndDate != nil && nextDue != nil {
 		if *nextDue > *t.RepeatEndDate {
 			return nil
@@ -80,6 +92,7 @@ func (s *TaskService) createNextOccurrence(ctx context.Context, t *models.Task) 
 	}
 
 	newTask := &models.Task{
+		UserID:         t.UserID,
 		Title:          t.Title,
 		Description:    t.Description,
 		Priority:       t.Priority,

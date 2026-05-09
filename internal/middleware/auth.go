@@ -1,29 +1,32 @@
 package middleware
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
+	"strings"
+
+	"todo/internal/repository"
 
 	"github.com/gin-gonic/gin"
 )
 
-func AuthMiddleware(apiKey string) gin.HandlerFunc {
+func AuthMiddleware(apiKeyRepo *repository.APIKeyRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if apiKey == "" {
-			c.Next()
-			return
-		}
+		key := extractAPIKey(c)
 
-		key := c.GetHeader("X-API-Key")
 		if key == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"success": false,
-				"error":   "missing X-API-Key header",
+				"error":   "missing API key (use Authorization: Bearer <key> or api-key: <key>)",
 				"code":    "UNAUTHORIZED",
 			})
 			return
 		}
 
-		if key != apiKey {
+		hash := HashAPIKey(key)
+		userID, err := apiKeyRepo.ValidateKey(c.Request.Context(), hash)
+		if err != nil || userID <= 0 {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "invalid API key",
@@ -32,6 +35,38 @@ func AuthMiddleware(apiKey string) gin.HandlerFunc {
 			return
 		}
 
+		c.Set("user_id", userID)
 		c.Next()
 	}
+}
+
+func extractAPIKey(c *gin.Context) string {
+	// 1. Authorization: Bearer <key>
+	if auth := c.GetHeader("Authorization"); auth != "" {
+		if strings.HasPrefix(auth, "Bearer ") {
+			return strings.TrimPrefix(auth, "Bearer ")
+		}
+	}
+
+	// 2. api-key: <key>
+	if key := c.GetHeader("api-key"); key != "" {
+		return key
+	}
+
+	// 3. X-API-Key: <key> (legacy)
+	return c.GetHeader("X-API-Key")
+}
+
+func HashAPIKey(key string) string {
+	h := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(h[:])
+}
+
+func GetUserID(c *gin.Context) (int64, bool) {
+	uid, exists := c.Get("user_id")
+	if !exists {
+		return 0, false
+	}
+	id, ok := uid.(int64)
+	return id, ok
 }

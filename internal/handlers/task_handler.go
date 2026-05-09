@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
+	"todo/internal/middleware"
 	"todo/internal/models"
 	"todo/internal/service"
 	"todo/internal/utils"
@@ -22,7 +24,7 @@ func NewTaskHandler(svc *service.TaskService) *TaskHandler {
 
 // Create 创建任务
 // @Summary      创建一个新任务
-// @Description  创建一个新任务，支持设置标题、优先级、截止时间、提醒时间、重复规则等
+// @Description  创建一个新任务，支持设置标题、优先级、截止时间、提醒时间、重复规则等；若设置了提醒时间（remind_at），则必须至少存在一个已启用的通知渠道
 // @Tags         tasks
 // @Accept       json
 // @Produce      json
@@ -33,14 +35,24 @@ func NewTaskHandler(svc *service.TaskService) *TaskHandler {
 // @Security     ApiKeyAuth
 // @Router       /api/v1/tasks [post]
 func (h *TaskHandler) Create(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		return
+	}
+
 	var req models.CreateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 		return
 	}
 
-	task, err := h.svc.Create(c.Request.Context(), req)
+	task, err := h.svc.Create(c.Request.Context(), userID, req)
 	if err != nil {
+		if errors.Is(err, service.ErrReminderChannelMissing) {
+			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
+			return
+		}
 		utils.RespondError(c, http.StatusInternalServerError, "failed to create task", utils.CodeInternalError)
 		return
 	}
@@ -61,13 +73,19 @@ func (h *TaskHandler) Create(c *gin.Context) {
 // @Security     ApiKeyAuth
 // @Router       /api/v1/tasks/{id} [get]
 func (h *TaskHandler) GetByID(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		return
+	}
+
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
 		return
 	}
 
-	task, err := h.svc.GetByID(c.Request.Context(), id)
+	task, err := h.svc.GetByID(c.Request.Context(), userID, id)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "failed to get task", utils.CodeInternalError)
 		return
@@ -99,6 +117,12 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 // @Security     ApiKeyAuth
 // @Router       /api/v1/tasks [get]
 func (h *TaskHandler) List(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		return
+	}
+
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	if page < 1 {
@@ -121,7 +145,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 	sortField := c.DefaultQuery("sort", "created_at")
 	sortOrder := c.DefaultQuery("order", "desc")
 
-	tasks, total, err := h.svc.List(c.Request.Context(), filters, page, limit, sortField, sortOrder)
+	tasks, total, err := h.svc.List(c.Request.Context(), userID, filters, page, limit, sortField, sortOrder)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "failed to list tasks", utils.CodeInternalError)
 		return
@@ -148,6 +172,12 @@ func (h *TaskHandler) List(c *gin.Context) {
 // @Security     ApiKeyAuth
 // @Router       /api/v1/tasks/{id} [put]
 func (h *TaskHandler) Update(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		return
+	}
+
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
@@ -160,7 +190,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	task, err := h.svc.Update(c.Request.Context(), id, req)
+	task, err := h.svc.Update(c.Request.Context(), userID, id, req)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "failed to update task", utils.CodeInternalError)
 		return
@@ -186,13 +216,19 @@ func (h *TaskHandler) Update(c *gin.Context) {
 // @Security     ApiKeyAuth
 // @Router       /api/v1/tasks/{id} [delete]
 func (h *TaskHandler) Delete(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		return
+	}
+
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
 		return
 	}
 
-	deleted, err := h.svc.Delete(c.Request.Context(), id)
+	deleted, err := h.svc.Delete(c.Request.Context(), userID, id)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "failed to delete task", utils.CodeInternalError)
 		return
@@ -218,13 +254,19 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 // @Security     ApiKeyAuth
 // @Router       /api/v1/tasks/{id}/complete [patch]
 func (h *TaskHandler) ToggleComplete(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		return
+	}
+
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
 		return
 	}
 
-	task, err := h.svc.ToggleComplete(c.Request.Context(), id)
+	task, err := h.svc.ToggleComplete(c.Request.Context(), userID, id)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "failed to toggle task", utils.CodeInternalError)
 		return

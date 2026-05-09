@@ -16,39 +16,57 @@ import (
 )
 
 type ReminderService struct {
-	repo    *repository.TaskRepo
-	cfg     config.ReminderConfig
-	logger  *zap.Logger
-	client  *http.Client
-	tmpl    *template.Template
+	taskRepo     *repository.TaskRepo
+	configRepo   *repository.ReminderConfigRepo
+	logger       *zap.Logger
+	client       *http.Client
+	enabled      bool
+	scanInterval time.Duration
+	defaultTmpl  *template.Template
 }
 
-func NewReminderService(repo *repository.TaskRepo, cfg config.ReminderConfig, logger *zap.Logger) (*ReminderService, error) {
+func NewReminderService(
+	taskRepo *repository.TaskRepo,
+	configRepo *repository.ReminderConfigRepo,
+	cfg config.ReminderConfig,
+	logger *zap.Logger,
+) (*ReminderService, error) {
 	tmpl, err := template.New("webhook").Parse(cfg.WebhookBodyTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("parse webhook template: %w", err)
+		return nil, fmt.Errorf("parse default webhook template: %w", err)
+	}
+
+	scanInterval := time.Duration(cfg.ScanIntervalSeconds) * time.Second
+	if scanInterval <= 0 {
+		scanInterval = 30 * time.Second
+	}
+
+	timeout := time.Duration(cfg.WebhookTimeoutSeconds) * time.Second
+	if timeout <= 0 {
+		timeout = 10 * time.Second
 	}
 
 	return &ReminderService{
-		repo:   repo,
-		cfg:    cfg,
-		logger: logger,
-		client: &http.Client{Timeout: time.Duration(cfg.WebhookTimeoutSeconds) * time.Second},
-		tmpl:   tmpl,
+		taskRepo:     taskRepo,
+		configRepo:   configRepo,
+		logger:       logger,
+		client:       &http.Client{Timeout: timeout},
+		enabled:      cfg.Enabled,
+		scanInterval: scanInterval,
+		defaultTmpl:  tmpl,
 	}, nil
 }
 
 func (s *ReminderService) Start(ctx context.Context) {
-	if !s.cfg.Enabled {
+	if !s.enabled {
 		s.logger.Info("reminder service disabled")
 		return
 	}
 
-	interval := time.Duration(s.cfg.ScanIntervalSeconds) * time.Second
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(s.scanInterval)
 	defer ticker.Stop()
 
-	s.logger.Info("reminder service started", zap.Duration("interval", interval))
+	s.logger.Info("reminder service started", zap.Duration("interval", s.scanInterval))
 
 	for {
 		select {
@@ -62,48 +80,110 @@ func (s *ReminderService) Start(ctx context.Context) {
 }
 
 func (s *ReminderService) processReminders(ctx context.Context) {
-	tasks, err := s.repo.GetPendingReminders(ctx)
+	tasks, err := s.taskRepo.GetPendingReminders(ctx)
 	if err != nil {
 		s.logger.Error("get pending reminders failed", zap.Error(err))
 		return
 	}
 
 	for _, task := range tasks {
-		if err := s.sendReminder(ctx, &task); err != nil {
-			s.logger.Error("send reminder failed",
+		s.processTaskReminder(ctx, &task)
+	}
+}
+
+func (s *ReminderService) processTaskReminder(ctx context.Context, task *models.Task) {
+	configs, err := s.deliveryConfigs(ctx, task.UserID)
+	if err != nil {
+		s.logger.Error("get reminder delivery config failed",
+			zap.Int64("task_id", task.ID),
+			zap.Int64("user_id", task.UserID),
+			zap.Error(err),
+		)
+		return
+	}
+	if len(configs) == 0 {
+		s.logger.Debug("no enabled reminder config for task, skipping",
+			zap.Int64("task_id", task.ID),
+			zap.Int64("user_id", task.UserID),
+		)
+		return
+	}
+
+	allSucceeded := true
+	for _, cfg := range configs {
+		if err := s.sendToChannel(ctx, task, &cfg); err != nil {
+			allSucceeded = false
+			s.logger.Error("send reminder to channel failed",
 				zap.Int64("task_id", task.ID),
-				zap.String("title", task.Title),
+				zap.Int64("user_id", task.UserID),
+				zap.String("channel", cfg.Name),
 				zap.Error(err),
 			)
 		}
 	}
+
+	if !allSucceeded {
+		return
+	}
+
+	if _, err := s.taskRepo.MarkReminderSent(ctx, task.ID); err != nil {
+		s.logger.Error("mark reminder sent failed", zap.Int64("task_id", task.ID), zap.Error(err))
+	}
 }
 
-func (s *ReminderService) sendReminder(ctx context.Context, task *models.Task) error {
-	// 原子标记，防止重复发送
-	sent, err := s.repo.MarkReminderSent(ctx, task.ID)
+func (s *ReminderService) deliveryConfigs(ctx context.Context, userID int64) ([]models.UserReminderConfig, error) {
+	configs, err := s.configRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("mark reminder sent: %w", err)
+		return nil, err
 	}
-	if !sent {
-		return nil // 已被其他实例处理
+
+	enabledConfigs := make([]models.UserReminderConfig, 0, len(configs))
+	for _, cfg := range configs {
+		if cfg.Enabled {
+			enabledConfigs = append(enabledConfigs, cfg)
+		}
+	}
+	if len(enabledConfigs) > 0 {
+		return enabledConfigs, nil
+	}
+	return nil, nil
+}
+
+func (s *ReminderService) sendToChannel(ctx context.Context, task *models.Task, cfg *models.UserReminderConfig) error {
+	tmpl := s.defaultTmpl
+	if cfg.WebhookBodyTemplate != "" {
+		var err error
+		tmpl, err = template.New("webhook").Parse(cfg.WebhookBodyTemplate)
+		if err != nil {
+			return fmt.Errorf("parse webhook template: %w", err)
+		}
 	}
 
 	// 渲染模板
 	data := task.ToTemplateData()
 	var body bytes.Buffer
-	if err := s.tmpl.Execute(&body, data); err != nil {
+	if err := tmpl.Execute(&body, data); err != nil {
 		return fmt.Errorf("execute template: %w", err)
 	}
 
 	// 带重试的 HTTP 推送
+	maxRetries := cfg.MaxRetries
+	if maxRetries <= 0 {
+		maxRetries = 3
+	}
+	retryDelay := cfg.RetryDelaySeconds
+	if retryDelay <= 0 {
+		retryDelay = 5
+	}
+
 	var lastErr error
-	for attempt := 1; attempt <= s.cfg.MaxRetries; attempt++ {
-		err := s.doHTTPRequest(body.String())
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err := s.doHTTPRequest(ctx, cfg, body.String())
 		if err == nil {
 			s.logger.Info("reminder sent",
 				zap.Int64("task_id", task.ID),
 				zap.String("title", task.Title),
+				zap.String("channel", cfg.Name),
 				zap.Int("attempt", attempt),
 			)
 			return nil
@@ -111,27 +191,28 @@ func (s *ReminderService) sendReminder(ctx context.Context, task *models.Task) e
 		lastErr = err
 		s.logger.Warn("reminder send failed, retrying",
 			zap.Int64("task_id", task.ID),
+			zap.String("channel", cfg.Name),
 			zap.Int("attempt", attempt),
 			zap.Error(err),
 		)
-		time.Sleep(time.Duration(s.cfg.RetryDelaySeconds*attempt) * time.Second)
+		time.Sleep(time.Duration(retryDelay*attempt) * time.Second)
 	}
 
-	return fmt.Errorf("failed after %d retries: %w", s.cfg.MaxRetries, lastErr)
+	return fmt.Errorf("failed after %d retries: %w", maxRetries, lastErr)
 }
 
-func (s *ReminderService) doHTTPRequest(body string) error {
-	method := s.cfg.WebhookMethod
+func (s *ReminderService) doHTTPRequest(ctx context.Context, cfg *models.UserReminderConfig, body string) error {
+	method := cfg.WebhookMethod
 	if method == "" {
 		method = http.MethodPost
 	}
 
-	req, err := http.NewRequest(method, s.cfg.WebhookURL, bytes.NewBufferString(body))
+	req, err := http.NewRequestWithContext(ctx, method, cfg.WebhookURL, bytes.NewBufferString(body))
 	if err != nil {
 		return err
 	}
 
-	for k, v := range s.cfg.WebhookHeaders {
+	for k, v := range cfg.WebhookHeaders {
 		req.Header.Set(k, v)
 	}
 
@@ -147,12 +228,11 @@ func (s *ReminderService) doHTTPRequest(body string) error {
 	return nil
 }
 
-// UpdateTemplate 动态更新 Webhook 模板
 func (s *ReminderService) UpdateTemplate(tmplStr string) error {
 	tmpl, err := template.New("webhook").Parse(tmplStr)
 	if err != nil {
 		return err
 	}
-	s.tmpl = tmpl
+	s.defaultTmpl = tmpl
 	return nil
 }

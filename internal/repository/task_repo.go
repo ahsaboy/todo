@@ -17,7 +17,7 @@ func NewTaskRepo(db *sql.DB) *TaskRepo {
 	return &TaskRepo{db: db}
 }
 
-func (r *TaskRepo) Create(ctx context.Context, req models.CreateTaskRequest) (*models.Task, error) {
+func (r *TaskRepo) Create(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error) {
 	priority := 3
 	if req.Priority != nil {
 		priority = *req.Priority
@@ -32,26 +32,26 @@ func (r *TaskRepo) Create(ctx context.Context, req models.CreateTaskRequest) (*m
 	}
 
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO tasks (title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		req.Title, req.Description, priority, req.DueAt, req.RemindAt, repeatType, repeatInterval, req.RepeatEndDate,
+		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		userID, req.Title, req.Description, priority, req.DueAt, req.RemindAt, repeatType, repeatInterval, req.RepeatEndDate,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert task: %w", err)
 	}
 
 	id, _ := result.LastInsertId()
-	return r.GetByID(ctx, id)
+	return r.GetByID(ctx, userID, id)
 }
 
-func (r *TaskRepo) GetByID(ctx context.Context, id int64) (*models.Task, error) {
+func (r *TaskRepo) GetByID(ctx context.Context, userID, id int64) (*models.Task, error) {
 	task := &models.Task{}
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, title, description, completed, priority, due_at, remind_at,
+		SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
 		       repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at,
 		       created_at, updated_at
-		FROM tasks WHERE id = ?`, id).Scan(
-		&task.ID, &task.Title, &task.Description, &task.Completed, &task.Priority,
+		FROM tasks WHERE id = ? AND user_id = ?`, id, userID).Scan(
+		&task.ID, &task.UserID, &task.Title, &task.Description, &task.Completed, &task.Priority,
 		&task.DueAt, &task.RemindAt, &task.RepeatType, &task.RepeatInterval,
 		&task.RepeatEndDate, &task.ReminderSent, &task.ReminderSentAt,
 		&task.CreatedAt, &task.UpdatedAt,
@@ -65,8 +65,18 @@ func (r *TaskRepo) GetByID(ctx context.Context, id int64) (*models.Task, error) 
 	return task, nil
 }
 
-func (r *TaskRepo) List(ctx context.Context, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error) {
+func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error) {
 	where, args := buildWhereClause(filters)
+
+	// 添加 user_id 过滤
+	userWhere := " WHERE user_id = ?"
+	if where == "" {
+		where = userWhere
+		args = append(args, userID)
+	} else {
+		where = " WHERE user_id = ? AND " + where[7:] // 去掉原有的 " WHERE "
+		args = append([]any{userID}, args...)
+	}
 
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM tasks" + where
@@ -85,7 +95,7 @@ func (r *TaskRepo) List(ctx context.Context, filters models.TaskFilters, page, l
 	}
 
 	offset := (page - 1) * limit
-	query := fmt.Sprintf("SELECT id, title, description, completed, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, created_at, updated_at FROM tasks%s ORDER BY %s %s LIMIT ? OFFSET ?", where, sortField, sortOrder)
+	query := fmt.Sprintf("SELECT id, user_id, title, description, completed, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, created_at, updated_at FROM tasks%s ORDER BY %s %s LIMIT ? OFFSET ?", where, sortField, sortOrder)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -97,15 +107,18 @@ func (r *TaskRepo) List(ctx context.Context, filters models.TaskFilters, page, l
 	var tasks []models.Task
 	for rows.Next() {
 		var t models.Task
-		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scan task: %w", err)
 		}
 		tasks = append(tasks, t)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration: %w", err)
+	}
 	return tasks, total, nil
 }
 
-func (r *TaskRepo) Update(ctx context.Context, id int64, req models.UpdateTaskRequest) (*models.Task, error) {
+func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error) {
 	setClauses := []string{}
 	args := []any{}
 
@@ -143,13 +156,13 @@ func (r *TaskRepo) Update(ctx context.Context, id int64, req models.UpdateTaskRe
 	}
 
 	if len(setClauses) == 0 {
-		return r.GetByID(ctx, id)
+		return r.GetByID(ctx, userID, id)
 	}
 
 	setClauses = append(setClauses, "updated_at = datetime('now','localtime')")
-	args = append(args, id)
+	args = append(args, id, userID)
 
-	query := "UPDATE tasks SET " + strings.Join(setClauses, ", ") + " WHERE id = ?"
+	query := "UPDATE tasks SET " + strings.Join(setClauses, ", ") + " WHERE id = ? AND user_id = ?"
 	result, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("update task: %w", err)
@@ -158,11 +171,11 @@ func (r *TaskRepo) Update(ctx context.Context, id int64, req models.UpdateTaskRe
 	if rows == 0 {
 		return nil, nil
 	}
-	return r.GetByID(ctx, id)
+	return r.GetByID(ctx, userID, id)
 }
 
-func (r *TaskRepo) Delete(ctx context.Context, id int64) (bool, error) {
-	result, err := r.db.ExecContext(ctx, "DELETE FROM tasks WHERE id = ?", id)
+func (r *TaskRepo) Delete(ctx context.Context, userID, id int64) (bool, error) {
+	result, err := r.db.ExecContext(ctx, "DELETE FROM tasks WHERE id = ? AND user_id = ?", id, userID)
 	if err != nil {
 		return false, fmt.Errorf("delete task: %w", err)
 	}
@@ -170,9 +183,9 @@ func (r *TaskRepo) Delete(ctx context.Context, id int64) (bool, error) {
 	return rows > 0, nil
 }
 
-func (r *TaskRepo) ToggleComplete(ctx context.Context, id int64) (*models.Task, error) {
+func (r *TaskRepo) ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error) {
 	result, err := r.db.ExecContext(ctx, `
-		UPDATE tasks SET completed = CASE WHEN completed = 0 THEN 1 ELSE 0 END, updated_at = datetime('now','localtime') WHERE id = ?`, id)
+		UPDATE tasks SET completed = CASE WHEN completed = 0 THEN 1 ELSE 0 END, updated_at = datetime('now','localtime') WHERE id = ? AND user_id = ?`, id, userID)
 	if err != nil {
 		return nil, fmt.Errorf("toggle complete: %w", err)
 	}
@@ -180,16 +193,19 @@ func (r *TaskRepo) ToggleComplete(ctx context.Context, id int64) (*models.Task, 
 	if rows == 0 {
 		return nil, nil
 	}
-	return r.GetByID(ctx, id)
+	return r.GetByID(ctx, userID, id)
 }
 
 func (r *TaskRepo) GetPendingReminders(ctx context.Context) ([]models.Task, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, title, description, completed, priority, due_at, remind_at,
+		SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
 		       repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at,
 		       created_at, updated_at
 		FROM tasks
-		WHERE remind_at IS NOT NULL AND reminder_sent = 0 AND remind_at <= datetime('now','localtime')`)
+		WHERE user_id IS NOT NULL
+		  AND remind_at IS NOT NULL
+		  AND reminder_sent = 0
+		  AND remind_at <= datetime('now','localtime')`)
 	if err != nil {
 		return nil, fmt.Errorf("query pending reminders: %w", err)
 	}
@@ -198,10 +214,13 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context) ([]models.Task, erro
 	var tasks []models.Task
 	for rows.Next() {
 		var t models.Task
-		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan reminder task: %w", err)
 		}
 		tasks = append(tasks, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
 	}
 	return tasks, nil
 }
@@ -218,9 +237,9 @@ func (r *TaskRepo) MarkReminderSent(ctx context.Context, id int64) (bool, error)
 
 func (r *TaskRepo) CreateRepeatTask(ctx context.Context, t *models.Task) error {
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO tasks (title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-		t.Title, t.Description, t.Priority, t.DueAt, t.RemindAt, t.RepeatType, t.RepeatInterval, t.RepeatEndDate,
+		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+		t.UserID, t.Title, t.Description, t.Priority, t.DueAt, t.RemindAt, t.RepeatType, t.RepeatInterval, t.RepeatEndDate,
 	)
 	return err
 }

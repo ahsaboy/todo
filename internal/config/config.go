@@ -9,7 +9,6 @@ import (
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
-	Auth     AuthConfig     `yaml:"auth"`
 	Reminder ReminderConfig `yaml:"reminder"`
 	CORS     CORSConfig     `yaml:"cors"`
 	Logging  LoggingConfig  `yaml:"logging"`
@@ -25,20 +24,22 @@ type DatabaseConfig struct {
 	Path string `yaml:"path"`
 }
 
-type AuthConfig struct {
-	APIKey string `yaml:"api_key"`
+type ReminderConfig struct {
+	Enabled               bool                          `yaml:"enabled"`
+	ScanIntervalSeconds   int                           `yaml:"scan_interval_seconds"`
+	WebhookBodyTemplate   string                        `yaml:"webhook_body_template"`
+	WebhookTimeoutSeconds int                           `yaml:"webhook_timeout_seconds"`
+	MaxRetries            int                           `yaml:"max_retries"`
+	RetryDelaySeconds     int                           `yaml:"retry_delay_seconds"`
+	DefaultTemplates      map[string]DefaultTemplate    `yaml:"default_templates"`
 }
 
-type ReminderConfig struct {
-	Enabled              bool              `yaml:"enabled"`
-	ScanIntervalSeconds  int               `yaml:"scan_interval_seconds"`
-	WebhookURL           string            `yaml:"webhook_url"`
-	WebhookMethod        string            `yaml:"webhook_method"`
-	WebhookHeaders       map[string]string `yaml:"webhook_headers"`
-	WebhookBodyTemplate  string            `yaml:"webhook_body_template"`
-	WebhookTimeoutSeconds int              `yaml:"webhook_timeout_seconds"`
-	MaxRetries           int               `yaml:"max_retries"`
-	RetryDelaySeconds    int               `yaml:"retry_delay_seconds"`
+type DefaultTemplate struct {
+	ChannelType        string            `yaml:"channel_type"`
+	WebhookURL         string            `yaml:"webhook_url"`
+	WebhookMethod      string            `yaml:"webhook_method"`
+	WebhookHeaders     map[string]string `yaml:"webhook_headers"`
+	WebhookBodyTemplate string           `yaml:"webhook_body_template"`
 }
 
 type CORSConfig struct {
@@ -68,7 +69,6 @@ func Load(path string) (*Config, error) {
 		},
 		Reminder: ReminderConfig{
 			ScanIntervalSeconds:   30,
-			WebhookMethod:         "POST",
 			WebhookBodyTemplate:   `{"task_id":{{.TaskID}},"title":"{{.Title}}","priority":"{{.PriorityText}}","due_at":"{{.DueAt}}"}`,
 			WebhookTimeoutSeconds: 10,
 			MaxRetries:            3,

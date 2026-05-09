@@ -12,41 +12,58 @@ server:
 database:
   path: "./data/tasks.db"  # SQLite 数据库文件路径
 
-# API 认证配置
-auth:
-  api_key: "your-secure-api-key"  # 请求头 X-API-Key 的值，留空则不启用认证
-
 # 提醒服务配置
 reminder:
   enabled: true                    # 是否启用后台提醒扫描
   scan_interval_seconds: 30        # 扫描间隔（秒）
-  webhook_url: "http://100.80.0.2:1821/run_task"  # 提醒推送的目标地址
-  webhook_method: "POST"           # HTTP 请求方法
-  webhook_headers:                 # 自定义请求头
-    Content-Type: "application/json"
-  # Webhook 请求体模板，支持 Go text/template 语法
-  # 可用变量：
-  #   {{.TaskID}}       - 任务 ID
-  #   {{.Title}}        - 任务标题
-  #   {{.Description}}  - 任务描述
-  #   {{.Priority}}     - 优先级 (1=高, 2=中, 3=低)
-  #   {{.PriorityText}} - 优先级文字 ("高"/"中"/"低")
-  #   {{.DueAt}}        - 截止时间
-  #   {{.RemindAt}}     - 提醒时间
-  #   {{.RepeatType}}   - 重复类型
-  #   {{.CreatedAt}}    - 创建时间
-  #  {"msg_type":"text","content":{"text":"[TODO提醒] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
-  webhook_body_template: |
-    {
-      "name": "MCP Send Notification",
-      "arguments": {
-        "title": "[TODO提醒]",
-        "content": "{{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"
-      }
-    }
   webhook_timeout_seconds: 10      # HTTP 请求超时（秒）
   max_retries: 3                   # 失败重试次数
   retry_delay_seconds: 5           # 重试间隔基数（秒），实际间隔会乘以重试次数
+  webhook_body_template: |         # 用户渠道未自定义模板时使用的默认消息模板
+    {"msg_type":"text","content":{"text":"[TODO] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
+
+  # 系统不再支持全局 webhook 目标地址。
+  # 用户必须通过 /api/v1/user/reminder-configs 创建并启用自己的通知渠道。
+  # 下面的 default_templates 仅作为创建渠道时的模板参考，不会直接被系统拿来发送。
+  # 预置提醒模板（用户创建提醒配置时可参考）
+  # GET /api/v1/templates 可查看所有预置模板
+  # 模板变量：{{.TaskID}} {{.Title}} {{.Description}} {{.Priority}} {{.PriorityText}} {{.DueAt}} {{.RemindAt}} {{.RepeatType}} {{.CreatedAt}}
+  default_templates:
+    feishu:
+      channel_type: "webhook"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: "application/json"
+      webhook_body_template: |
+        {"msg_type":"text","content":{"text":"[TODO] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
+    dingtalk:
+      channel_type: "webhook"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: "application/json"
+      webhook_body_template: |
+        {"msgtype":"markdown","markdown":{"title":"TODO提醒","text":"### {{.Title}}\n- 优先级: {{.PriorityText}}\n- 截止: {{.DueAt}}"}}
+    wecom:
+      channel_type: "webhook"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: "application/json"
+      webhook_body_template: |
+        {"msgtype":"text","text":{"content":"[TODO提醒] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
+    mcp:
+      channel_type: "webhook"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: "application/json"
+      webhook_body_template: |
+        {"name":"MCP Send Notification","arguments":{"title":"[TODO提醒]","content":"{{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
+    telegram:
+      channel_type: "webhook"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: "application/json"
+      webhook_body_template: |
+        {"text":"[TODO] {{.Title}}\nPriority: {{.PriorityText}}\nDue: {{.DueAt}}","parse_mode":"Markdown"}
 
 # CORS 跨域配置
 cors:

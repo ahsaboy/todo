@@ -1,5 +1,86 @@
 basePath: /
 definitions:
+  todo_internal_models.APIKeyInfo:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      last_used_at:
+        type: string
+      name:
+        type: string
+    type: object
+  todo_internal_models.APIKeyResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      key:
+        description: 仅创建时返回明文
+        type: string
+      name:
+        type: string
+    type: object
+  todo_internal_models.ChangePasswordRequest:
+    properties:
+      new_password:
+        maxLength: 72
+        minLength: 6
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  todo_internal_models.CreateKeyRequest:
+    properties:
+      name:
+        maxLength: 64
+        type: string
+    type: object
+  todo_internal_models.CreateReminderConfigRequest:
+    properties:
+      channel_type:
+        enum:
+        - webhook
+        - feishu
+        - dingtalk
+        - wecom
+        - slack
+        type: string
+      max_retries:
+        maximum: 10
+        minimum: 0
+        type: integer
+      name:
+        maxLength: 64
+        type: string
+      retry_delay_seconds:
+        maximum: 300
+        minimum: 1
+        type: integer
+      webhook_body_template:
+        type: string
+      webhook_headers:
+        additionalProperties:
+          type: string
+        type: object
+      webhook_method:
+        enum:
+        - GET
+        - POST
+        - PUT
+        type: string
+      webhook_url:
+        type: string
+    required:
+    - channel_type
+    - name
+    - webhook_url
+    type: object
   todo_internal_models.CreateTaskRequest:
     properties:
       description:
@@ -36,6 +117,32 @@ definitions:
     required:
     - title
     type: object
+  todo_internal_models.LoginRequest:
+    properties:
+      account:
+        type: string
+      password:
+        type: string
+    required:
+    - account
+    - password
+    type: object
+  todo_internal_models.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 6
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+    - password
+    - username
+    type: object
   todo_internal_models.Task:
     properties:
       completed:
@@ -65,6 +172,51 @@ definitions:
       title:
         type: string
       updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  todo_internal_models.UpdateProfileRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  todo_internal_models.UpdateReminderConfigRequest:
+    properties:
+      channel_type:
+        enum:
+        - webhook
+        - feishu
+        - dingtalk
+        - wecom
+        - slack
+        type: string
+      enabled:
+        type: boolean
+      max_retries:
+        maximum: 10
+        minimum: 0
+        type: integer
+      name:
+        maxLength: 64
+        type: string
+      retry_delay_seconds:
+        maximum: 300
+        minimum: 1
+        type: integer
+      webhook_body_template:
+        type: string
+      webhook_headers:
+        additionalProperties:
+          type: string
+        type: object
+      webhook_method:
+        enum:
+        - GET
+        - POST
+        - PUT
+        type: string
+      webhook_url:
         type: string
     type: object
   todo_internal_models.UpdateTaskRequest:
@@ -99,6 +251,48 @@ definitions:
       title:
         maxLength: 255
         minLength: 1
+        type: string
+    type: object
+  todo_internal_models.UserReminderConfig:
+    properties:
+      channel_type:
+        type: string
+      created_at:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: integer
+      max_retries:
+        type: integer
+      name:
+        type: string
+      retry_delay_seconds:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+      webhook_body_template:
+        type: string
+      webhook_headers:
+        additionalProperties:
+          type: string
+        type: object
+      webhook_method:
+        type: string
+      webhook_url:
+        type: string
+    type: object
+  todo_internal_models.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      username:
         type: string
     type: object
   todo_internal_utils.ErrorResponse:
@@ -147,10 +341,90 @@ definitions:
 host: localhost:8080
 info:
   contact: {}
-  description: 一个轻量级的 TODO 任务管理服务，支持 CRUD、提醒推送、重复任务等功能
+  description: 多用户 TODO 任务管理系统，支持用户注册/登录、个人 API Key、多渠道提醒推送
   title: TODO 任务管理系统 API
-  version: 1.0.0
+  version: 2.0.0
 paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 验证用户名或邮箱密码并返回新的 API Key
+      parameters:
+      - description: 登录信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/todo_internal_models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    ' api_key':
+                      type: string
+                    user:
+                      $ref: '#/definitions/todo_internal_models.UserResponse'
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      summary: 用户登录
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户并返回 API Key
+      parameters:
+      - description: 注册信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/todo_internal_models.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  properties:
+                    ' api_key':
+                      type: string
+                    user:
+                      $ref: '#/definitions/todo_internal_models.UserResponse'
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      summary: 用户注册
+      tags:
+      - auth
   /api/v1/health:
     get:
       description: 检查服务和数据库连接状态，用于 Docker 健康检查和负载均衡探测
@@ -256,7 +530,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: 创建一个新任务，支持设置标题、优先级、截止时间、提醒时间、重复规则等
+      description: 创建一个新任务，支持设置标题、优先级、截止时间、提醒时间、重复规则等；若设置了提醒时间（remind_at），则必须至少存在一个已启用的通知渠道
       parameters:
       - description: 任务信息
         in: body
@@ -443,9 +717,349 @@ paths:
       summary: 切换任务的完成/未完成状态
       tags:
       - tasks
+  /api/v1/user/keys:
+    get:
+      description: 获取当前用户的所有 API Key
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/todo_internal_models.APIKeyInfo'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 列出所有 API Keys
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: 为当前用户生成一个新的 API Key
+      parameters:
+      - description: Key 信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/todo_internal_models.CreateKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/todo_internal_models.APIKeyResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 生成新 API Key
+      tags:
+      - user
+  /api/v1/user/keys/{id}:
+    delete:
+      description: 删除指定的 API Key
+      parameters:
+      - description: API Key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 撤销 API Key
+      tags:
+      - user
+  /api/v1/user/password:
+    put:
+      consumes:
+      - application/json
+      description: 验证旧密码后设置新密码
+      parameters:
+      - description: 密码信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/todo_internal_models.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 修改密码
+      tags:
+      - user
+  /api/v1/user/profile:
+    get:
+      description: 获取当前登录用户的个人信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/todo_internal_models.UserResponse'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户信息
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: 更新当前用户的邮箱等信息
+      parameters:
+      - description: 要更新的信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/todo_internal_models.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/todo_internal_models.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新用户信息
+      tags:
+      - user
+  /api/v1/user/reminder-configs:
+    get:
+      description: 获取当前用户的所有通知渠道配置
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/todo_internal_models.UserReminderConfig'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 列出提醒配置
+      tags:
+      - reminder-config
+    post:
+      consumes:
+      - application/json
+      description: 为当前用户创建一个新的通知渠道配置
+      parameters:
+      - description: 配置信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/todo_internal_models.CreateReminderConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/todo_internal_models.UserReminderConfig'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 创建提醒配置
+      tags:
+      - reminder-config
+  /api/v1/user/reminder-configs/{id}:
+    delete:
+      parameters:
+      - description: 配置 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 删除提醒配置
+      tags:
+      - reminder-config
+    get:
+      parameters:
+      - description: 配置 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/todo_internal_models.UserReminderConfig'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取单个提醒配置
+      tags:
+      - reminder-config
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 配置 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 要更新的字段
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/todo_internal_models.UpdateReminderConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/todo_internal_models.UserReminderConfig'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新提醒配置
+      tags:
+      - reminder-config
 securityDefinitions:
-  ApiKeyAuth:
+  APIKeyAuth:
     in: header
-    name: X-API-Key
+    name: api-key
+    type: apiKey
+  BearerAuth:
+    in: header
+    name: Authorization
     type: apiKey
 swagger: "2.0"

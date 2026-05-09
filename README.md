@@ -1,16 +1,19 @@
 # TODO 任务管理系统
 
-一个轻量级的 TODO 任务管理服务，基于 Go + Gin + SQLite，支持 REST API CRUD、后台提醒推送、重复任务自动生成。
+一个轻量级的多用户 TODO 任务管理服务，基于 Go + Gin + SQLite，支持用户注册/登录、个人 API Key、多渠道提醒推送。
 
 ## 功能特性
 
+- 用户注册/登录，个人 API Key 管理
+- 任务按用户隔离，每人只能看到自己的任务
 - 任务 CRUD（创建、查询、更新、删除）
+- 创建任务前必须先配置至少一个已启用的提醒渠道
 - 分页、排序、筛选、关键字搜索
 - 任务优先级（高/中/低）
 - 截止时间与提醒时间设定
-- 后台定时扫描，自动 HTTP 推送提醒（Webhook，支持自定义模板，适配飞书/钉钉/企业微信等）
+- 后台定时扫描，按用户多渠道推送提醒（飞书/钉钉/企业微信等）
 - 重复任务（daily/weekly/monthly/yearly），完成时自动生成下一次
-- API Key 认证
+- 支持 `Authorization: Bearer` 和 `api-key` 两种认证方式
 - 健康检查端点（Docker 健康探测）
 - Swagger API 文档
 - 优雅退出
@@ -22,13 +25,13 @@
 
 ```bash
 # 编译
-go build -o bin/server ./cmd/server
+make build
 
-# 运行（默认读取 config.yaml）
-./bin/server
+# 运行
+make run
 
 # 或直接运行
-go run ./cmd/server
+make dev
 ```
 
 ### Docker 部署
@@ -51,50 +54,100 @@ todo-server [选项]
   -h, --help           显示帮助信息
 ```
 
-**示例:**
-
-```bash
-./bin/server -c /etc/todo/config.yaml
-./bin/server -p 9090 --mode release
-./bin/server -c prod.yaml -p 80 --host 0.0.0.0
-```
-
 ## API 接口
 
 服务启动后访问 Swagger 文档：`http://localhost:8080/docs/index.html`
 
-### Swagger 认证
+### 认证方式
 
-打开 Swagger UI 后，点击页面右上角的 **Authorize** 按钮，输入你的 API Key（对应 `config.yaml` 中的 `auth.api_key`），之后所有请求会自动携带 `X-API-Key` 请求头。
+支持两种请求头（任选其一）：
+
+```bash
+# 方式一：Bearer Token（推荐）
+curl -H "Authorization: Bearer <api_key>" http://localhost:8080/api/v1/tasks
+
+# 方式二：自定义 Header
+curl -H "api-key: <api_key>" http://localhost:8080/api/v1/tasks
+```
 
 ### 端点一览
 
+#### 公开端点（无需认证）
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v1/health` | 健康检查（无需认证） |
-| POST | `/api/v1/tasks` | 创建任务 |
+| GET | `/api/v1/health` | 健康检查 |
+| POST | `/api/v1/auth/register` | 用户注册（返回 API Key） |
+| POST | `/api/v1/auth/login` | 用户登录（返回 API Key） |
+| GET | `/api/v1/templates` | 查看预置提醒模板列表（仅供创建用户自己的渠道配置时参考） |
+
+#### 需认证端点
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/v1/tasks` | 创建任务（要求至少一个已启用提醒渠道） |
 | GET | `/api/v1/tasks` | 获取任务列表 |
 | GET | `/api/v1/tasks/:id` | 获取单个任务 |
 | PUT | `/api/v1/tasks/:id` | 更新任务 |
 | DELETE | `/api/v1/tasks/:id` | 删除任务 |
 | PATCH | `/api/v1/tasks/:id/complete` | 切换完成状态 |
-
-### 认证
-
-除健康检查外，所有 API 需要在请求头中携带 `X-API-Key`：
-
-```bash
-curl -H "X-API-Key: your-secure-api-key" http://localhost:8080/api/v1/tasks
-```
+| GET | `/api/v1/user/profile` | 获取用户信息 |
+| PUT | `/api/v1/user/profile` | 更新用户信息 |
+| PUT | `/api/v1/user/password` | 修改密码 |
+| GET | `/api/v1/user/keys` | 列出所有 API Key |
+| POST | `/api/v1/user/keys` | 生成新 API Key |
+| DELETE | `/api/v1/user/keys/:id` | 撤销 API Key |
+| GET | `/api/v1/user/reminder-configs` | 列出提醒配置 |
+| POST | `/api/v1/user/reminder-configs` | 创建提醒配置 |
+| GET | `/api/v1/user/reminder-configs/:id` | 获取单个提醒配置 |
+| PUT | `/api/v1/user/reminder-configs/:id` | 更新提醒配置 |
+| DELETE | `/api/v1/user/reminder-configs/:id` | 删除提醒配置 |
 
 ### 示例
 
-**创建任务:**
+**注册用户：**
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "demo",
+    "password": "123456",
+    "email": "demo@example.com"
+  }'
+# 返回 user 信息和 api_key（明文，仅此一次显示）
+```
+
+**登录：**
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "demo", "password": "123456"}'
+```
+
+**先配置提醒渠道：**
+
+```bash
+curl -X POST http://localhost:8080/api/v1/user/reminder-configs \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <api_key>" \
+  -d '{
+    "name": "feishu",
+    "channel_type": "feishu",
+    "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/xxx",
+    "webhook_body_template": "{\"msg_type\":\"text\",\"content\":{\"text\":\"[TODO] {{.Title}}\\n优先级: {{.PriorityText}}\\n截止: {{.DueAt}}\"}}"
+  }'
+```
+
+如果当前用户没有任何已启用渠道，`POST /api/v1/tasks` 会返回 `400 INVALID_INPUT`。
+
+**再创建任务：**
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/tasks \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secure-api-key" \
+  -H "Authorization: Bearer <api_key>" \
   -d '{
     "title": "完成项目报告",
     "priority": 1,
@@ -102,20 +155,6 @@ curl -X POST http://localhost:8080/api/v1/tasks \
     "remind_at": "2026-05-19 09:00:00",
     "repeat_type": "weekly"
   }'
-```
-
-**列表查询（分页 + 筛选）:**
-
-```bash
-curl "http://localhost:8080/api/v1/tasks?page=1&limit=10&status=pending&priority=1&sort=due_at&order=asc" \
-  -H "X-API-Key: your-secure-api-key"
-```
-
-**切换完成状态:**
-
-```bash
-curl -X PATCH http://localhost:8080/api/v1/tasks/1/complete \
-  -H "X-API-Key: your-secure-api-key"
 ```
 
 ### 列表查询参数
@@ -138,36 +177,44 @@ curl -X PATCH http://localhost:8080/api/v1/tasks/1/complete \
 
 ```yaml
 server:
-  host: "0.0.0.0"       # 监听地址
-  port: 8080             # 监听端口
-  mode: "debug"          # debug / release
+  host: "0.0.0.0"
+  port: 8080
+  mode: "debug"
 
 database:
-  path: "./data/tasks.db"  # SQLite 文件路径
-
-auth:
-  api_key: "your-secure-api-key"  # 留空则不启用认证
+  path: "./data/tasks.db"
 
 reminder:
   enabled: true
-  scan_interval_seconds: 30        # 扫描间隔
-  webhook_url: "http://localhost:9000/webhook"
-  webhook_method: "POST"
-  webhook_headers:
-    Content-Type: "application/json"
-  webhook_body_template: |         # 支持 Go template 变量
-    {"msg_type":"text","content":{"text":"[TODO提醒] {{.Title}}\n截止: {{.DueAt}}"}}
+  scan_interval_seconds: 30
+  webhook_body_template: |        # 用户渠道未自定义模板时使用的默认消息模板
+    {"msg_type":"text","content":{"text":"[TODO] {{.Title}}"}}
+  webhook_timeout_seconds: 10
   max_retries: 3
   retry_delay_seconds: 5
+  default_templates:
+    feishu:
+      channel_type: "webhook"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: "application/json"
+      webhook_body_template: |
+        {"msg_type":"text","content":{"text":"[TODO] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
 
 cors:
   enabled: true
   allowed_origins: ["*"]
 
 logging:
-  level: "info"          # debug / info / warn / error
-  format: "json"         # json / console
+  level: "info"
+  format: "json"
 ```
+
+说明：
+
+- 系统不再支持全局 webhook 发送地址。
+- 用户必须通过 `/api/v1/user/reminder-configs` 创建并启用自己的通知渠道。
+- `default_templates` 只提供模板参考，不会直接作为发送目标。
 
 ### Webhook 模板变量
 
@@ -183,26 +230,12 @@ logging:
 | `{{.RepeatType}}` | 重复类型 | `"weekly"` |
 | `{{.CreatedAt}}` | 创建时间 | `"2026-05-09 10:00"` |
 
-**适配飞书:**
+## 业务约束
 
-```yaml
-webhook_body_template: |
-  {"msg_type":"text","content":{"text":"[TODO] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
-```
-
-**适配钉钉 (Markdown):**
-
-```yaml
-webhook_body_template: |
-  {"msgtype":"markdown","markdown":{"title":"TODO提醒","text":"### {{.Title}}\n- 优先级: {{.PriorityText}}\n- 截止: {{.DueAt}}"}}
-```
-
-**适配企业微信:**
-
-```yaml
-webhook_body_template: |
-  {"msgtype":"text","text":{"content":"[TODO提醒] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
-```
+- 用户必须先创建并启用至少一个提醒渠道，才能创建任务。
+- 禁用某个用户的全部提醒渠道后，该用户任务不会回退到任何全局 webhook。
+- 提醒只有在该任务的所有已启用渠道都发送成功后，才会标记为已发送。
+- 注册接口在并发下如果用户名冲突，会稳定返回 `409 Conflict`。
 
 ## 项目结构
 
@@ -212,13 +245,26 @@ TODO/
 ├── internal/
 │   ├── config/config.go            # YAML 配置加载
 │   ├── database/database.go        # SQLite 连接 + WAL 模式 + 自动建表
-│   ├── models/task.go              # 数据模型 + 模板变量映射
-│   ├── handlers/task_handler.go    # HTTP 处理函数
-│   ├── repository/task_repo.go     # 数据库操作层
+│   ├── models/
+│   │   ├── task.go                 # 任务数据模型
+│   │   ├── user.go                 # 用户数据模型
+│   │   ├── api_key.go              # API Key 数据模型
+│   │   └── reminder_config.go      # 提醒配置数据模型
+│   ├── handlers/
+│   │   ├── auth_handler.go         # 认证 HTTP 处理（注册/登录/Key管理）
+│   │   ├── task_handler.go         # 任务 HTTP 处理
+│   │   └── reminder_config_handler.go  # 提醒配置 CRUD
+│   ├── repository/
+│   │   ├── user_repo.go            # 用户数据库操作
+│   │   ├── api_key_repo.go         # API Key 数据库操作
+│   │   ├── task_repo.go            # 任务数据库操作
+│   │   └── reminder_config_repo.go # 提醒配置数据库操作
 │   ├── service/
-│   │   ├── task_service.go         # 业务逻辑 + 重复任务自动生成
-│   │   └── reminder_service.go     # 后台提醒扫描 + Webhook 推送
-│   ├── middleware/auth.go          # API Key 认证中间件
+│   │   ├── auth_service.go         # 认证逻辑
+│   │   ├── task_service.go         # 业务逻辑
+│   │   ├── reminder_service.go     # 后台提醒（按用户多渠道）
+│   │   └── reminder_config_service.go  # 提醒配置管理
+│   ├── middleware/auth.go          # 认证中间件（Bearer/api-key/X-API-Key）
 │   └── utils/
 │       ├── response.go             # 统一响应格式
 │       └── validator.go            # 参数校验
@@ -243,8 +289,6 @@ make docker-up      # Docker Compose 启动
 make docker-down    # Docker Compose 停止
 make docker-logs    # 查看 Docker 日志
 ```
-
-> Makefile 自动检测操作系统，Windows 上编译出 `server.exe`，Linux/macOS 编译出 `server`。
 
 ## 技术栈
 

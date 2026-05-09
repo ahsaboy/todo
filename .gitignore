@@ -10,8 +10,8 @@ data/*.db-wal
 .env
 .env.local
 *.log
-server
 todo-app
 .DS_Store
 Thumbs.db
 .claude/
+.codex-cache/
