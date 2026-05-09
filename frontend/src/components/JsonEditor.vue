@@ -392,12 +392,19 @@ defineExpose({ textareaRef, format })
 }
 
 .json-editor-container {
+  --json-editor-font-family:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --json-editor-font-size: 13px;
+  --json-editor-line-height: 1.6;
   position: relative;
   display: grid;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface-muted);
   overflow: hidden;
+  font-family: var(--json-editor-font-family);
+  font-size: var(--json-editor-font-size);
+  line-height: var(--json-editor-line-height);
   transition: border-color 150ms, box-shadow 150ms, background-color 150ms;
 }
 
@@ -413,14 +420,15 @@ defineExpose({ textareaRef, format })
 .json-highlight,
 .json-textarea {
   margin: 0;
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-  font-size: 13px;
-  line-height: 1.6;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 400;
   tab-size: 2;
   letter-spacing: 0;
   font-kerning: none;
   font-variant-ligatures: none;
+  font-synthesis: none;
 }
 
 .json-highlight {
@@ -439,6 +447,15 @@ defineExpose({ textareaRef, format })
 
 .json-highlight-content {
   margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  font-kerning: inherit;
+  font-variant-ligatures: inherit;
+  font-synthesis: inherit;
+  tab-size: inherit;
   white-space: pre;
   transform: translate(0, 0);
   will-change: transform;
