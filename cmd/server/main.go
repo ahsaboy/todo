@@ -159,13 +159,7 @@ func main() {
 
 	// 公开端点
 	r.GET("/api/v1/health", handlers.HealthCheck(db))
-	r.GET("/api/v1/templates", func(c *gin.Context) {
-		templates := cfg.Reminder.DefaultTemplates
-		if templates == nil {
-			templates = map[string]config.DefaultTemplate{}
-		}
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": templates})
-	})
+	r.GET("/api/v1/templates", reminderTemplatesHandler(cfg))
 	r.GET("/docs/*any", func(c *gin.Context) {
 		httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
 	})
@@ -270,6 +264,23 @@ func main() {
 		logger.Error("关闭服务出错", zap.Error(err))
 	}
 	logger.Info("服务已停止")
+}
+
+// reminderTemplatesHandler 查看预置提醒模板
+// @Summary      查看预置提醒模板
+// @Description  返回 config.yaml 中 reminder.default_templates 配置的预置模板；模板只作为创建用户通知渠道时的参考，不会直接用于发送
+// @Tags         templates
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Router       /api/v1/templates [get]
+func reminderTemplatesHandler(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		templates := cfg.Reminder.DefaultTemplates
+		if templates == nil {
+			templates = map[string]config.DefaultTemplate{}
+		}
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": templates})
+	}
 }
 
 func initLogger(cfg config.LoggingConfig) (*zap.Logger, error) {

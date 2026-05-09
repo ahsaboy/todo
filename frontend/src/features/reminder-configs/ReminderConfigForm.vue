@@ -12,6 +12,22 @@
       />
     </div>
 
+    <div class="form-group">
+      <label for="reminder-config-template">预置模板</label>
+      <select
+        id="reminder-config-template"
+        v-model="selectedTemplate"
+        name="reminder_config_template"
+        :disabled="loadingTemplates"
+        @change="applySelectedTemplate"
+      >
+        <option value="">自定义</option>
+        <option v-for="template in templateOptions" :key="template.name" :value="template.name">
+          {{ template.label }}
+        </option>
+      </select>
+    </div>
+
     <div class="form-row">
       <div class="form-group">
         <label for="reminder-config-channel-type">渠道类型 *</label>
@@ -20,6 +36,7 @@
           v-model="form.channel_type"
           name="reminder_config_channel_type"
           required
+          @change="handleChannelTypeChange"
         >
           <option value="webhook">Webhook</option>
           <option value="feishu">飞书</option>
@@ -57,26 +74,44 @@
 
     <div class="form-group">
       <label for="reminder-config-webhook-headers">Webhook Headers (JSON)</label>
-      <textarea
+      <JsonEditor
+        ref="headersEditorRef"
         id="reminder-config-webhook-headers"
-        v-model="webhookHeadersStr"
-        name="reminder_config_webhook_headers"
+        v-model="webhookHeadersText"
         placeholder='{"Authorization": "Bearer xxx"}'
-        rows="3"
-        class="code-input"
-      ></textarea>
+        :rows="3"
+        @blur="validateWebhookHeaders"
+        @focus="lastFocusedTextarea = 'headers'"
+      />
+      <p v-if="webhookHeadersError" class="field-error">{{ webhookHeadersError }}</p>
+      <p v-else class="field-hint">必须是 JSON 对象，值需为字符串。</p>
     </div>
 
     <div class="form-group">
       <label for="reminder-config-body-template">Body 模板</label>
-      <textarea
+      <JsonEditor
+        ref="bodyEditorRef"
         id="reminder-config-body-template"
-        v-model="form.webhook_body_template"
-        name="reminder_config_body_template"
-        placeholder='{"text": "{{.Title}}"}'
-        rows="4"
-        class="code-input"
-      ></textarea>
+        v-model="webhookBodyTemplateText"
+        placeholder='{"text":"{{.Title}}"}'
+        :rows="4"
+        @blur="validateWebhookBodyTemplate"
+        @focus="lastFocusedTextarea = 'body'"
+      />
+      <p v-if="webhookBodyTemplateError" class="field-error">{{ webhookBodyTemplateError }}</p>
+      <p v-else class="field-hint">JSON 对象中的字符串可以使用模板变量，点击即可插入：</p>
+      <div class="template-vars">
+        <button
+          v-for="variable in templateVariables"
+          :key="variable"
+          type="button"
+          class="template-var-clickable"
+          @mousedown.prevent
+          @click="insertVariable(variable)"
+        >
+          {{ variable }}
+        </button>
+      </div>
     </div>
 
     <div class="form-row">
@@ -125,11 +160,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
+import { getReminderTemplates } from '@/entities/reminder-config/api'
+import JsonEditor from '@/components/JsonEditor.vue'
 import type {
   CreateReminderConfigPayload,
   UpdateReminderConfigPayload,
   ChannelType,
+  ReminderTemplateDto,
+  ReminderTemplatesDto,
   WebhookMethod,
 } from '@/entities/reminder-config/model'
 
@@ -164,20 +203,210 @@ const form = reactive<{
   retry_delay_seconds: props.initialData?.retry_delay_seconds ?? 5,
 })
 
-const webhookHeadersStr = computed({
-  get: () => JSON.stringify(form.webhook_headers || {}, null, 2),
-  set: (val: string) => {
-    try {
-      form.webhook_headers = JSON.parse(val)
-    } catch {
-      // 无效 JSON，保持原值
-    }
-  },
+const submitting = ref(false)
+const loadingTemplates = ref(false)
+const selectedTemplate = ref('')
+const templates = ref<ReminderTemplatesDto>({})
+const webhookHeadersText = ref(JSON.stringify(form.webhook_headers || {}, null, 2))
+const webhookBodyTemplateText = ref(form.webhook_body_template || '')
+const webhookHeadersError = ref('')
+const webhookBodyTemplateError = ref('')
+const lastFocusedTextarea = ref<'headers' | 'body'>('body')
+const headersEditorRef = ref<InstanceType<typeof JsonEditor>>()
+const bodyEditorRef = ref<InstanceType<typeof JsonEditor>>()
+
+const templateVariables = [
+  '{{.TaskID}}',
+  '{{.Title}}',
+  '{{.Description}}',
+  '{{.Priority}}',
+  '{{.PriorityText}}',
+  '{{.DueAt}}',
+  '{{.RemindAt}}',
+  '{{.RepeatType}}',
+  '{{.CreatedAt}}',
+]
+
+const templateOptions = computed(() =>
+  Object.keys(templates.value)
+    .sort()
+    .map((name) => ({
+      label: formatTemplateName(name),
+      name,
+    })),
+)
+
+onMounted(() => {
+  loadTemplates()
 })
 
-const submitting = ref(false)
+async function loadTemplates() {
+  loadingTemplates.value = true
+  try {
+    const response = await getReminderTemplates()
+    templates.value = response.data ?? {}
+  } catch {
+    templates.value = {}
+  } finally {
+    loadingTemplates.value = false
+  }
+}
+
+function applySelectedTemplate() {
+  if (!selectedTemplate.value) return
+  applyTemplate(selectedTemplate.value)
+}
+
+function handleChannelTypeChange() {
+  if (templates.value[form.channel_type]) {
+    selectedTemplate.value = form.channel_type
+    applyTemplate(form.channel_type)
+    return
+  }
+
+  selectedTemplate.value = ''
+}
+
+function applyTemplate(name: string) {
+  const template = templates.value[name]
+  if (!template) return
+
+  form.channel_type = resolveTemplateChannelType(name, template)
+  form.webhook_method = isWebhookMethod(template.webhook_method) ? template.webhook_method : 'POST'
+  form.webhook_headers = template.webhook_headers ?? {}
+  form.webhook_body_template = template.webhook_body_template || ''
+  webhookHeadersText.value = JSON.stringify(form.webhook_headers, null, 2)
+  webhookBodyTemplateText.value = form.webhook_body_template
+  webhookHeadersError.value = ''
+  webhookBodyTemplateError.value = ''
+
+  if (!form.webhook_url && template.webhook_url) {
+    form.webhook_url = template.webhook_url
+  }
+  if (!form.name) {
+    form.name = formatTemplateName(name)
+  }
+}
+
+function resolveTemplateChannelType(name: string, template: ReminderTemplateDto): ChannelType {
+  if (isChannelType(name)) {
+    return name
+  }
+  if (isChannelType(template.channel_type)) {
+    return template.channel_type
+  }
+  return 'webhook'
+}
+
+function isChannelType(value: string): value is ChannelType {
+  return ['webhook', 'feishu', 'dingtalk', 'wecom', 'slack'].includes(value)
+}
+
+function isWebhookMethod(value: string): value is WebhookMethod {
+  return ['GET', 'POST', 'PUT'].includes(value)
+}
+
+function formatTemplateName(name: string): string {
+  const labels: Record<string, string> = {
+    dingtalk: '钉钉',
+    feishu: '飞书',
+    mcp: 'MCP',
+    telegram: 'Telegram',
+    wecom: '企业微信',
+  }
+  return labels[name] || name
+}
+
+function insertVariable(variable: string) {
+  const editor = lastFocusedTextarea.value === 'headers' ? headersEditorRef.value : bodyEditorRef.value
+  const textarea = editor?.textareaRef
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const val = textarea.value
+  const newVal = val.slice(0, start) + variable + val.slice(end)
+
+  if (lastFocusedTextarea.value === 'headers') {
+    webhookHeadersText.value = newVal
+  } else {
+    webhookBodyTemplateText.value = newVal
+  }
+
+  requestAnimationFrame(() => {
+    textarea.focus()
+    const pos = start + variable.length
+    textarea.setSelectionRange(pos, pos)
+  })
+}
+
+function validateWebhookHeaders(): boolean {
+  const raw = webhookHeadersText.value.trim()
+
+  if (!raw) {
+    form.webhook_headers = {}
+    webhookHeadersText.value = '{}'
+    webhookHeadersError.value = ''
+    return true
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!isRecord(parsed)) {
+      webhookHeadersError.value = 'Headers 必须是 JSON 对象。'
+      return false
+    }
+
+    const invalidValue = Object.values(parsed).some((value) => typeof value !== 'string')
+    if (invalidValue) {
+      webhookHeadersError.value = 'Headers 的每个值都必须是字符串。'
+      return false
+    }
+
+    form.webhook_headers = parsed
+    webhookHeadersText.value = JSON.stringify(parsed, null, 2)
+    webhookHeadersError.value = ''
+    return true
+  } catch {
+    webhookHeadersError.value = 'Headers 不是合法 JSON。'
+    return false
+  }
+}
+
+function validateWebhookBodyTemplate(): boolean {
+  const raw = webhookBodyTemplateText.value.trim()
+
+  if (!raw) {
+    form.webhook_body_template = ''
+    webhookBodyTemplateError.value = ''
+    return true
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!isRecord(parsed)) {
+      webhookBodyTemplateError.value = 'Body 模板必须是 JSON 对象。'
+      return false
+    }
+
+    form.webhook_body_template = JSON.stringify(parsed)
+    webhookBodyTemplateText.value = JSON.stringify(parsed, null, 2)
+    webhookBodyTemplateError.value = ''
+    return true
+  } catch {
+    webhookBodyTemplateError.value =
+      'Body 模板不是合法 JSON。模板变量需要放在 JSON 字符串中，例如 "{{.Title}}"。'
+    return false
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, string> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
 async function handleSubmit() {
+  if (!validateWebhookHeaders() || !validateWebhookBodyTemplate()) return
+
   submitting.value = true
   try {
     emit('submit', { ...form })
@@ -214,6 +443,49 @@ async function handleSubmit() {
   font-size: 14px;
 }
 
+.field-hint,
+.field-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.field-hint {
+  color: var(--color-text-muted);
+}
+
+.field-error {
+  color: var(--color-danger);
+}
+
+.template-vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.template-var-clickable {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 8%, white);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms, color 150ms, transform 150ms;
+}
+
+.template-var-clickable:hover {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.template-var-clickable:active {
+  transform: translateY(1px);
+}
+
 .checkbox-label {
   display: flex;
   align-items: center;
@@ -226,11 +498,6 @@ async function handleSubmit() {
 .checkbox-label input {
   width: 16px;
   height: 16px;
-}
-
-.code-input {
-  font-family: monospace;
-  font-size: 13px;
 }
 
 .form-row {

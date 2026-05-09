@@ -25,21 +25,21 @@ type DatabaseConfig struct {
 }
 
 type ReminderConfig struct {
-	Enabled               bool                          `yaml:"enabled"`
-	ScanIntervalSeconds   int                           `yaml:"scan_interval_seconds"`
-	WebhookBodyTemplate   string                        `yaml:"webhook_body_template"`
-	WebhookTimeoutSeconds int                           `yaml:"webhook_timeout_seconds"`
-	MaxRetries            int                           `yaml:"max_retries"`
-	RetryDelaySeconds     int                           `yaml:"retry_delay_seconds"`
-	DefaultTemplates      map[string]DefaultTemplate    `yaml:"default_templates"`
+	Enabled               bool                       `yaml:"enabled"`
+	ScanIntervalSeconds   int                        `yaml:"scan_interval_seconds"`
+	WebhookBodyTemplate   string                     `yaml:"webhook_body_template"`
+	WebhookTimeoutSeconds int                        `yaml:"webhook_timeout_seconds"`
+	MaxRetries            int                        `yaml:"max_retries"`
+	RetryDelaySeconds     int                        `yaml:"retry_delay_seconds"`
+	DefaultTemplates      map[string]DefaultTemplate `yaml:"default_templates"`
 }
 
 type DefaultTemplate struct {
-	ChannelType        string            `yaml:"channel_type"`
-	WebhookURL         string            `yaml:"webhook_url"`
-	WebhookMethod      string            `yaml:"webhook_method"`
-	WebhookHeaders     map[string]string `yaml:"webhook_headers"`
-	WebhookBodyTemplate string           `yaml:"webhook_body_template"`
+	ChannelType         string            `yaml:"channel_type" json:"channel_type"`
+	WebhookURL          string            `yaml:"webhook_url" json:"webhook_url"`
+	WebhookMethod       string            `yaml:"webhook_method" json:"webhook_method"`
+	WebhookHeaders      map[string]string `yaml:"webhook_headers" json:"webhook_headers"`
+	WebhookBodyTemplate string            `yaml:"webhook_body_template" json:"webhook_body_template"`
 }
 
 type CORSConfig struct {

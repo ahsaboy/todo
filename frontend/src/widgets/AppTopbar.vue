@@ -39,7 +39,6 @@ const userInitial = computed(() => {
     </button>
     <h1 class="page-title">{{ pageTitle }}</h1>
     <div class="topbar-actions">
-      <button class="btn-new-task">新建任务</button>
       <div class="user-menu">
         <button class="user-btn">{{ userInitial }}</button>
       </div>

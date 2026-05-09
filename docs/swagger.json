@@ -609,6 +609,27 @@
                 }
             }
         },
+        "/api/v1/templates": {
+            "get": {
+                "description": "返回 config.yaml 中 reminder.default_templates 配置的预置模板；模板只作为创建用户通知渠道时的参考，不会直接用于发送",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "templates"
+                ],
+                "summary": "查看预置提醒模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user/keys": {
             "get": {
                 "security": [

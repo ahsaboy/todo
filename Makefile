@@ -2,7 +2,7 @@
 
 GOOS   ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
-APP    := server
+APP    := todo
 LDFLAGS := -s -w
 BUILDFLAGS := -trimpath -ldflags="$(LDFLAGS)"
 
@@ -16,9 +16,9 @@ endif
 
 # 检测 UPX 是否可用
 ifeq ($(OS),Windows_NT)
-	HAS_UPX := $(shell where upx >nul 2>nul && echo 1 || echo 0)
+	HAS_UPX := $(strip $(shell cmd /C "where upx >nul 2>nul && echo 1 || echo 0"))
 else
-	HAS_UPX := $(shell command -v upx >/dev/null 2>&1 && echo 1 || echo 0)
+	HAS_UPX := $(strip $(shell command -v upx >/dev/null 2>&1 && echo 1 || echo 0))
 endif
 
 # UPX 压缩（如果系统安装了 UPX 则自动压缩）

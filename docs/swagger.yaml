@@ -715,6 +715,20 @@ paths:
       summary: 切换任务的完成/未完成状态
       tags:
       - tasks
+  /api/v1/templates:
+    get:
+      description: 返回 config.yaml 中 reminder.default_templates 配置的预置模板；模板只作为创建用户通知渠道时的参考，不会直接用于发送
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 查看预置提醒模板
+      tags:
+      - templates
   /api/v1/user/keys:
     get:
       description: 获取当前用户的所有 API Key

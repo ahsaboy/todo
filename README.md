@@ -166,7 +166,7 @@ curl -X POST http://localhost:8080/api/v1/user/reminder-configs \
   }'
 ```
 
-也可以在前端的“提醒配置”页面新增通知渠道，保存后默认启用；编辑时可切换启用状态。列表接口在没有配置时返回空数组 `[]`。
+也可以在前端的“提醒配置”页面新增通知渠道，保存后默认启用；表单会通过 `GET /api/v1/templates` 加载配置文件中的预置模板，用于填充请求方法、Headers 和 Body 模板。Headers 和 Body 模板输入框会校验 JSON，Body 模板中的模板变量需要写在 JSON 字符串内，例如 `"{{.Title}}"`。列表接口在没有配置时返回空数组 `[]`。
 
 如果当前用户没有任何已启用渠道，`POST /api/v1/tasks` 会返回 `400 INVALID_INPUT`。
 

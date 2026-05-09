@@ -2,9 +2,14 @@ import type { ApiResponse } from '@/shared/api/types'
 import { api } from '@/shared/api/client'
 import type {
   ReminderConfigDto,
+  ReminderTemplatesDto,
   CreateReminderConfigPayload,
   UpdateReminderConfigPayload,
 } from './model'
+
+export function getReminderTemplates() {
+  return api.get<ApiResponse<ReminderTemplatesDto>>('/templates')
+}
 
 export function getReminderConfigs() {
   return api.get<ApiResponse<ReminderConfigDto[]>>('/user/reminder-configs')

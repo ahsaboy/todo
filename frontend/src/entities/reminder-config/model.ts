@@ -17,6 +17,16 @@ export interface ReminderConfigDto {
   webhook_url: string
 }
 
+export interface ReminderTemplateDto {
+  channel_type: string
+  webhook_body_template: string
+  webhook_headers: Record<string, string> | null
+  webhook_method: string
+  webhook_url: string
+}
+
+export type ReminderTemplatesDto = Record<string, ReminderTemplateDto>
+
 export interface ReminderConfig {
   channelType: string
   createdAt: string
