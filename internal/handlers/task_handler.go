@@ -30,6 +30,7 @@ func NewTaskHandler(svc *service.TaskService) *TaskHandler {
 // @Success      201  {object} utils.SuccessResponse{data=models.Task}
 // @Failure      400  {object} utils.ErrorResponse
 // @Failure      500  {object} utils.ErrorResponse
+// @Security     ApiKeyAuth
 // @Router       /api/v1/tasks [post]
 func (h *TaskHandler) Create(c *gin.Context) {
 	var req models.CreateTaskRequest
@@ -57,6 +58,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 // @Failure      400  {object} utils.ErrorResponse
 // @Failure      404  {object} utils.ErrorResponse
 // @Failure      500  {object} utils.ErrorResponse
+// @Security     ApiKeyAuth
 // @Router       /api/v1/tasks/{id} [get]
 func (h *TaskHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -94,6 +96,7 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 // @Param        search    query string false "搜索关键字（标题/描述）"
 // @Success      200  {object} utils.PaginatedResponse{data=[]models.Task}
 // @Failure      500  {object} utils.ErrorResponse
+// @Security     ApiKeyAuth
 // @Router       /api/v1/tasks [get]
 func (h *TaskHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -142,6 +145,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 // @Failure      400  {object} utils.ErrorResponse
 // @Failure      404  {object} utils.ErrorResponse
 // @Failure      500  {object} utils.ErrorResponse
+// @Security     ApiKeyAuth
 // @Router       /api/v1/tasks/{id} [put]
 func (h *TaskHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -179,6 +183,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 // @Failure      400  {object} utils.ErrorResponse
 // @Failure      404  {object} utils.ErrorResponse
 // @Failure      500  {object} utils.ErrorResponse
+// @Security     ApiKeyAuth
 // @Router       /api/v1/tasks/{id} [delete]
 func (h *TaskHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -210,6 +215,7 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 // @Failure      400  {object} utils.ErrorResponse
 // @Failure      404  {object} utils.ErrorResponse
 // @Failure      500  {object} utils.ErrorResponse
+// @Security     ApiKeyAuth
 // @Router       /api/v1/tasks/{id}/complete [patch]
 func (h *TaskHandler) ToggleComplete(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)

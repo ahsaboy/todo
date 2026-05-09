@@ -45,6 +45,11 @@ const docTemplate = `{
         },
         "/api/v1/tasks": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "支持分页查询、按状态/优先级筛选、按关键字搜索、自定义排序",
                 "produces": [
                     "application/json"
@@ -164,6 +169,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "创建一个新任务，支持设置标题、优先级、截止时间、提醒时间、重复规则等",
                 "consumes": [
                     "application/json"
@@ -222,6 +232,11 @@ const docTemplate = `{
         },
         "/api/v1/tasks/{id}": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "根据任务 ID 返回任务详情",
                 "produces": [
                     "application/json"
@@ -279,6 +294,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "部分更新任务字段，只需传入需要修改的字段",
                 "consumes": [
                     "application/json"
@@ -348,6 +368,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "根据任务 ID 永久删除一个任务",
                 "produces": [
                     "application/json"
@@ -396,6 +421,11 @@ const docTemplate = `{
         },
         "/api/v1/tasks/{id}/complete": {
             "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "将任务在已完成和未完成之间切换。如果是重复任务且标记为完成，会自动创建下一次任务",
                 "produces": [
                     "application/json"

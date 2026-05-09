@@ -248,6 +248,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: 获取任务列表（分页、筛选、排序）
       tags:
       - tasks
@@ -282,6 +284,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: 创建一个新任务
       tags:
       - tasks
@@ -314,6 +318,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: 删除指定任务
       tags:
       - tasks
@@ -349,6 +355,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: 根据 ID 获取任务
       tags:
       - tasks
@@ -392,6 +400,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: 更新任务信息
       tags:
       - tasks
@@ -428,6 +438,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/todo_internal_utils.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: 切换任务的完成/未完成状态
       tags:
       - tasks
