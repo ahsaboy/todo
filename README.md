@@ -34,7 +34,7 @@ go run ./cmd/server
 ### Docker 部署
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 ### CLI 参数
@@ -62,6 +62,10 @@ todo-server [选项]
 ## API 接口
 
 服务启动后访问 Swagger 文档：`http://localhost:8080/docs/index.html`
+
+### Swagger 认证
+
+打开 Swagger UI 后，点击页面右上角的 **Authorize** 按钮，输入你的 API Key（对应 `config.yaml` 中的 `auth.api_key`），之后所有请求会自动携带 `X-API-Key` 请求头。
 
 ### 端点一览
 
@@ -231,12 +235,15 @@ TODO/
 make build          # 编译
 make run            # 编译并运行
 make test           # 运行测试
+make dev            # 本地开发（go run，读取 config.yaml）
+make clean          # 清理构建产物和数据库文件
 make docker-build   # 构建 Docker 镜像
 make docker-up      # Docker Compose 启动
 make docker-down    # Docker Compose 停止
 make docker-logs    # 查看 Docker 日志
-make clean          # 清理构建产物和数据库文件
 ```
+
+> Makefile 自动检测操作系统，Windows 上编译出 `server.exe`，Linux/macOS 编译出 `server`。
 
 ## 技术栈
 
