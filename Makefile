@@ -1,4 +1,4 @@
-.PHONY: build run test dev clean docker-build docker-up docker-down docker-logs
+.PHONY: swag build run test dev clean docker-build docker-up docker-down docker-logs
 
 # 自动检测可执行文件后缀
 ifeq ($(OS),Windows_NT)
@@ -7,7 +7,11 @@ else
 	EXT :=
 endif
 
-build:
+swag:
+	swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+	sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
+
+build: swag
 	go build -o bin/server$(EXT) ./cmd/server
 
 run: build
@@ -16,7 +20,7 @@ run: build
 test:
 	go test -v ./...
 
-dev:
+dev: swag
 	go run ./cmd/server -c config.yaml
 
 clean:

@@ -15,10 +15,9 @@ make docker-up / docker-down / docker-logs
 
 编译需要 `CGO_ENABLED=1`（go-sqlite3 依赖 CGO）。Dockerfile 中已显式设置。
 
-修改 API 注解后需手动重新生成 Swagger：
+`make build` 和 `make dev` 会自动重新生成 Swagger 文档。也可单独执行：
 ```bash
-swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
-sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go  # 修复 swag 版本兼容问题
+make swag     # 仅重新生成 Swagger 文档
 ```
 
 ## 架构

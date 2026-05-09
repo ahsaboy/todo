@@ -232,10 +232,11 @@ TODO/
 ## Makefile 命令
 
 ```bash
-make build          # 编译
+make build          # 编译（自动生成 Swagger 文档）
 make run            # 编译并运行
 make test           # 运行测试
-make dev            # 本地开发（go run，读取 config.yaml）
+make dev            # 本地开发（go run，自动生成 Swagger 文档）
+make swag           # 仅重新生成 Swagger 文档
 make clean          # 清理构建产物和数据库文件
 make docker-build   # 构建 Docker 镜像
 make docker-up      # Docker Compose 启动

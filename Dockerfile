@@ -9,6 +9,10 @@ RUN go mod download
 
 COPY . .
 
+RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+    swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal && \
+    sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
+
 RUN CGO_ENABLED=1 GOOS=linux go build -o /server ./cmd/server
 
 FROM alpine:3.19
