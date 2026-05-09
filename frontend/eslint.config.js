@@ -17,6 +17,15 @@ export default tseslint.config(
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
+      globals: {
+        localStorage: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+        confirm: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
     },
   },
   {

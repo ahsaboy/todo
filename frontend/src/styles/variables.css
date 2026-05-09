@@ -11,4 +11,18 @@
   --color-danger: #d92d20;
   --color-warning: #b76e00;
   --color-success: #1a7f37;
+
+  /* 响应式断点 */
+  --bp-mobile: 767px;
+  --bp-tablet: 1023px;
+  --bp-desktop: 1024px;
+  --bp-wide: 1440px;
+
+  /* 布局尺寸 */
+  --sidebar-width: 248px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 56px;
+  --toolbar-height: 48px;
+  --bottom-nav-height: 56px;
+  --content-padding: 24px;
 }
