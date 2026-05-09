@@ -17,16 +17,16 @@ func NewReminderConfigService(repo *repository.ReminderConfigRepo) *ReminderConf
 
 func (s *ReminderConfigService) Create(ctx context.Context, userID int64, req models.CreateReminderConfigRequest) (*models.UserReminderConfig, error) {
 	cfg := &models.UserReminderConfig{
-		UserID:               userID,
-		Name:                 req.Name,
-		ChannelType:          req.ChannelType,
-		WebhookURL:           req.WebhookURL,
-		WebhookMethod:        req.WebhookMethod,
-		WebhookHeaders:       req.WebhookHeaders,
-		WebhookBodyTemplate:  req.WebhookBodyTemplate,
-		MaxRetries:           3,
-		RetryDelaySeconds:    5,
-		Enabled:              true,
+		UserID:              userID,
+		Name:                req.Name,
+		ChannelType:         req.ChannelType,
+		WebhookURL:          req.WebhookURL,
+		WebhookMethod:       req.WebhookMethod,
+		WebhookHeaders:      req.WebhookHeaders,
+		WebhookBodyTemplate: req.WebhookBodyTemplate,
+		MaxRetries:          3,
+		RetryDelaySeconds:   5,
+		Enabled:             true,
 	}
 	if cfg.WebhookMethod == "" {
 		cfg.WebhookMethod = "POST"
@@ -36,6 +36,9 @@ func (s *ReminderConfigService) Create(ctx context.Context, userID int64, req mo
 	}
 	if req.RetryDelaySeconds != nil {
 		cfg.RetryDelaySeconds = *req.RetryDelaySeconds
+	}
+	if req.Enabled != nil {
+		cfg.Enabled = *req.Enabled
 	}
 
 	return s.repo.Create(ctx, cfg)

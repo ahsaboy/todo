@@ -92,7 +92,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        body body models.CreateKeyRequest true "Key 信息"
-// @Success      200  {object} utils.SuccessResponse{data=models.APIKeyResponse}
+// @Success      200  {object} utils.SuccessResponse{data=models.APIKeyPlainResponse}
 // @Failure      400  {object} utils.ErrorResponse
 // @Failure      500  {object} utils.ErrorResponse
 // @Security     ApiKeyAuth
@@ -116,7 +116,10 @@ func (h *AuthHandler) GenerateAPIKey(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, gin.H{"api_key": apiKey})
+	utils.RespondSuccess(c, models.APIKeyPlainResponse{
+		APIKey: apiKey,
+		Key:    apiKey,
+	})
 }
 
 // RevokeAPIKey 撤销 API Key
@@ -177,7 +180,7 @@ func (h *AuthHandler) ListAPIKeys(c *gin.Context) {
 		return
 	}
 
-	var infos []models.APIKeyInfo
+	infos := make([]models.APIKeyInfo, 0, len(keys))
 	for _, k := range keys {
 		infos = append(infos, models.APIKeyInfo{
 			ID:         k.ID,

@@ -700,7 +700,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/todo_internal_models.APIKeyResponse"
+                                            "$ref": "#/definitions/todo_internal_models.APIKeyPlainResponse"
                                         }
                                     }
                                 }
@@ -1201,20 +1201,14 @@ const docTemplate = `{
                 }
             }
         },
-        "todo_internal_models.APIKeyResponse": {
+        "todo_internal_models.APIKeyPlainResponse": {
             "type": "object",
             "properties": {
-                "created_at": {
+                "api_key": {
                     "type": "string"
-                },
-                "id": {
-                    "type": "integer"
                 },
                 "key": {
-                    "description": "仅创建时返回明文",
-                    "type": "string"
-                },
-                "name": {
+                    "description": "兼容旧前端字段名",
                     "type": "string"
                 }
             }
@@ -1262,6 +1256,9 @@ const docTemplate = `{
                         "wecom",
                         "slack"
                     ]
+                },
+                "enabled": {
+                    "type": "boolean"
                 },
                 "max_retries": {
                     "type": "integer",

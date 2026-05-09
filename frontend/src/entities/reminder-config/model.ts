@@ -12,7 +12,7 @@ export interface ReminderConfigDto {
   updated_at: string
   user_id: number
   webhook_body_template: string
-  webhook_headers: Record<string, string>
+  webhook_headers: Record<string, string> | null
   webhook_method: string
   webhook_url: string
 }
@@ -35,6 +35,7 @@ export interface ReminderConfig {
 
 export interface CreateReminderConfigPayload {
   channel_type: ChannelType
+  enabled?: boolean
   max_retries?: number
   name: string
   retry_delay_seconds?: number

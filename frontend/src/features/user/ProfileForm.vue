@@ -1,18 +1,30 @@
 <template>
   <form class="profile-form" @submit.prevent="handleSubmit">
     <div class="form-group">
-      <label>用户名</label>
-      <input :value="user?.username" disabled />
+      <label for="profile-username">用户名</label>
+      <input id="profile-username" :value="user?.username" name="profile_username" disabled />
     </div>
 
     <div class="form-group">
-      <label>邮箱</label>
-      <input v-model="email" type="email" placeholder="your@email.com" />
+      <label for="profile-email">邮箱</label>
+      <input
+        id="profile-email"
+        v-model="email"
+        name="profile_email"
+        type="email"
+        placeholder="your@email.com"
+        autocomplete="email"
+      />
     </div>
 
     <div class="form-group">
-      <label>注册时间</label>
-      <input :value="formatDate(user?.createdAt)" disabled />
+      <label for="profile-created-at">注册时间</label>
+      <input
+        id="profile-created-at"
+        :value="formatDate(user?.createdAt)"
+        name="profile_created_at"
+        disabled
+      />
     </div>
 
     <div class="form-actions">

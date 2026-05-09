@@ -2,16 +2,33 @@ import { API_BASE_URL } from '@/shared/config/api'
 import { ApiError } from '@/shared/api/errors'
 import type { ApiResponse, PaginatedResponse } from '@/shared/api/types'
 
+let unauthorizedHandler: (() => void) | null = null
+let isHandlingUnauthorized = false
+
+export function setUnauthorizedHandler(handler: () => void): void {
+  unauthorizedHandler = handler
+}
+
 // From localStorage get API Key
 function getApiKey(): string | null {
   return localStorage.getItem('api_key')
 }
 
 // Handle 401 Unauthorized - clear auth and redirect to login
-function handleUnauthorized(): void {
+function handleUnauthorized(endpoint: string): void {
+  if (endpoint.startsWith('/auth/')) {
+    return
+  }
+
   localStorage.removeItem('api_key')
-  // Redirect to login page using hash mode
-  window.location.href = '/#/login'
+
+  if (!isHandlingUnauthorized) {
+    isHandlingUnauthorized = true
+    unauthorizedHandler?.()
+    setTimeout(() => {
+      isHandlingUnauthorized = false
+    }, 0)
+  }
 }
 
 // Base request method
@@ -39,9 +56,12 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
   // Handle 401 Unauthorized
   if (response.status === 401) {
-    handleUnauthorized()
+    const isSessionExpired = !endpoint.startsWith('/auth/')
+    handleUnauthorized(endpoint)
     throw new ApiError({
-      message: 'Session expired, please login again',
+      message: isSessionExpired
+        ? 'Session expired, please login again'
+        : data.error || 'Unauthorized',
       code: 'UNAUTHORIZED',
       status: 401,
     })

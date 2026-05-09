@@ -11,16 +11,12 @@ definitions:
       name:
         type: string
     type: object
-  todo_internal_models.APIKeyResponse:
+  todo_internal_models.APIKeyPlainResponse:
     properties:
-      created_at:
+      api_key:
         type: string
-      id:
-        type: integer
       key:
-        description: 仅创建时返回明文
-        type: string
-      name:
+        description: 兼容旧前端字段名
         type: string
     type: object
   todo_internal_models.ChangePasswordRequest:
@@ -51,6 +47,8 @@ definitions:
         - wecom
         - slack
         type: string
+      enabled:
+        type: boolean
       max_retries:
         maximum: 10
         minimum: 0
@@ -764,7 +762,7 @@ paths:
             - $ref: '#/definitions/todo_internal_utils.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/todo_internal_models.APIKeyResponse'
+                  $ref: '#/definitions/todo_internal_models.APIKeyPlainResponse'
               type: object
         "400":
           description: Bad Request

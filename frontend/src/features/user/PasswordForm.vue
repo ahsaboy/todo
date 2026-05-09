@@ -1,18 +1,40 @@
 <template>
   <form class="password-form" @submit.prevent="handleSubmit">
     <div class="form-group">
-      <label>当前密码 *</label>
-      <input v-model="form.old_password" type="password" required />
+      <label for="password-current">当前密码 *</label>
+      <input
+        id="password-current"
+        v-model="form.old_password"
+        name="current_password"
+        type="password"
+        required
+        autocomplete="current-password"
+      />
     </div>
 
     <div class="form-group">
-      <label>新密码 *</label>
-      <input v-model="form.new_password" type="password" required minlength="6" />
+      <label for="password-new">新密码 *</label>
+      <input
+        id="password-new"
+        v-model="form.new_password"
+        name="new_password"
+        type="password"
+        required
+        minlength="6"
+        autocomplete="new-password"
+      />
     </div>
 
     <div class="form-group">
-      <label>确认新密码 *</label>
-      <input v-model="confirmPassword" type="password" required />
+      <label for="password-confirm">确认新密码 *</label>
+      <input
+        id="password-confirm"
+        v-model="confirmPassword"
+        name="confirm_password"
+        type="password"
+        required
+        autocomplete="new-password"
+      />
       <span v-if="error" class="error-text">{{ error }}</span>
     </div>
 

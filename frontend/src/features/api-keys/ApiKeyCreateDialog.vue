@@ -12,7 +12,14 @@
             <div v-if="!newKey" class="create-form">
               <div class="form-group">
                 <label for="key-name">名称（可选）</label>
-                <input id="key-name" v-model="name" type="text" placeholder="例如：生产环境" />
+                <input
+                  id="key-name"
+                  v-model="name"
+                  name="api_key_name"
+                  type="text"
+                  placeholder="例如：生产环境"
+                  autocomplete="off"
+                />
               </div>
               <button class="btn-primary" type="button" :disabled="loading" @click="handleCreate">
                 {{ loading ? '创建中...' : '创建' }}
@@ -60,7 +67,11 @@ async function handleCreate() {
   loading.value = true
   try {
     const response = await createApiKey({ name: name.value || undefined })
-    newKey.value = response.data.key
+    const generatedKey = response.data.api_key ?? response.data.key
+    if (!generatedKey) {
+      throw new Error('接口未返回 API Key')
+    }
+    newKey.value = generatedKey
     emit('created')
   } catch (e) {
     window.alert('创建失败：' + (e instanceof Error ? e.message : '未知错误'))

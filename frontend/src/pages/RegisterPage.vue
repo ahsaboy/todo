@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { register } from '@/entities/auth/api'
 import { useAuthStore } from '@/app/stores/auth.store'
 import type { RegisterPayload } from '@/entities/auth/model'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const payload = ref<RegisterPayload>({
@@ -23,7 +24,12 @@ async function handleSubmit() {
   try {
     const response = await register(payload.value)
     authStore.setAuth(response.data.api_key, response.data.user)
-    router.push({ name: 'tasks' })
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    if (redirect) {
+      await router.replace(redirect)
+    } else {
+      router.push({ name: 'tasks' })
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Registration failed'
   } finally {
@@ -42,6 +48,7 @@ async function handleSubmit() {
           <input
             id="username"
             v-model="payload.username"
+            name="username"
             type="text"
             required
             minlength="3"
@@ -51,13 +58,20 @@ async function handleSubmit() {
         </div>
         <div class="form-group">
           <label for="email">Email (optional)</label>
-          <input id="email" v-model="payload.email" type="email" autocomplete="email" />
+          <input
+            id="email"
+            v-model="payload.email"
+            name="email"
+            type="email"
+            autocomplete="email"
+          />
         </div>
         <div class="form-group">
           <label for="password">Password</label>
           <input
             id="password"
             v-model="payload.password"
+            name="password"
             type="password"
             required
             minlength="6"

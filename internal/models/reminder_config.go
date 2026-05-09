@@ -3,19 +3,19 @@ package models
 import "encoding/json"
 
 type UserReminderConfig struct {
-	ID                   int64             `json:"id"`
-	UserID               int64             `json:"user_id"`
-	Name                 string            `json:"name"`
-	ChannelType          string            `json:"channel_type"`
-	WebhookURL           string            `json:"webhook_url"`
-	WebhookMethod        string            `json:"webhook_method"`
-	WebhookHeaders       map[string]string `json:"webhook_headers"`
-	WebhookBodyTemplate  string            `json:"webhook_body_template"`
-	MaxRetries           int               `json:"max_retries"`
-	RetryDelaySeconds    int               `json:"retry_delay_seconds"`
-	Enabled              bool              `json:"enabled"`
-	CreatedAt            string            `json:"created_at"`
-	UpdatedAt            string            `json:"updated_at"`
+	ID                  int64             `json:"id"`
+	UserID              int64             `json:"user_id"`
+	Name                string            `json:"name"`
+	ChannelType         string            `json:"channel_type"`
+	WebhookURL          string            `json:"webhook_url"`
+	WebhookMethod       string            `json:"webhook_method"`
+	WebhookHeaders      map[string]string `json:"webhook_headers"`
+	WebhookBodyTemplate string            `json:"webhook_body_template"`
+	MaxRetries          int               `json:"max_retries"`
+	RetryDelaySeconds   int               `json:"retry_delay_seconds"`
+	Enabled             bool              `json:"enabled"`
+	CreatedAt           string            `json:"created_at"`
+	UpdatedAt           string            `json:"updated_at"`
 }
 
 type CreateReminderConfigRequest struct {
@@ -27,6 +27,7 @@ type CreateReminderConfigRequest struct {
 	WebhookBodyTemplate string            `json:"webhook_body_template"`
 	MaxRetries          *int              `json:"max_retries" binding:"omitempty,min=0,max=10"`
 	RetryDelaySeconds   *int              `json:"retry_delay_seconds" binding:"omitempty,min=1,max=300"`
+	Enabled             *bool             `json:"enabled"`
 }
 
 type UpdateReminderConfigRequest struct {

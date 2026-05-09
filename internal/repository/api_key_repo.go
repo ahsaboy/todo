@@ -37,7 +37,7 @@ func (r *APIKeyRepo) GetByUserID(ctx context.Context, userID int64) ([]models.AP
 	}
 	defer rows.Close()
 
-	var keys []models.APIKey
+	keys := make([]models.APIKey, 0)
 	for rows.Next() {
 		var k models.APIKey
 		if err := rows.Scan(&k.ID, &k.UserID, &k.KeyHash, &k.Name, &k.LastUsedAt, &k.CreatedAt); err != nil {

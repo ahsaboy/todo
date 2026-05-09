@@ -15,11 +15,16 @@
           :class="{ completed: task.completed }"
         >
           <input
+            :id="`task-group-completed-${task.id}`"
+            :name="`task_group_completed_${task.id}`"
             type="checkbox"
             :checked="task.completed"
             class="task-checkbox"
             @change="$emit('toggle', task.id)"
           />
+          <label class="sr-only" :for="`task-group-completed-${task.id}`">
+            {{ task.completed ? '标记为未完成' : '标记为完成' }}：{{ task.title }}
+          </label>
           <div class="task-content">
             <div class="task-title">{{ task.title }}</div>
             <div class="task-meta">

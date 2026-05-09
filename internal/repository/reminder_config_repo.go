@@ -61,7 +61,7 @@ func (r *ReminderConfigRepo) GetByUserID(ctx context.Context, userID int64) ([]m
 	}
 	defer rows.Close()
 
-	var configs []models.UserReminderConfig
+	configs := make([]models.UserReminderConfig, 0)
 	for rows.Next() {
 		var c models.UserReminderConfig
 		var headersRaw string

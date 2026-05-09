@@ -16,10 +16,19 @@
       <tbody>
         <tr v-for="task in tasks" :key="task.id" :class="{ completed: task.completed }">
           <td class="col-completed">
-            <input type="checkbox" :checked="task.completed" @change="$emit('toggle', task.id)" />
+            <input
+              :id="`task-table-completed-${task.id}`"
+              :name="`task_table_completed_${task.id}`"
+              type="checkbox"
+              :checked="task.completed"
+              @change="$emit('toggle', task.id)"
+            />
+            <label class="sr-only" :for="`task-table-completed-${task.id}`">
+              {{ task.completed ? '标记为未完成' : '标记为完成' }}：{{ task.title }}
+            </label>
           </td>
           <td class="col-title">
-            <button class="task-title-btn" @click="$emit('open', task)">
+            <button class="task-title-btn" type="button" @click="$emit('open', task)">
               {{ task.title }}
             </button>
           </td>
@@ -39,8 +48,10 @@
             {{ formatDate(task.createdAt) }}
           </td>
           <td class="col-actions">
-            <button class="btn-icon" @click="$emit('edit', task)">编辑</button>
-            <button class="btn-icon btn-danger" @click="$emit('delete', task.id)">删除</button>
+            <button class="btn-icon" type="button" @click="$emit('edit', task)">编辑</button>
+            <button class="btn-icon btn-danger" type="button" @click="$emit('delete', task.id)">
+              删除
+            </button>
           </td>
         </tr>
       </tbody>

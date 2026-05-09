@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { login } from '@/entities/auth/api'
 import { useAuthStore } from '@/app/stores/auth.store'
 import type { LoginPayload } from '@/entities/auth/model'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const payload = ref<LoginPayload>({
@@ -22,7 +23,12 @@ async function handleSubmit() {
   try {
     const response = await login(payload.value)
     authStore.setAuth(response.data.api_key, response.data.user)
-    router.push({ name: 'tasks' })
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    if (redirect) {
+      await router.replace(redirect)
+    } else {
+      router.push({ name: 'tasks' })
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Login failed'
   } finally {
@@ -41,6 +47,7 @@ async function handleSubmit() {
           <input
             id="account"
             v-model="payload.account"
+            name="account"
             type="text"
             required
             autocomplete="username"
@@ -51,6 +58,7 @@ async function handleSubmit() {
           <input
             id="password"
             v-model="payload.password"
+            name="password"
             type="password"
             required
             autocomplete="current-password"

@@ -1,8 +1,13 @@
 <template>
   <div class="task-filters">
     <div class="filter-group">
-      <label>状态</label>
-      <select v-model="localFilters.status" @change="applyFilters">
+      <label for="task-filter-status">状态</label>
+      <select
+        id="task-filter-status"
+        v-model="localFilters.status"
+        name="task_filter_status"
+        @change="applyFilters"
+      >
         <option value="all">全部</option>
         <option value="pending">待处理</option>
         <option value="completed">已完成</option>
@@ -10,8 +15,13 @@
     </div>
 
     <div class="filter-group">
-      <label>优先级</label>
-      <select v-model="localFilters.priority" @change="applyFilters">
+      <label for="task-filter-priority">优先级</label>
+      <select
+        id="task-filter-priority"
+        v-model="localFilters.priority"
+        name="task_filter_priority"
+        @change="applyFilters"
+      >
         <option :value="undefined">全部</option>
         <option :value="3">高</option>
         <option :value="2">中</option>
@@ -20,8 +30,11 @@
     </div>
 
     <div class="filter-group search">
+      <label class="sr-only" for="task-filter-search">搜索任务</label>
       <input
+        id="task-filter-search"
         v-model="localFilters.search"
+        name="task_filter_search"
         type="text"
         placeholder="搜索任务..."
         @input="applyFilters"

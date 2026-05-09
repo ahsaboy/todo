@@ -12,7 +12,7 @@ export function toReminderConfig(dto: ReminderConfigDto): ReminderConfig {
     updatedAt: dto.updated_at,
     userId: dto.user_id,
     webhookBodyTemplate: dto.webhook_body_template,
-    webhookHeaders: dto.webhook_headers,
+    webhookHeaders: dto.webhook_headers ?? {},
     webhookMethod: dto.webhook_method,
     webhookUrl: dto.webhook_url,
   }

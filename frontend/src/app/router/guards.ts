@@ -6,7 +6,7 @@ export function setupRouterGuards(router: Router) {
     const authStore = useAuthStore()
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-      return { name: 'login' }
+      return { name: 'login', query: { redirect: to.fullPath } }
     }
 
     if (to.meta.requiresGuest && authStore.isAuthenticated) {

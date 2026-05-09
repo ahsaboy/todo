@@ -11,9 +11,9 @@ export function toApiKeyInfo(dto: ApiKeyInfoDto): ApiKeyInfo {
 
 export function toApiKeyResponse(dto: ApiKeyResponseDto): ApiKeyResponse {
   return {
-    createdAt: dto.created_at,
-    id: dto.id,
-    key: dto.key,
-    name: dto.name,
+    createdAt: dto.created_at ?? '',
+    id: dto.id ?? 0,
+    key: dto.key ?? dto.api_key ?? '',
+    name: dto.name ?? '',
   }
 }

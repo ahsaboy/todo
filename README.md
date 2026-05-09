@@ -45,6 +45,8 @@ make build-windows   # 交叉编译 Windows (amd64)
 make build-darwin    # 交叉编译 macOS (arm64)
 ```
 
+`make build` 会先构建 `frontend/dist`，复制到 `web/dist`，再由 Go `embed` 打包进最终二进制。前端构建产物里可能包含 `_` 开头的文件，因此嵌入规则使用 `//go:embed all:dist`。
+
 > 项目使用纯 Go SQLite 驱动（modernc.org/sqlite），无需 CGO，所有平台均可直接交叉编译。
 
 ### UPX 压缩
@@ -98,34 +100,34 @@ curl -H "api-key: <api_key>" http://localhost:8080/api/v1/tasks
 
 #### 公开端点（无需认证）
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/health` | 健康检查 |
-| POST | `/api/v1/auth/register` | 用户注册（返回 API Key） |
-| POST | `/api/v1/auth/login` | 用户登录（返回 API Key） |
-| GET | `/api/v1/templates` | 查看预置提醒模板列表（仅供创建用户自己的渠道配置时参考） |
+| 方法 | 路径                    | 说明                                                     |
+| ---- | ----------------------- | -------------------------------------------------------- |
+| GET  | `/api/v1/health`        | 健康检查                                                 |
+| POST | `/api/v1/auth/register` | 用户注册（返回 API Key）                                 |
+| POST | `/api/v1/auth/login`    | 用户登录（返回 API Key）                                 |
+| GET  | `/api/v1/templates`     | 查看预置提醒模板列表（仅供创建用户自己的渠道配置时参考） |
 
 #### 需认证端点
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/v1/tasks` | 创建任务（设置 remind_at 时要求至少一个已启用提醒渠道） |
-| GET | `/api/v1/tasks` | 获取任务列表 |
-| GET | `/api/v1/tasks/:id` | 获取单个任务 |
-| PUT | `/api/v1/tasks/:id` | 更新任务 |
-| DELETE | `/api/v1/tasks/:id` | 删除任务 |
-| PATCH | `/api/v1/tasks/:id/complete` | 切换完成状态 |
-| GET | `/api/v1/user/profile` | 获取用户信息 |
-| PUT | `/api/v1/user/profile` | 更新用户信息 |
-| PUT | `/api/v1/user/password` | 修改密码 |
-| GET | `/api/v1/user/keys` | 列出所有 API Key |
-| POST | `/api/v1/user/keys` | 生成新 API Key |
-| DELETE | `/api/v1/user/keys/:id` | 撤销 API Key |
-| GET | `/api/v1/user/reminder-configs` | 列出提醒配置 |
-| POST | `/api/v1/user/reminder-configs` | 创建提醒配置 |
-| GET | `/api/v1/user/reminder-configs/:id` | 获取单个提醒配置 |
-| PUT | `/api/v1/user/reminder-configs/:id` | 更新提醒配置 |
-| DELETE | `/api/v1/user/reminder-configs/:id` | 删除提醒配置 |
+| 方法   | 路径                                | 说明                                                    |
+| ------ | ----------------------------------- | ------------------------------------------------------- |
+| POST   | `/api/v1/tasks`                     | 创建任务（设置 remind_at 时要求至少一个已启用提醒渠道） |
+| GET    | `/api/v1/tasks`                     | 获取任务列表                                            |
+| GET    | `/api/v1/tasks/:id`                 | 获取单个任务                                            |
+| PUT    | `/api/v1/tasks/:id`                 | 更新任务                                                |
+| DELETE | `/api/v1/tasks/:id`                 | 删除任务                                                |
+| PATCH  | `/api/v1/tasks/:id/complete`        | 切换完成状态                                            |
+| GET    | `/api/v1/user/profile`              | 获取用户信息                                            |
+| PUT    | `/api/v1/user/profile`              | 更新用户信息                                            |
+| PUT    | `/api/v1/user/password`             | 修改密码                                                |
+| GET    | `/api/v1/user/keys`                 | 列出所有 API Key                                        |
+| POST   | `/api/v1/user/keys`                 | 生成新 API Key（明文仅在本次响应显示）                  |
+| DELETE | `/api/v1/user/keys/:id`             | 撤销 API Key                                            |
+| GET    | `/api/v1/user/reminder-configs`     | 列出提醒配置                                            |
+| POST   | `/api/v1/user/reminder-configs`     | 创建提醒配置                                            |
+| GET    | `/api/v1/user/reminder-configs/:id` | 获取单个提醒配置                                        |
+| PUT    | `/api/v1/user/reminder-configs/:id` | 更新提醒配置                                            |
+| DELETE | `/api/v1/user/reminder-configs/:id` | 删除提醒配置                                            |
 
 ### 示例
 
@@ -164,7 +166,19 @@ curl -X POST http://localhost:8080/api/v1/user/reminder-configs \
   }'
 ```
 
+也可以在前端的“提醒配置”页面新增通知渠道，保存后默认启用；编辑时可切换启用状态。列表接口在没有配置时返回空数组 `[]`。
+
 如果当前用户没有任何已启用渠道，`POST /api/v1/tasks` 会返回 `400 INVALID_INPUT`。
+
+**生成 API Key：**
+
+```bash
+curl -X POST http://localhost:8080/api/v1/user/keys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <api_key>" \
+  -d '{"name": "automation"}'
+# 返回 data.api_key 和兼容字段 data.key，明文只显示一次
+```
 
 **再创建任务：**
 
@@ -183,17 +197,17 @@ curl -X POST http://localhost:8080/api/v1/tasks \
 
 ### 列表查询参数
 
-| 参数 | 说明 | 示例 |
-|------|------|------|
-| `page` | 页码（默认 1） | `?page=2` |
-| `limit` | 每页数量（默认 20，最大 100） | `?limit=50` |
-| `sort` | 排序字段 | `?sort=due_at` |
-| `order` | 排序方向 | `?order=asc` |
-| `status` | 筛选状态 | `?status=pending` |
-| `priority` | 筛选优先级 | `?priority=1` |
-| `due_before` | 截止时间上限 | `?due_before=2026-05-31` |
-| `due_after` | 截止时间下限 | `?due_after=2026-05-01` |
-| `search` | 关键字搜索 | `?search=报告` |
+| 参数         | 说明                          | 示例                     |
+| ------------ | ----------------------------- | ------------------------ |
+| `page`       | 页码（默认 1）                | `?page=2`                |
+| `limit`      | 每页数量（默认 20，最大 100） | `?limit=50`              |
+| `sort`       | 排序字段                      | `?sort=due_at`           |
+| `order`      | 排序方向                      | `?order=asc`             |
+| `status`     | 筛选状态                      | `?status=pending`        |
+| `priority`   | 筛选优先级                    | `?priority=1`            |
+| `due_before` | 截止时间上限                  | `?due_before=2026-05-31` |
+| `due_after`  | 截止时间下限                  | `?due_after=2026-05-01`  |
+| `search`     | 关键字搜索                    | `?search=报告`           |
 
 ## 配置文件
 
@@ -211,7 +225,7 @@ database:
 reminder:
   enabled: true
   scan_interval_seconds: 30
-  webhook_body_template: |        # 用户渠道未自定义模板时使用的默认消息模板
+  webhook_body_template: | # 用户渠道未自定义模板时使用的默认消息模板
     {"msg_type":"text","content":{"text":"[TODO] {{.Title}}"}}
   webhook_timeout_seconds: 10
   max_retries: 3
@@ -242,17 +256,17 @@ logging:
 
 ### Webhook 模板变量
 
-| 变量 | 说明 | 示例 |
-|------|------|------|
-| `{{.TaskID}}` | 任务 ID | `42` |
-| `{{.Title}}` | 任务标题 | `"完成报告"` |
-| `{{.Description}}` | 任务描述 | `"Q2 报告"` |
-| `{{.Priority}}` | 优先级数字 | `1` |
-| `{{.PriorityText}}` | 优先级文字 | `"高"` |
-| `{{.DueAt}}` | 截止时间 | `"2026-05-20 14:00"` |
-| `{{.RemindAt}}` | 提醒时间 | `"2026-05-19 09:00"` |
-| `{{.RepeatType}}` | 重复类型 | `"weekly"` |
-| `{{.CreatedAt}}` | 创建时间 | `"2026-05-09 10:00"` |
+| 变量                | 说明       | 示例                 |
+| ------------------- | ---------- | -------------------- |
+| `{{.TaskID}}`       | 任务 ID    | `42`                 |
+| `{{.Title}}`        | 任务标题   | `"完成报告"`         |
+| `{{.Description}}`  | 任务描述   | `"Q2 报告"`          |
+| `{{.Priority}}`     | 优先级数字 | `1`                  |
+| `{{.PriorityText}}` | 优先级文字 | `"高"`               |
+| `{{.DueAt}}`        | 截止时间   | `"2026-05-20 14:00"` |
+| `{{.RemindAt}}`     | 提醒时间   | `"2026-05-19 09:00"` |
+| `{{.RepeatType}}`   | 重复类型   | `"weekly"`           |
+| `{{.CreatedAt}}`    | 创建时间   | `"2026-05-09 10:00"` |
 
 ## 业务约束
 
@@ -294,6 +308,10 @@ TODO/
 │       ├── response.go             # 统一响应格式
 │       └── validator.go            # 参数校验
 ├── docs/                           # Swagger 文档（自动生成）
+├── frontend/                       # Vue 前端源码
+├── web/                            # Go embed 前端构建产物入口
+│   ├── embed.go                    # 使用 //go:embed all:dist
+│   └── dist/                       # make build 生成并复制的静态文件
 ├── config.yaml                     # 配置文件
 ├── Dockerfile                      # 多阶段构建
 ├── docker-compose.yml              # 容器编排

@@ -1,13 +1,18 @@
 <template>
   <div class="quick-create">
+    <label class="sr-only" for="quick-task-title">快速添加任务</label>
     <input
+      id="quick-task-title"
       v-model="title"
+      name="quick_task_title"
       type="text"
       placeholder="快速添加任务..."
       class="quick-input"
       @keyup.enter="handleCreate"
     />
-    <button class="quick-btn" :disabled="!title.trim()" @click="handleCreate">添加</button>
+    <button class="quick-btn" type="button" :disabled="!title.trim()" @click="handleCreate">
+      添加
+    </button>
   </div>
 </template>
 

@@ -1,13 +1,19 @@
 <template>
   <div class="task-sort">
-    <select v-model="localSort.field" @change="applySort">
+    <label class="sr-only" for="task-sort-field">排序字段</label>
+    <select
+      id="task-sort-field"
+      v-model="localSort.field"
+      name="task_sort_field"
+      @change="applySort"
+    >
       <option value="created_at">创建时间</option>
       <option value="due_at">截止时间</option>
       <option value="priority">优先级</option>
       <option value="title">标题</option>
     </select>
 
-    <button class="btn-order" @click="toggleOrder">
+    <button class="btn-order" type="button" @click="toggleOrder">
       {{ localSort.order === 'asc' ? '↑' : '↓' }}
     </button>
   </div>

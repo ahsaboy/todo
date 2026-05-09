@@ -1,9 +1,11 @@
 <template>
   <form class="task-form" @submit.prevent="handleSubmit">
     <div class="form-group">
-      <label>标题 *</label>
+      <label for="task-title">标题 *</label>
       <input
+        id="task-title"
         v-model="form.title"
+        name="task_title"
         type="text"
         placeholder="任务标题"
         :class="{ error: errors.title }"
@@ -12,14 +14,20 @@
     </div>
 
     <div class="form-group">
-      <label>描述</label>
-      <textarea v-model="form.description" placeholder="任务描述" rows="3"></textarea>
+      <label for="task-description">描述</label>
+      <textarea
+        id="task-description"
+        v-model="form.description"
+        name="task_description"
+        placeholder="任务描述"
+        rows="3"
+      ></textarea>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label>优先级</label>
-        <select v-model="form.priority">
+        <label for="task-priority">优先级</label>
+        <select id="task-priority" v-model="form.priority" name="task_priority">
           <option :value="undefined">未设置</option>
           <option :value="1">低</option>
           <option :value="2">中</option>
@@ -28,20 +36,25 @@
       </div>
 
       <div class="form-group">
-        <label>截止时间</label>
-        <input v-model="form.due_at" type="datetime-local" />
+        <label for="task-due-at">截止时间</label>
+        <input id="task-due-at" v-model="form.due_at" name="task_due_at" type="datetime-local" />
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label>提醒时间</label>
-        <input v-model="form.remind_at" type="datetime-local" />
+        <label for="task-remind-at">提醒时间</label>
+        <input
+          id="task-remind-at"
+          v-model="form.remind_at"
+          name="task_remind_at"
+          type="datetime-local"
+        />
       </div>
 
       <div class="form-group">
-        <label>重复类型</label>
-        <select v-model="form.repeat_type">
+        <label for="task-repeat-type">重复类型</label>
+        <select id="task-repeat-type" v-model="form.repeat_type" name="task_repeat_type">
           <option value="none">无</option>
           <option value="daily">每天</option>
           <option value="weekly">每周</option>
@@ -53,13 +66,25 @@
 
     <div v-if="form.repeat_type !== 'none'" class="form-row">
       <div class="form-group">
-        <label>重复间隔</label>
-        <input v-model.number="form.repeat_interval" type="number" min="1" max="365" />
+        <label for="task-repeat-interval">重复间隔</label>
+        <input
+          id="task-repeat-interval"
+          v-model.number="form.repeat_interval"
+          name="task_repeat_interval"
+          type="number"
+          min="1"
+          max="365"
+        />
       </div>
 
       <div class="form-group">
-        <label>重复结束日期</label>
-        <input v-model="form.repeat_end_date" type="date" />
+        <label for="task-repeat-end-date">重复结束日期</label>
+        <input
+          id="task-repeat-end-date"
+          v-model="form.repeat_end_date"
+          name="task_repeat_end_date"
+          type="date"
+        />
       </div>
     </div>
 

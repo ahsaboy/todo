@@ -215,6 +215,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("无法加载 assets 资源", zap.Error(err))
 	}
+	indexHTML, err := fs.ReadFile(distFS, "index.html")
+	if err != nil {
+		logger.Fatal("无法加载 index.html", zap.Error(err))
+	}
 
 	// 静态文件（优先级高于 NoRoute）
 	r.StaticFS("/assets", http.FS(assetsFS))
@@ -235,8 +239,9 @@ func main() {
 			return
 		}
 
-		// 其他路由返回 index.html
-		c.FileFromFS("index.html", http.FS(distFS))
+		// 其他路由返回 index.html。不要用 FileFromFS("index.html")，它底层的
+		// http.FileServer 会把 /index.html 规范化重定向到 ./，导致根路径循环跳转。
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
 	})
 
 	// 启动 HTTP 服务器

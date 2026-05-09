@@ -1,14 +1,26 @@
 <template>
   <form class="config-form" @submit.prevent="handleSubmit">
     <div class="form-group">
-      <label>名称 *</label>
-      <input v-model="form.name" type="text" placeholder="配置名称" required />
+      <label for="reminder-config-name">名称 *</label>
+      <input
+        id="reminder-config-name"
+        v-model="form.name"
+        name="reminder_config_name"
+        type="text"
+        placeholder="配置名称"
+        required
+      />
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label>渠道类型 *</label>
-        <select v-model="form.channel_type" required>
+        <label for="reminder-config-channel-type">渠道类型 *</label>
+        <select
+          id="reminder-config-channel-type"
+          v-model="form.channel_type"
+          name="reminder_config_channel_type"
+          required
+        >
           <option value="webhook">Webhook</option>
           <option value="feishu">飞书</option>
           <option value="dingtalk">钉钉</option>
@@ -18,8 +30,12 @@
       </div>
 
       <div class="form-group">
-        <label>请求方法</label>
-        <select v-model="form.webhook_method">
+        <label for="reminder-config-webhook-method">请求方法</label>
+        <select
+          id="reminder-config-webhook-method"
+          v-model="form.webhook_method"
+          name="reminder_config_webhook_method"
+        >
           <option value="POST">POST</option>
           <option value="GET">GET</option>
           <option value="PUT">PUT</option>
@@ -28,14 +44,23 @@
     </div>
 
     <div class="form-group">
-      <label>Webhook URL *</label>
-      <input v-model="form.webhook_url" type="url" placeholder="https://..." required />
+      <label for="reminder-config-webhook-url">Webhook URL *</label>
+      <input
+        id="reminder-config-webhook-url"
+        v-model="form.webhook_url"
+        name="reminder_config_webhook_url"
+        type="url"
+        placeholder="https://..."
+        required
+      />
     </div>
 
     <div class="form-group">
-      <label>Webhook Headers (JSON)</label>
+      <label for="reminder-config-webhook-headers">Webhook Headers (JSON)</label>
       <textarea
+        id="reminder-config-webhook-headers"
         v-model="webhookHeadersStr"
+        name="reminder_config_webhook_headers"
         placeholder='{"Authorization": "Bearer xxx"}'
         rows="3"
         class="code-input"
@@ -43,10 +68,12 @@
     </div>
 
     <div class="form-group">
-      <label>Body 模板</label>
+      <label for="reminder-config-body-template">Body 模板</label>
       <textarea
+        id="reminder-config-body-template"
         v-model="form.webhook_body_template"
-        placeholder='{"text": "{{task.title}}"}'
+        name="reminder_config_body_template"
+        placeholder='{"text": "{{.Title}}"}'
         rows="4"
         class="code-input"
       ></textarea>
@@ -54,15 +81,39 @@
 
     <div class="form-row">
       <div class="form-group">
-        <label>最大重试次数</label>
-        <input v-model.number="form.max_retries" type="number" min="0" max="10" />
+        <label for="reminder-config-max-retries">最大重试次数</label>
+        <input
+          id="reminder-config-max-retries"
+          v-model.number="form.max_retries"
+          name="reminder_config_max_retries"
+          type="number"
+          min="0"
+          max="10"
+        />
       </div>
 
       <div class="form-group">
-        <label>重试延迟（秒）</label>
-        <input v-model.number="form.retry_delay_seconds" type="number" min="1" max="300" />
+        <label for="reminder-config-retry-delay">重试延迟（秒）</label>
+        <input
+          id="reminder-config-retry-delay"
+          v-model.number="form.retry_delay_seconds"
+          name="reminder_config_retry_delay_seconds"
+          type="number"
+          min="1"
+          max="300"
+        />
       </div>
     </div>
+
+    <label class="checkbox-label" for="reminder-config-enabled">
+      <input
+        id="reminder-config-enabled"
+        v-model="form.enabled"
+        name="reminder_config_enabled"
+        type="checkbox"
+      />
+      <span>启用此通知渠道</span>
+    </label>
 
     <div class="form-actions">
       <button type="button" class="btn-secondary" @click="$emit('cancel')">取消</button>
@@ -94,6 +145,7 @@ const emit = defineEmits<{
 const form = reactive<{
   name: string
   channel_type: ChannelType
+  enabled: boolean
   webhook_url: string
   webhook_method: WebhookMethod
   webhook_headers: Record<string, string>
@@ -103,6 +155,7 @@ const form = reactive<{
 }>({
   name: props.initialData?.name || '',
   channel_type: props.initialData?.channel_type || 'webhook',
+  enabled: props.initialData?.enabled ?? true,
   webhook_url: props.initialData?.webhook_url || '',
   webhook_method: props.initialData?.webhook_method || 'POST',
   webhook_headers: props.initialData?.webhook_headers || {},
@@ -159,6 +212,20 @@ async function handleSubmit() {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 14px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.checkbox-label input {
+  width: 16px;
+  height: 16px;
 }
 
 .code-input {

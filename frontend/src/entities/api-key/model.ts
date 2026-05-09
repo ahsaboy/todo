@@ -1,22 +1,23 @@
 export interface ApiKeyInfoDto {
   created_at: string
   id: number
-  last_used_at: string
+  last_used_at: string | null
   name: string
 }
 
 export interface ApiKeyInfo {
   createdAt: string
   id: number
-  lastUsedAt: string
+  lastUsedAt: string | null
   name: string
 }
 
 export interface ApiKeyResponseDto {
-  created_at: string
-  id: number
-  key: string
-  name: string
+  api_key?: string
+  created_at?: string
+  id?: number
+  key?: string
+  name?: string
 }
 
 export interface ApiKeyResponse {

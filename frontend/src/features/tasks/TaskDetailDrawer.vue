@@ -5,11 +5,13 @@
         <div class="drawer-content">
           <div class="drawer-header">
             <h3>{{ title || (task ? '编辑任务' : '创建任务') }}</h3>
-            <button class="btn-close" @click="handleClose">×</button>
+            <button class="btn-close" type="button" @click="handleClose">×</button>
           </div>
 
           <div class="drawer-body">
+            <slot v-if="$slots.default"></slot>
             <TaskForm
+              v-else
               :initial-data="task || {}"
               :mode="task ? 'edit' : 'create'"
               @submit="handleSubmit"

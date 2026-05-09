@@ -4,8 +4,12 @@
       <h3>筛选</h3>
 
       <div class="filter-group">
-        <label>状态</label>
-        <select v-model="localFilters.status">
+        <label for="mobile-task-filter-status">状态</label>
+        <select
+          id="mobile-task-filter-status"
+          v-model="localFilters.status"
+          name="mobile_task_filter_status"
+        >
           <option value="all">全部</option>
           <option value="pending">待处理</option>
           <option value="completed">已完成</option>
@@ -13,8 +17,12 @@
       </div>
 
       <div class="filter-group">
-        <label>优先级</label>
-        <select v-model="localFilters.priority">
+        <label for="mobile-task-filter-priority">优先级</label>
+        <select
+          id="mobile-task-filter-priority"
+          v-model="localFilters.priority"
+          name="mobile_task_filter_priority"
+        >
           <option :value="undefined">全部</option>
           <option :value="3">高</option>
           <option :value="2">中</option>
@@ -23,8 +31,14 @@
       </div>
 
       <div class="filter-group">
-        <label>搜索</label>
-        <input v-model="localFilters.search" type="text" placeholder="搜索任务..." />
+        <label for="mobile-task-filter-search">搜索</label>
+        <input
+          id="mobile-task-filter-search"
+          v-model="localFilters.search"
+          name="mobile_task_filter_search"
+          type="text"
+          placeholder="搜索任务..."
+        />
       </div>
 
       <div class="filter-actions">

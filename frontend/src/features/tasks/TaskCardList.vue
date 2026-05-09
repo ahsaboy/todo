@@ -7,11 +7,16 @@
       :class="{ completed: task.completed }"
     >
       <input
+        :id="`task-card-completed-${task.id}`"
+        :name="`task_card_completed_${task.id}`"
         type="checkbox"
         :checked="task.completed"
         class="task-checkbox"
         @change="$emit('toggle', task.id)"
       />
+      <label class="sr-only" :for="`task-card-completed-${task.id}`">
+        {{ task.completed ? '标记为未完成' : '标记为完成' }}：{{ task.title }}
+      </label>
       <div class="task-content" @click="$emit('open', task)">
         <div class="task-title">{{ task.title }}</div>
         <div v-if="task.description" class="task-desc">
@@ -24,7 +29,7 @@
           </span>
         </div>
       </div>
-      <button class="btn-more" @click="$emit('more', task)">···</button>
+      <button class="btn-more" type="button" @click="$emit('more', task)">···</button>
     </div>
   </div>
 </template>

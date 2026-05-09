@@ -52,7 +52,8 @@ export function useTasks() {
         order: sort.order,
       })
 
-      tasks.value = response.data.map(toTask)
+      const data = Array.isArray(response.data) ? response.data : []
+      tasks.value = data.map(toTask)
       meta.value = response.meta
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch tasks'

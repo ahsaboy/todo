@@ -48,7 +48,8 @@ async function fetchKeys() {
   error.value = null
   try {
     const response = await getApiKeys()
-    keys.value = response.data.map(toApiKeyInfo)
+    const data = Array.isArray(response.data) ? response.data : []
+    keys.value = data.map(toApiKeyInfo)
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
   } finally {

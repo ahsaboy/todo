@@ -66,7 +66,8 @@ async function fetchConfigs() {
   error.value = null
   try {
     const response = await getReminderConfigs()
-    configs.value = response.data.map(toReminderConfig)
+    const data = Array.isArray(response.data) ? response.data : []
+    configs.value = data.map(toReminderConfig)
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
   } finally {
@@ -94,6 +95,7 @@ function toPayload(config: ReminderConfig): Partial<CreateReminderConfigPayload>
     webhook_body_template: config.webhookBodyTemplate,
     max_retries: config.maxRetries,
     retry_delay_seconds: config.retryDelaySeconds,
+    enabled: config.enabled,
   }
 }
 
