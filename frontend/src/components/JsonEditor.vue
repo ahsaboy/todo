@@ -1,9 +1,12 @@
 <template>
-  <div class="json-editor" :class="{ 'is-disabled': disabled }">
+  <div
+    class="json-editor"
+    :class="{ 'is-disabled': disabled, 'is-focused': isFocused, 'is-invalid': hasInvalidJson }"
+  >
     <div class="json-editor-toolbar">
       <button type="button" class="btn-format" :disabled="disabled" @click="format">格式化</button>
     </div>
-    <div class="json-editor-container" :style="{ '--json-editor-rows': rows }">
+    <div class="json-editor-container">
       <div class="json-highlight" aria-hidden="true">
         <pre ref="highlightContentRef" class="json-highlight-content" v-html="highlighted"></pre>
       </div>
@@ -19,8 +22,8 @@
         spellcheck="false"
         @input="onInput"
         @scroll="onScroll"
-        @focus="$emit('focus', $event)"
-        @blur="$emit('blur', $event)"
+        @focus="handleFocus"
+        @blur="handleBlur"
       ></textarea>
     </div>
   </div>
@@ -55,6 +58,8 @@ const textareaRef = ref<HTMLTextAreaElement>()
 const highlightContentRef = ref<HTMLElement>()
 const highlighted = ref('')
 const internalValue = ref(props.modelValue)
+const isFocused = ref(false)
+const hasInvalidJson = ref(false)
 let isTyping = false
 
 onMounted(() => {
@@ -62,6 +67,7 @@ onMounted(() => {
     internalValue.value = props.modelValue
   }
   highlight()
+  nextTick(syncScroll)
 })
 
 watch(
@@ -114,18 +120,32 @@ function onScroll() {
 }
 
 function highlight() {
-  highlighted.value = highlightJson(internalValue.value)
-}
+  const raw = internalValue.value
 
-function highlightJson(raw: string): string {
-  if (!raw) return ''
-  try {
-    JSON.parse(raw)
-  } catch {
-    return wrapToken('json-invalid', raw)
+  if (!raw) {
+    hasInvalidJson.value = false
+    highlighted.value = ''
+    return
   }
 
-  return tokenizeJson(raw)
+  try {
+    JSON.parse(raw)
+    hasInvalidJson.value = false
+    highlighted.value = tokenizeJson(raw)
+  } catch {
+    hasInvalidJson.value = true
+    highlighted.value = wrapToken('json-invalid', raw)
+  }
+}
+
+function handleFocus(event: FocusEvent) {
+  isFocused.value = true
+  emit('focus', event)
+}
+
+function handleBlur(event: FocusEvent) {
+  isFocused.value = false
+  emit('blur', event)
 }
 
 function escapeHtml(s: string): string {
@@ -372,6 +392,7 @@ defineExpose({ textareaRef, format })
 }
 
 .json-editor-container {
+  position: relative;
   display: grid;
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -391,7 +412,6 @@ defineExpose({ textareaRef, format })
 
 .json-highlight,
 .json-textarea {
-  grid-area: 1 / 1;
   margin: 0;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
@@ -404,6 +424,8 @@ defineExpose({ textareaRef, format })
 }
 
 .json-highlight {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
   user-select: none;
   overflow: hidden;
@@ -411,11 +433,12 @@ defineExpose({ textareaRef, format })
   padding: 10px 12px;
   background: transparent;
   color: transparent;
+  opacity: 1;
+  transition: opacity 120ms ease;
 }
 
 .json-highlight-content {
   margin: 0;
-  min-height: 100%;
   white-space: pre;
   transform: translate(0, 0);
   will-change: transform;
@@ -450,6 +473,8 @@ defineExpose({ textareaRef, format })
 }
 
 .json-textarea {
+  position: relative;
+  display: block;
   width: 100%;
   min-height: 0;
   padding: 10px 12px;
@@ -457,7 +482,7 @@ defineExpose({ textareaRef, format })
   resize: vertical;
   background: transparent;
   color: transparent;
-  caret-color: var(--color-primary);
+  caret-color: var(--color-text);
   outline: none;
   text-shadow: none;
   -webkit-text-fill-color: transparent;
@@ -466,6 +491,21 @@ defineExpose({ textareaRef, format })
   overflow-wrap: normal;
   overflow: auto;
   scrollbar-gutter: stable;
+}
+
+.json-editor.is-focused .json-highlight {
+  opacity: 0;
+}
+
+.json-editor.is-focused .json-textarea {
+  color: var(--color-text);
+  -webkit-text-fill-color: var(--color-text);
+}
+
+.json-editor.is-focused.is-invalid .json-textarea {
+  color: var(--color-danger);
+  -webkit-text-fill-color: var(--color-danger);
+  caret-color: var(--color-danger);
 }
 
 .json-textarea::selection {
