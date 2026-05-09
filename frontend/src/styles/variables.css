@@ -1,0 +1,14 @@
+:root {
+  --font-sans: 'Inter', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f3f5;
+  --color-border: #dfe3e8;
+  --color-text: #1f2328;
+  --color-text-muted: #687076;
+  --color-primary: #256f6c;
+  --color-primary-hover: #1f5f5c;
+  --color-danger: #d92d20;
+  --color-warning: #b76e00;
+  --color-success: #1a7f37;
+}

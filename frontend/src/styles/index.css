@@ -1,0 +1,64 @@
+@import './variables.css';
+@import './element-theme.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.app-panel {
+  width: min(100%, 560px);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  padding: 28px;
+  box-shadow: 0 16px 40px rgb(31 35 40 / 8%);
+}
+
+.app-panel h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.app-panel p {
+  margin: 12px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.app-eyebrow {
+  margin: 0 0 8px !important;
+  color: var(--color-primary) !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
