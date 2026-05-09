@@ -1054,7 +1054,7 @@ paths:
       tags:
       - reminder-config
 securityDefinitions:
-  APIKeyAuth:
+  ApiKeyAuth:
     in: header
     name: api-key
     type: apiKey

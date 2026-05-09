@@ -13,7 +13,7 @@ make clean    # 清理 bin/ 和 data/*.db
 make docker-up / docker-down / docker-logs
 ```
 
-编译需要 `CGO_ENABLED=1`（go-sqlite3 依赖 CGO）。Dockerfile 中已显式设置。
+使用纯 Go SQLite 驱动（modernc.org/sqlite），无需 CGO，支持交叉编译。
 
 `make build` 和 `make dev` 会自动重新生成 Swagger 文档。也可单独执行：
 ```bash

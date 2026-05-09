@@ -32,7 +32,7 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @securityDefinitions.apikey APIKeyAuth
+// @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name api-key
 

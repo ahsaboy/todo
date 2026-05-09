@@ -1,7 +1,5 @@
 FROM golang:1.23-alpine AS builder
 
-RUN apk add --no-cache gcc musl-dev
-
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -13,7 +11,7 @@ RUN go install github.com/swaggo/swag/cmd/swag@latest && \
     swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal && \
     sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
 
-RUN CGO_ENABLED=1 GOOS=linux go build -o /server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
 
 FROM alpine:3.19
 

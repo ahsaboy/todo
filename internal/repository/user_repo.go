@@ -3,12 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
+	"strings"
 
 	"todo/internal/models"
-
-	"github.com/mattn/go-sqlite3"
 )
 
 type UserRepo struct {
@@ -31,8 +29,7 @@ func (r *UserRepo) Create(ctx context.Context, username, email, passwordHash str
 		username, email, passwordHash,
 	)
 	if err != nil {
-		var sqliteErr sqlite3.Error
-		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		if strings.Contains(err.Error(), "UNIQUE constraint") {
 			return nil, ErrUsernameTaken
 		}
 		return nil, fmt.Errorf("insert user: %w", err)
