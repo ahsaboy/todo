@@ -67,7 +67,10 @@ onMounted(() => {
     internalValue.value = props.modelValue
   }
   highlight()
-  nextTick(syncScroll)
+  nextTick(() => {
+    syncHeight()
+    syncScroll()
+  })
 })
 
 watch(
@@ -76,6 +79,10 @@ watch(
     if (isTyping) return
     internalValue.value = val
     highlight()
+    nextTick(() => {
+      syncHeight()
+      syncScroll()
+    })
   },
 )
 
@@ -91,7 +98,10 @@ function format() {
     internalValue.value = JSON.stringify(parsed, null, 2)
     emitValue(internalValue.value)
     highlight()
-    nextTick(syncScroll)
+    nextTick(() => {
+      syncHeight()
+      syncScroll()
+    })
   } catch {
     // invalid JSON, ignore
   }
@@ -104,9 +114,16 @@ function onInput(e: Event) {
   internalValue.value = val
   emitValue(val)
   highlight()
+  syncHeight()
   requestAnimationFrame(() => {
     isTyping = false
   })
+}
+
+function syncHeight() {
+  if (!textareaRef.value) return
+  textareaRef.value.style.height = 'auto'
+  textareaRef.value.style.height = `${textareaRef.value.scrollHeight}px`
 }
 
 function syncScroll() {
@@ -506,7 +523,8 @@ defineExpose({ textareaRef, format })
   white-space: pre;
   word-break: normal;
   overflow-wrap: normal;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-gutter: stable;
 }
 

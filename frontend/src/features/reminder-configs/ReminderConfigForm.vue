@@ -197,7 +197,7 @@ const form = reactive<{
   enabled: props.initialData?.enabled ?? true,
   webhook_url: props.initialData?.webhook_url || '',
   webhook_method: props.initialData?.webhook_method || 'POST',
-  webhook_headers: props.initialData?.webhook_headers || {},
+  webhook_headers: props.initialData?.webhook_headers || '',
   webhook_body_template: props.initialData?.webhook_body_template || '',
   max_retries: props.initialData?.max_retries ?? 3,
   retry_delay_seconds: props.initialData?.retry_delay_seconds ?? 5,
