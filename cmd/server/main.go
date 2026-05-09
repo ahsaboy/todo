@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,7 @@ import (
 	"todo/internal/middleware"
 	"todo/internal/repository"
 	"todo/internal/service"
+	"todo/web"
 )
 
 // @title           TODO 任务管理系统 API
@@ -203,6 +205,39 @@ func main() {
 		api.PUT("/user/reminder-configs/:id", reminderConfigHandler.Update)
 		api.DELETE("/user/reminder-configs/:id", reminderConfigHandler.Delete)
 	}
+
+	// 静态资源服务
+	distFS, err := fs.Sub(web.Files, "dist")
+	if err != nil {
+		logger.Fatal("无法加载静态资源", zap.Error(err))
+	}
+	assetsFS, err := fs.Sub(distFS, "assets")
+	if err != nil {
+		logger.Fatal("无法加载 assets 资源", zap.Error(err))
+	}
+
+	// 静态文件（优先级高于 NoRoute）
+	r.StaticFS("/assets", http.FS(assetsFS))
+	r.StaticFileFS("/favicon.svg", "favicon.svg", http.FS(distFS))
+	r.StaticFileFS("/icons.svg", "icons.svg", http.FS(distFS))
+
+	// SPA fallback
+	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// API 路由返回 JSON
+		if len(path) >= 4 && path[:4] == "/api" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "endpoint not found",
+				"code":    "NOT_FOUND",
+			})
+			return
+		}
+
+		// 其他路由返回 index.html
+		c.FileFromFS("index.html", http.FS(distFS))
+	})
 
 	// 启动 HTTP 服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
