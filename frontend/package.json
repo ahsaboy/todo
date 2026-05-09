@@ -14,7 +14,9 @@
     "check-api-paths": "node scripts/check-api-paths.mjs"
   },
   "dependencies": {
-    "vue": "^3.5.32"
+    "pinia": "^3.0.4",
+    "vue": "^3.5.32",
+    "vue-router": "^5.0.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
