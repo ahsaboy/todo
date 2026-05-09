@@ -3,6 +3,8 @@
 GOOS   ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 APP    := server
+LDFLAGS := -s -w
+BUILDFLAGS := -trimpath -ldflags="$(LDFLAGS)"
 
 ifeq ($(OS),Windows_NT)
 	SHELL := cmd.exe
@@ -31,33 +33,33 @@ swag: check-swag
 # 编译当前平台
 build: swag
 ifeq ($(OS),Windows_NT)
-	set "GOOS=$(GOOS)" && set "GOARCH=$(GOARCH)" && go build -o "bin\$(APP)-$(GOOS)-$(GOARCH)$(EXT)" ".\cmd\server"
+	set "GOOS=$(GOOS)" && set "GOARCH=$(GOARCH)" && go build $(BUILDFLAGS) -o "bin\$(APP)-$(GOOS)-$(GOARCH)$(EXT)" ".\cmd\server"
 else
-	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o "bin/$(APP)-$(GOOS)-$(GOARCH)$(EXT)" ./cmd/server
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(BUILDFLAGS) -o "bin/$(APP)-$(GOOS)-$(GOARCH)$(EXT)" ./cmd/server
 endif
 
 # 交叉编译 Linux
 build-linux: swag
 ifeq ($(OS),Windows_NT)
-	set "GOOS=linux" && set "GOARCH=amd64" && go build -o "bin\$(APP)-linux-amd64" ".\cmd\server"
+	set "GOOS=linux" && set "GOARCH=amd64" && go build $(BUILDFLAGS) -o "bin\$(APP)-linux-amd64" ".\cmd\server"
 else
-	GOOS=linux GOARCH=amd64 go build -o "bin/$(APP)-linux-amd64" ./cmd/server
+	GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o "bin/$(APP)-linux-amd64" ./cmd/server
 endif
 
 # 交叉编译 Windows
 build-windows: swag
 ifeq ($(OS),Windows_NT)
-	set "GOOS=windows" && set "GOARCH=amd64" && go build -o "bin\$(APP)-windows-amd64.exe" ".\cmd\server"
+	set "GOOS=windows" && set "GOARCH=amd64" && go build $(BUILDFLAGS) -o "bin\$(APP)-windows-amd64.exe" ".\cmd\server"
 else
-	GOOS=windows GOARCH=amd64 go build -o "bin/$(APP)-windows-amd64.exe" ./cmd/server
+	GOOS=windows GOARCH=amd64 go build $(BUILDFLAGS) -o "bin/$(APP)-windows-amd64.exe" ./cmd/server
 endif
 
 # 交叉编译 macOS
 build-darwin: swag
 ifeq ($(OS),Windows_NT)
-	set "GOOS=darwin" && set "GOARCH=arm64" && go build -o "bin\$(APP)-darwin-arm64" ".\cmd\server"
+	set "GOOS=darwin" && set "GOARCH=arm64" && go build $(BUILDFLAGS) -o "bin\$(APP)-darwin-arm64" ".\cmd\server"
 else
-	GOOS=darwin GOARCH=arm64 go build -o "bin/$(APP)-darwin-arm64" ./cmd/server
+	GOOS=darwin GOARCH=arm64 go build $(BUILDFLAGS) -o "bin/$(APP)-darwin-arm64" ./cmd/server
 endif
 
 run: build
