@@ -4,13 +4,16 @@
       <button type="button" class="btn-format" :disabled="disabled" @click="format">格式化</button>
     </div>
     <div class="json-editor-container" :style="{ '--json-editor-rows': rows }">
-      <pre class="json-highlight" aria-hidden="true" v-html="highlighted"></pre>
+      <div class="json-highlight" aria-hidden="true">
+        <pre ref="highlightContentRef" class="json-highlight-content" v-html="highlighted"></pre>
+      </div>
       <textarea
         ref="textareaRef"
         :id="id"
         :value="internalValue"
         :placeholder="placeholder"
         :rows="rows"
+        wrap="off"
         class="json-textarea"
         :disabled="disabled"
         spellcheck="false"
@@ -49,6 +52,7 @@ const emit = defineEmits<{
 }>()
 
 const textareaRef = ref<HTMLTextAreaElement>()
+const highlightContentRef = ref<HTMLElement>()
 const highlighted = ref('')
 const internalValue = ref(props.modelValue)
 let isTyping = false
@@ -100,12 +104,9 @@ function onInput(e: Event) {
 }
 
 function syncScroll() {
-  if (!textareaRef.value) return
-  const pre = textareaRef.value.previousElementSibling as HTMLElement | null
-  if (pre) {
-    pre.scrollTop = textareaRef.value.scrollTop
-    pre.scrollLeft = textareaRef.value.scrollLeft
-  }
+  if (!textareaRef.value || !highlightContentRef.value) return
+  const { scrollTop, scrollLeft } = textareaRef.value
+  highlightContentRef.value.style.transform = `translate(${-scrollLeft}px, ${-scrollTop}px)`
 }
 
 function onScroll() {
@@ -118,26 +119,221 @@ function highlight() {
 
 function highlightJson(raw: string): string {
   if (!raw) return ''
-  const escaped = escapeHtml(raw)
-  return escaped.replace(
-    /("(?:\\.|[^"\\])*")\s*(:)?|(\btrue\b|\bfalse\b|\bnull\b)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|([{}[\],])/g,
-    (match, str, colon, bool, num, punct) => {
-      if (str) {
-        if (colon) {
-          return `<span class="json-key">${str}</span>:`
-        }
-        return `<span class="json-string">${str}</span>`
-      }
-      if (bool) return `<span class="json-bool">${bool}</span>`
-      if (num) return `<span class="json-number">${num}</span>`
-      if (punct) return `<span class="json-punct">${punct}</span>`
-      return match
-    },
-  )
+  try {
+    JSON.parse(raw)
+  } catch {
+    return wrapToken('json-invalid', raw)
+  }
+
+  return tokenizeJson(raw)
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+type JsonContext =
+  | { type: 'object'; phase: 'keyOrEnd' | 'colon' | 'value' | 'commaOrEnd' }
+  | { type: 'array'; phase: 'valueOrEnd' | 'commaOrEnd' }
+
+function tokenizeJson(raw: string): string {
+  const parts: string[] = []
+  const stack: JsonContext[] = []
+  let index = 0
+
+  while (index < raw.length) {
+    const char = raw[index]
+
+    if (isWhitespace(char)) {
+      parts.push(char)
+      index += 1
+      continue
+    }
+
+    if (char === '"') {
+      const token = readString(raw, index)
+      if (isObjectKeyPosition(stack)) {
+        parts.push(wrapToken('json-key', token.value))
+        setObjectPhase(stack, 'colon')
+      } else {
+        parts.push(wrapToken('json-string', token.value))
+        advanceAfterValue(stack)
+      }
+      index = token.nextIndex
+      continue
+    }
+
+    if (char === '{') {
+      parts.push(wrapToken('json-punct', char))
+      stack.push({ type: 'object', phase: 'keyOrEnd' })
+      index += 1
+      continue
+    }
+
+    if (char === '[') {
+      parts.push(wrapToken('json-punct', char))
+      stack.push({ type: 'array', phase: 'valueOrEnd' })
+      index += 1
+      continue
+    }
+
+    if (char === '}' || char === ']') {
+      parts.push(wrapToken('json-punct', char))
+      stack.pop()
+      advanceAfterValue(stack)
+      index += 1
+      continue
+    }
+
+    if (char === ':') {
+      parts.push(wrapToken('json-punct', char))
+      setObjectPhase(stack, 'value')
+      index += 1
+      continue
+    }
+
+    if (char === ',') {
+      parts.push(wrapToken('json-punct', char))
+      setNextEntryPhase(stack)
+      index += 1
+      continue
+    }
+
+    if (char === 't' && raw.startsWith('true', index)) {
+      parts.push(wrapToken('json-bool', 'true'))
+      advanceAfterValue(stack)
+      index += 4
+      continue
+    }
+
+    if (char === 'f' && raw.startsWith('false', index)) {
+      parts.push(wrapToken('json-bool', 'false'))
+      advanceAfterValue(stack)
+      index += 5
+      continue
+    }
+
+    if (char === 'n' && raw.startsWith('null', index)) {
+      parts.push(wrapToken('json-null', 'null'))
+      advanceAfterValue(stack)
+      index += 4
+      continue
+    }
+
+    const numberToken = readNumber(raw, index)
+    parts.push(wrapToken('json-number', numberToken.value))
+    advanceAfterValue(stack)
+    index = numberToken.nextIndex
+  }
+
+  return parts.join('')
+}
+
+function readString(raw: string, startIndex: number) {
+  let index = startIndex + 1
+  let escaped = false
+
+  while (index < raw.length) {
+    const char = raw[index]
+
+    if (escaped) {
+      escaped = false
+      index += 1
+      continue
+    }
+
+    if (char === '\\') {
+      escaped = true
+      index += 1
+      continue
+    }
+
+    if (char === '"') {
+      index += 1
+      break
+    }
+
+    index += 1
+  }
+
+  return {
+    value: raw.slice(startIndex, index),
+    nextIndex: index,
+  }
+}
+
+function readNumber(raw: string, startIndex: number) {
+  let index = startIndex
+
+  while (index < raw.length && isNumberChar(raw[index])) {
+    index += 1
+  }
+
+  return {
+    value: raw.slice(startIndex, index),
+    nextIndex: index,
+  }
+}
+
+function wrapToken(className: string, value: string) {
+  return `<span class="${className}">${escapeHtml(value)}</span>`
+}
+
+function isObjectKeyPosition(stack: JsonContext[]) {
+  const current = getCurrentContext(stack)
+  return current?.type === 'object' && current.phase === 'keyOrEnd'
+}
+
+function setObjectPhase(stack: JsonContext[], phase: Extract<JsonContext, { type: 'object' }>['phase']) {
+  const current = getCurrentContext(stack)
+  if (current?.type === 'object') {
+    current.phase = phase
+  }
+}
+
+function advanceAfterValue(stack: JsonContext[]) {
+  const current = getCurrentContext(stack)
+  if (!current) return
+
+  if (current.type === 'object' && current.phase === 'value') {
+    current.phase = 'commaOrEnd'
+  }
+
+  if (current.type === 'array' && current.phase === 'valueOrEnd') {
+    current.phase = 'commaOrEnd'
+  }
+}
+
+function setNextEntryPhase(stack: JsonContext[]) {
+  const current = getCurrentContext(stack)
+  if (!current) return
+
+  if (current.type === 'object') {
+    current.phase = 'keyOrEnd'
+  }
+
+  if (current.type === 'array') {
+    current.phase = 'valueOrEnd'
+  }
+}
+
+function getCurrentContext(stack: JsonContext[]) {
+  return stack[stack.length - 1]
+}
+
+function isWhitespace(char: string) {
+  return char === ' ' || char === '\n' || char === '\r' || char === '\t'
+}
+
+function isNumberChar(char: string) {
+  return (
+    char === '-' ||
+    char === '+' ||
+    char === '.' ||
+    char === 'e' ||
+    char === 'E' ||
+    (char >= '0' && char <= '9')
+  )
 }
 
 defineExpose({ textareaRef, format })
@@ -197,31 +393,32 @@ defineExpose({ textareaRef, format })
 .json-textarea {
   grid-area: 1 / 1;
   margin: 0;
-  padding: 10px 12px;
-  min-height: calc(var(--json-editor-rows, 4) * 1.6em + 20px);
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
   font-size: 13px;
   line-height: 1.6;
   tab-size: 2;
-  white-space: pre;
-  overflow: auto;
-  scrollbar-gutter: stable;
+  letter-spacing: 0;
+  font-kerning: none;
+  font-variant-ligatures: none;
 }
 
 .json-highlight {
   pointer-events: none;
   user-select: none;
+  overflow: hidden;
+  min-height: 0;
+  padding: 10px 12px;
   background: transparent;
   color: transparent;
 }
 
-.json-highlight {
-  scrollbar-width: none;
-}
-
-.json-highlight::-webkit-scrollbar {
-  display: none;
+.json-highlight-content {
+  margin: 0;
+  min-height: 100%;
+  white-space: pre;
+  transform: translate(0, 0);
+  will-change: transform;
 }
 
 .json-highlight :deep(.json-key) {
@@ -240,12 +437,22 @@ defineExpose({ textareaRef, format })
   color: #8f5cf6;
 }
 
+.json-highlight :deep(.json-null) {
+  color: var(--color-text-muted);
+}
+
 .json-highlight :deep(.json-punct) {
   color: var(--color-text-muted);
 }
 
+.json-highlight :deep(.json-invalid) {
+  color: var(--color-danger);
+}
+
 .json-textarea {
   width: 100%;
+  min-height: 0;
+  padding: 10px 12px;
   border: 0;
   resize: vertical;
   background: transparent;
@@ -254,6 +461,11 @@ defineExpose({ textareaRef, format })
   outline: none;
   text-shadow: none;
   -webkit-text-fill-color: transparent;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .json-textarea::selection {
