@@ -8,7 +8,7 @@
     </div>
     <div class="json-editor-container">
       <div class="json-highlight" aria-hidden="true">
-        <pre ref="highlightContentRef" class="json-highlight-content" v-html="highlighted"></pre>
+        <pre ref="highlightContentRef" class="json-highlight-content"></pre>
       </div>
       <textarea
         ref="textareaRef"
@@ -142,6 +142,7 @@ function highlight() {
   if (!raw) {
     hasInvalidJson.value = false
     highlighted.value = ''
+    renderHighlight()
     return
   }
 
@@ -153,6 +154,12 @@ function highlight() {
     hasInvalidJson.value = true
     highlighted.value = wrapToken('json-invalid', raw)
   }
+  renderHighlight()
+}
+
+function renderHighlight() {
+  if (!highlightContentRef.value) return
+  highlightContentRef.value.innerHTML = highlighted.value
 }
 
 function handleFocus(event: FocusEvent) {

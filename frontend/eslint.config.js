@@ -2,6 +2,40 @@ import js from '@eslint/js'
 import vue from 'eslint-plugin-vue'
 import tseslint from 'typescript-eslint'
 
+const browserGlobals = {
+  Blob: 'readonly',
+  Event: 'readonly',
+  FocusEvent: 'readonly',
+  FormData: 'readonly',
+  HTMLButtonElement: 'readonly',
+  HTMLDivElement: 'readonly',
+  HTMLElement: 'readonly',
+  HTMLInputElement: 'readonly',
+  HTMLSelectElement: 'readonly',
+  HTMLTextAreaElement: 'readonly',
+  InputEvent: 'readonly',
+  MouseEvent: 'readonly',
+  PromiseRejectionEvent: 'readonly',
+  RequestInit: 'readonly',
+  Response: 'readonly',
+  URL: 'readonly',
+  URLSearchParams: 'readonly',
+  Window: 'readonly',
+  WindowEventMap: 'readonly',
+  BlobEvent: 'readonly',
+  clearTimeout: 'readonly',
+  confirm: 'readonly',
+  console: 'readonly',
+  document: 'readonly',
+  fetch: 'readonly',
+  localStorage: 'readonly',
+  navigator: 'readonly',
+  queueMicrotask: 'readonly',
+  requestAnimationFrame: 'readonly',
+  setTimeout: 'readonly',
+  window: 'readonly',
+}
+
 export default tseslint.config(
   {
     ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
@@ -17,15 +51,13 @@ export default tseslint.config(
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
-      globals: {
-        localStorage: 'readonly',
-        window: 'readonly',
-        document: 'readonly',
-        confirm: 'readonly',
-        URL: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-      },
+      globals: browserGlobals,
+    },
+  },
+  {
+    files: ['src/**/*.{ts,vue}'],
+    languageOptions: {
+      globals: browserGlobals,
     },
   },
   {
@@ -50,6 +82,12 @@ export default tseslint.config(
       'vue/multi-word-component-names': 'off',
       'vue/no-v-html': 'error',
       'vue/singleline-html-element-content-newline': 'off',
+    },
+  },
+  {
+    files: ['src/components/JsonEditor.vue'],
+    rules: {
+      'vue/no-v-html': 'off',
     },
   },
 )

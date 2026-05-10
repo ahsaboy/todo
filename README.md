@@ -76,6 +76,11 @@ todo-server [选项]
   -p, --port <port>    覆盖服务端口号
   --host <addr>        覆盖监听地址
   --mode <mode>        覆盖运行模式 (debug/release)
+  --log-path <path>    覆盖日志存储路径
+  --log-max-days <n>   覆盖日志保留天数
+  --backend-log <mode> 覆盖后端日志输出模式 (console/file/both/off)
+  --frontend-log <mode> 覆盖前端日志输出模式 (console/file/both/off)
+  --frontend-log-level <level>  覆盖前端日志级别
   -v, --version        显示版本号
   -h, --help           显示帮助信息
 ```
@@ -83,6 +88,8 @@ todo-server [选项]
 ## API 接口
 
 > 服务启动后访问 Swagger 文档：`http://localhost:8080/docs/index.html`
+>
+> `GET /api/v1/runtime-config` 和 `POST /api/v1/logs/frontend` 属于内部运行时接口，供前端日志初始化和上报使用，不作为公开业务 API。
 
 
 ## 配置文件
@@ -122,12 +129,29 @@ cors:
 logging:
   level: "info"
   format: "json"
+  path: "./logs"
+  max_days: 7
+  backend:
+    console_enabled: true
+    file_enabled: false
+  frontend:
+    console_enabled: false
+    file_enabled: false
+    level: "warn"
 ```
 
 说明：
 
 - 用户必须通过 `/api/v1/user/reminder-configs` 创建并启用自己的通知渠道。
 - `default_templates` 只提供模板参考，不会直接作为发送目标。
+
+### 日志配置
+
+- 后端日志按天写入 `backend-YYYY-MM-DD.log`，文件位置由 `logging.path` 决定。
+- 前端日志先通过 `POST /api/v1/logs/frontend` 上报，再按天写入 `frontend-YYYY-MM-DD.log`。
+- `logging.max_days` 控制日志保留天数，启动时会清理早于保留窗口的历史日志文件。
+- `GET /api/v1/runtime-config` 只下发前端所需的日志开关和级别，属于内部运行时接口。
+- 前端日志只记录必要字段，不包含认证头、密码、请求体或完整响应体。
 
 ### Webhook 模板变量
 
@@ -158,6 +182,7 @@ TODO/
 ├── cmd/server/main.go              # 入口：配置加载、路由注册、优雅退出
 ├── internal/
 │   ├── config/config.go            # YAML 配置加载
+│   ├── logging/                    # 日志初始化、日志路径和保留清理
 │   ├── database/database.go        # SQLite 连接 + WAL 模式 + 自动建表
 │   ├── models/
 │   │   ├── task.go                 # 任务数据模型
@@ -184,6 +209,7 @@ TODO/
 │       └── validator.go            # 参数校验
 ├── docs/                           # Swagger 文档（自动生成）
 ├── frontend/                       # Vue 前端源码
+│   └── src/shared/logger/           # 前端日志封装和上报
 ├── web/                            # Go embed 前端构建产物入口
 │   ├── embed.go                    # 使用 //go:embed all:dist
 │   └── dist/                       # make build 生成并复制的静态文件

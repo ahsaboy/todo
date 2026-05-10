@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/shared/config/api'
 import { ApiError } from '@/shared/api/errors'
 import type { ApiResponse, PaginatedResponse } from '@/shared/api/types'
+import { logger } from '@/shared/logger/logger'
 
 let unauthorizedHandler: (() => void) | null = null
 let isHandlingUnauthorized = false
@@ -34,6 +35,7 @@ function handleUnauthorized(endpoint: string): void {
 // Base request method
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
+  const method = options?.method ?? 'GET'
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -44,38 +46,68 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     headers['Authorization'] = `Bearer ${apiKey}`
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...headers,
-      ...options?.headers,
-    },
-  })
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options?.headers,
+      },
+    })
 
-  const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
-  // Handle 401 Unauthorized
-  if (response.status === 401) {
-    const isSessionExpired = !endpoint.startsWith('/auth/')
-    handleUnauthorized(endpoint)
+    // Handle 401 Unauthorized
+    if (response.status === 401) {
+      const isSessionExpired = !endpoint.startsWith('/auth/')
+      handleUnauthorized(endpoint)
+      logger.warn('API request failed', {
+        method,
+        endpoint,
+        status: response.status,
+        code: 'UNAUTHORIZED',
+      })
+      throw new ApiError({
+        message: isSessionExpired
+          ? 'Session expired, please login again'
+          : data.error || 'Unauthorized',
+        code: 'UNAUTHORIZED',
+        status: 401,
+      })
+    }
+
+    if (!response.ok || data.success === false) {
+      logger.warn('API request failed', {
+        method,
+        endpoint,
+        status: response.status,
+        code: data.code || 'INTERNAL_ERROR',
+      })
+      throw new ApiError({
+        message: data.error || 'Request failed',
+        code: data.code || 'INTERNAL_ERROR',
+        status: response.status,
+      })
+    }
+
+    return data
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error
+    }
+
+    logger.error('API request failed', {
+      method,
+      endpoint,
+      status: 0,
+      code: 'NETWORK_ERROR',
+    })
     throw new ApiError({
-      message: isSessionExpired
-        ? 'Session expired, please login again'
-        : data.error || 'Unauthorized',
-      code: 'UNAUTHORIZED',
-      status: 401,
+      message: 'Request failed',
+      code: 'NETWORK_ERROR',
+      status: 0,
     })
   }
-
-  if (!response.ok || data.success === false) {
-    throw new ApiError({
-      message: data.error || 'Request failed',
-      code: data.code || 'INTERNAL_ERROR',
-      status: response.status,
-    })
-  }
-
-  return data
 }
 
 // Export request methods

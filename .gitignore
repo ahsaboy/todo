@@ -1,6 +1,7 @@
 # Build outputs
 bin/
 *.exe
+.gocache/
 
 # Database files
 data/*.db
@@ -38,7 +39,8 @@ Thumbs.db
 # Claude Code
 .claude/
 .codex-cache/
-
+.codex/
+plan/
 # Logs
 logs/
 *.log

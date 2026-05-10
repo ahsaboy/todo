@@ -14,12 +14,12 @@ import (
 	"github.com/gin-gonic/gin"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	_ "todo/docs"
 	"todo/internal/config"
 	"todo/internal/database"
 	"todo/internal/handlers"
+	"todo/internal/logging"
 	"todo/internal/middleware"
 	"todo/internal/repository"
 	"todo/internal/service"
@@ -45,6 +45,11 @@ func main() {
 	port := flag.Int("port", 0, "覆盖服务端口号")
 	host := flag.String("host", "", "覆盖监听地址")
 	mode := flag.String("mode", "", "覆盖运行模式 (debug/release)")
+	logPath := flag.String("log-path", "", "覆盖日志存储路径")
+	logMaxDays := flag.Int("log-max-days", 0, "覆盖日志保留天数")
+	backendLog := flag.String("backend-log", "", "覆盖后端日志输出模式 (console/file/both/off)")
+	frontendLog := flag.String("frontend-log", "", "覆盖前端日志输出模式 (console/file/both/off)")
+	frontendLogLevel := flag.String("frontend-log-level", "", "覆盖前端日志级别")
 	showVersion := flag.Bool("version", false, "显示版本号")
 	showHelp := flag.Bool("help", false, "显示帮助信息")
 
@@ -57,6 +62,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  -p, --port <port>    覆盖服务端口号\n")
 		fmt.Fprintf(os.Stderr, "  --host <addr>        覆盖监听地址\n")
 		fmt.Fprintf(os.Stderr, "  --mode <mode>        覆盖运行模式 (debug/release)\n")
+		fmt.Fprintf(os.Stderr, "  --log-path <path>    覆盖日志存储路径\n")
+		fmt.Fprintf(os.Stderr, "  --log-max-days <n>   覆盖日志保留天数\n")
+		fmt.Fprintf(os.Stderr, "  --backend-log <mode> 覆盖后端日志输出模式 (console/file/both/off)\n")
+		fmt.Fprintf(os.Stderr, "  --frontend-log <mode> 覆盖前端日志输出模式 (console/file/both/off)\n")
+		fmt.Fprintf(os.Stderr, "  --frontend-log-level <level>  覆盖前端日志级别\n")
 		fmt.Fprintf(os.Stderr, "  -v, --version        显示版本号\n")
 		fmt.Fprintf(os.Stderr, "  -h, --help           显示此帮助信息\n")
 	}
@@ -94,9 +104,18 @@ func main() {
 	if *mode == "debug" || *mode == "release" {
 		cfg.Server.Mode = *mode
 	}
+	if err := applyLoggingOverrides(cfg, *logPath, *logMaxDays, *backendLog, *frontendLog, *frontendLogLevel); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	if err := logging.CleanupOldLogs(cfg.Logging.Path, cfg.Logging.MaxDays, time.Now()); err != nil {
+		fmt.Fprintf(os.Stderr, "清理旧日志失败: %v\n", err)
+		os.Exit(1)
+	}
 
 	// 初始化日志
-	logger, err := initLogger(cfg.Logging)
+	logger, err := logging.NewLogger(cfg.Logging)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "初始化日志失败: %v\n", err)
 		os.Exit(1)
@@ -127,6 +146,7 @@ func main() {
 	taskSvc := service.NewTaskService(taskRepo, reminderConfigRepo)
 
 	authHandler := handlers.NewAuthHandler(authSvc)
+	logHandler := handlers.NewLogHandler(cfg.Logging, logger)
 	reminderConfigHandler := handlers.NewReminderConfigHandler(reminderConfigSvc)
 	taskHandler := handlers.NewTaskHandler(taskSvc)
 
@@ -159,6 +179,8 @@ func main() {
 
 	// 公开端点
 	r.GET("/api/v1/health", handlers.HealthCheck(db))
+	r.GET("/api/v1/runtime-config", logHandler.RuntimeConfig)
+	r.POST("/api/v1/logs/frontend", logHandler.FrontendLogs)
 	r.GET("/api/v1/templates", reminderTemplatesHandler(cfg))
 	r.GET("/docs/*any", func(c *gin.Context) {
 		httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
@@ -283,38 +305,48 @@ func reminderTemplatesHandler(cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
-func initLogger(cfg config.LoggingConfig) (*zap.Logger, error) {
-	level := zap.InfoLevel
-	switch cfg.Level {
-	case "debug":
-		level = zap.DebugLevel
-	case "warn":
-		level = zap.WarnLevel
-	case "error":
-		level = zap.ErrorLevel
+func applyLoggingOverrides(cfg *config.Config, logPath string, logMaxDays int, backendLog string, frontendLog string, frontendLogLevel string) error {
+	if logPath != "" {
+		cfg.Logging.Path = logPath
 	}
-
-	zapCfg := zap.Config{
-		Level:       zap.NewAtomicLevelAt(level),
-		Encoding:    cfg.Format,
-		OutputPaths: []string{"stdout"},
-		EncoderConfig: zapcore.EncoderConfig{
-			TimeKey:        "ts",
-			LevelKey:       "level",
-			NameKey:        "logger",
-			MessageKey:     "msg",
-			LineEnding:     zapcore.DefaultLineEnding,
-			EncodeLevel:    zapcore.LowercaseLevelEncoder,
-			EncodeTime:     zapcore.ISO8601TimeEncoder,
-			EncodeDuration: zapcore.SecondsDurationEncoder,
-		},
+	if logMaxDays > 0 {
+		cfg.Logging.MaxDays = logMaxDays
 	}
-
-	if cfg.Format != "json" {
-		zapCfg.Encoding = "console"
+	if backendLog != "" {
+		consoleEnabled, fileEnabled, err := applyLogOutputMode(backendLog)
+		if err != nil {
+			return fmt.Errorf("无效的 --backend-log 值: %w", err)
+		}
+		cfg.Logging.Backend.ConsoleEnabled = consoleEnabled
+		cfg.Logging.Backend.FileEnabled = fileEnabled
 	}
+	if frontendLog != "" {
+		consoleEnabled, fileEnabled, err := applyLogOutputMode(frontendLog)
+		if err != nil {
+			return fmt.Errorf("无效的 --frontend-log 值: %w", err)
+		}
+		cfg.Logging.Frontend.ConsoleEnabled = consoleEnabled
+		cfg.Logging.Frontend.FileEnabled = fileEnabled
+	}
+	if frontendLogLevel != "" {
+		cfg.Logging.Frontend.Level = frontendLogLevel
+	}
+	return nil
+}
 
-	return zapCfg.Build()
+func applyLogOutputMode(mode string) (bool, bool, error) {
+	switch mode {
+	case "console":
+		return true, false, nil
+	case "file":
+		return false, true, nil
+	case "both":
+		return true, true, nil
+	case "off":
+		return false, false, nil
+	default:
+		return false, false, fmt.Errorf("可选值: console, file, both, off")
+	}
 }
 
 func corsMiddleware(origins []string) gin.HandlerFunc {
