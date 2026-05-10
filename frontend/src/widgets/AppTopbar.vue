@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth.store'
+import { Menu } from 'lucide-vue-next'
 
 defineProps<{
   showSidebarToggle: boolean
@@ -35,8 +36,8 @@ const userInitial = computed(() => {
 
 <template>
   <header class="app-topbar">
-    <button v-if="showSidebarToggle" class="sidebar-toggle" type="button" @click="$emit('toggleSidebar')">
-      <span>☰</span>
+    <button v-if="showSidebarToggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏" @click="$emit('toggleSidebar')">
+      <Menu :size="18" />
     </button>
     <h1 class="page-title">{{ pageTitle }}</h1>
     <div class="topbar-actions">

@@ -6,7 +6,7 @@
         <!-- 桌面端按钮 -->
         <button class="btn-primary desktop-only" @click="openCreate">新建任务</button>
         <!-- 移动端筛选按钮 -->
-        <button class="mobile-filter-btn mobile-only" @click="showFilters = true">筛选</button>
+        <button class="mobile-filter-btn mobile-only" @click="showFilters = true"><SlidersHorizontal :size="16" /> 筛选</button>
       </div>
     </div>
 
@@ -63,7 +63,7 @@
     </template>
 
     <!-- 移动端浮动按钮 -->
-    <button v-if="isMobile" class="fab" type="button" @click="openCreate">+</button>
+    <button v-if="isMobile" class="fab" type="button" aria-label="新建任务" @click="openCreate"><Plus :size="24" /></button>
 
     <!-- 移动端筛选面板 -->
     <MobileFilters v-model:visible="showFilters" :filters="filters" @change="setFilters" />
@@ -75,6 +75,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Plus, SlidersHorizontal } from 'lucide-vue-next'
 import { useTasks } from '@/features/tasks/useTasks'
 import TaskTable from '@/features/tasks/TaskTable.vue'
 import TaskCardList from '@/features/tasks/TaskCardList.vue'

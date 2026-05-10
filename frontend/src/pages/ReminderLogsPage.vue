@@ -2,7 +2,7 @@
   <div class="logs-page">
     <div class="page-header">
       <h2>提醒日志</h2>
-      <button class="btn-secondary" type="button" @click="fetchLogs">刷新</button>
+      <button class="btn-secondary" type="button" @click="fetchLogs"><RefreshCw :size="14" /> 刷新</button>
     </div>
 
     <div v-if="loading" class="page-loading">加载中...</div>
@@ -92,6 +92,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 import { getReminderLogs } from '@/entities/reminder-config/api'
 import { toReminderLog } from '@/entities/reminder-config/mapper'
 import type { ReminderLog } from '@/entities/reminder-config/model'

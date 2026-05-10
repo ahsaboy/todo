@@ -28,10 +28,8 @@
       </dl>
 
       <div class="card-actions">
-        <button class="action-btn" type="button" @click="$emit('edit', config)">编辑</button>
-        <button class="action-btn action-btn-danger" type="button" @click="$emit('delete', config.id)">
-          删除
-        </button>
+        <button class="action-btn" type="button" @click="$emit('edit', config)"><Pencil :size="14" /> 编辑</button>
+        <button class="action-btn action-btn-danger" type="button" @click="$emit('delete', config.id)"><Trash2 :size="14" /> 删除</button>
       </div>
     </article>
   </div>
@@ -63,10 +61,8 @@
           <td class="url-cell">{{ maskUrl(config.webhookUrl) }}</td>
           <td>
             <div class="table-actions">
-              <button class="btn-icon" type="button" @click="$emit('edit', config)">编辑</button>
-              <button class="btn-icon btn-danger" type="button" @click="$emit('delete', config.id)">
-                删除
-              </button>
+              <button class="btn-icon btn-icon-text" type="button" @click="$emit('edit', config)"><Pencil :size="14" /> 编辑</button>
+              <button class="btn-icon btn-icon-text btn-danger" type="button" @click="$emit('delete', config.id)"><Trash2 :size="14" /> 删除</button>
             </div>
           </td>
         </tr>
@@ -77,6 +73,7 @@
 
 <script setup lang="ts">
 import type { ReminderConfig } from '@/entities/reminder-config/model'
+import { Pencil, Trash2 } from 'lucide-vue-next'
 
 defineProps<{
   configs: ReminderConfig[]

@@ -17,9 +17,7 @@
         </div>
       </dl>
 
-      <button class="action-btn action-btn-danger" type="button" @click="$emit('revoke', key.id)">
-        撤销
-      </button>
+      <button class="action-btn action-btn-danger" type="button" @click="$emit('revoke', key.id)"><Ban :size="14" /> 撤销</button>
     </article>
   </div>
 
@@ -43,9 +41,7 @@
           <td>{{ formatDate(key.createdAt) }}</td>
           <td>{{ key.lastUsedAt ? formatDate(key.lastUsedAt) : '从未' }}</td>
           <td>
-            <button class="btn-icon btn-danger" type="button" @click="$emit('revoke', key.id)">
-              撤销
-            </button>
+            <button class="btn-icon btn-icon-text btn-danger" type="button" @click="$emit('revoke', key.id)"><Ban :size="14" /> 撤销</button>
           </td>
         </tr>
       </tbody>
@@ -55,6 +51,7 @@
 
 <script setup lang="ts">
 import type { ApiKeyInfo } from '@/entities/api-key/model'
+import { Ban } from 'lucide-vue-next'
 
 defineProps<{
   keys: ApiKeyInfo[]

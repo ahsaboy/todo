@@ -82,6 +82,82 @@
   flex-shrink: 0;
 }
 
+.nav-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  color: currentColor;
+}
+
+.sidebar-toggle svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  color: currentColor;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  transition: background-color 150ms, color 150ms;
+}
+
+.btn-icon:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.btn-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+  color: currentColor;
+}
+
+.action-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  transition: color 150ms;
+}
+
+.action-icon:hover {
+  color: var(--color-text);
+}
+
+.action-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  color: currentColor;
+}
+
+.fab svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
+  color: currentColor;
+}
+
+/* 图标+文字按钮统一布局 */
+.btn-icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .nav-text {
   white-space: nowrap;
   overflow: hidden;
@@ -251,6 +327,11 @@
 
   .mobile-bottom-nav .nav-icon {
     font-size: 20px;
+  }
+
+  .mobile-bottom-nav .nav-icon svg {
+    width: 20px;
+    height: 20px;
   }
 
   .app-topbar {

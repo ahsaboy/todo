@@ -48,10 +48,8 @@
             {{ formatDate(task.createdAt) }}
           </td>
           <td class="col-actions">
-            <button class="btn-icon" type="button" @click="$emit('edit', task)">编辑</button>
-            <button class="btn-icon btn-danger" type="button" @click="$emit('delete', task.id)">
-              删除
-            </button>
+            <button class="btn-icon btn-icon-text" type="button" @click="$emit('edit', task)"><Pencil :size="14" /> 编辑</button>
+            <button class="btn-icon btn-icon-text btn-danger" type="button" @click="$emit('delete', task.id)"><Trash2 :size="14" /> 删除</button>
           </td>
         </tr>
       </tbody>
@@ -62,6 +60,7 @@
 <script setup lang="ts">
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
+import { Pencil, Trash2 } from 'lucide-vue-next'
 
 defineProps<{
   tasks: Task[]

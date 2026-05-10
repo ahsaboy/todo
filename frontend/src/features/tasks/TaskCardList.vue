@@ -52,10 +52,8 @@
         </div>
       </div>
       <div class="task-actions">
-        <button class="action-btn" type="button" @click="$emit('edit', task)">编辑</button>
-        <button class="action-btn action-btn-danger" type="button" @click="$emit('delete', task.id)">
-          删除
-        </button>
+        <button class="action-btn" type="button" @click="$emit('edit', task)"><Pencil :size="14" /> 编辑</button>
+        <button class="action-btn action-btn-danger" type="button" @click="$emit('delete', task.id)"><Trash2 :size="14" /> 删除</button>
       </div>
     </div>
   </div>
@@ -65,6 +63,7 @@
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
+import { Pencil, Trash2 } from 'lucide-vue-next'
 
 defineProps<{
   tasks: Task[]
