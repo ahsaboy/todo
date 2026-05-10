@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"todo/internal/models"
 )
@@ -76,7 +77,8 @@ func (r *APIKeyRepo) ValidateKey(ctx context.Context, keyHash string) (int64, er
 
 	// 更新 last_used_at
 	r.db.ExecContext(ctx,
-		`UPDATE user_api_keys SET last_used_at = datetime('now','localtime') WHERE key_hash = ?`, keyHash,
+		`UPDATE user_api_keys SET last_used_at = ? WHERE key_hash = ?`,
+		time.Now().UTC().Format(time.RFC3339), keyHash,
 	)
 
 	return userID, nil

@@ -162,10 +162,22 @@ logging:
 | `{{.Description}}`  | 任务描述   | `"Q2 报告"`          |
 | `{{.Priority}}`     | 优先级数字 | `1`                  |
 | `{{.PriorityText}}` | 优先级文字 | `"高"`               |
-| `{{.DueAt}}`        | 截止时间   | `"2026-05-20 14:00"` |
-| `{{.RemindAt}}`     | 提醒时间   | `"2026-05-19 09:00"` |
-| `{{.RepeatType}}`   | 重复类型   | `"weekly"`           |
-| `{{.CreatedAt}}`    | 创建时间   | `"2026-05-09 10:00"` |
+| `{{.DueAt}}`        | 截止时间   | `"2026-05-20T06:00:00Z"` |
+| `{{.RemindAt}}`     | 提醒时间   | `"2026-05-19T01:00:00Z"` |
+| `{{.RepeatType}}`   | 重复类型   | `"weekly"`               |
+| `{{.CreatedAt}}`    | 创建时间   | `"2026-05-09T02:00:00Z"` |
+
+## 时间契约
+
+所有时间字段统一使用 **UTC RFC3339** 格式存储和传输。
+
+- **API 入参/出参**：`2026-05-10T10:30:00Z`
+- **数据库存储**：SQLite `TEXT`，内容为 UTC RFC3339
+- **前端展示**：根据浏览器本地时区格式化
+- **涉及字段**：`due_at`、`remind_at`、`repeat_end_date`、`created_at`、`updated_at`、`reminder_sent_at`、`last_used_at`
+
+> 数据库中可能存在旧格式（`YYYY-MM-DD HH:MM:SS`）的历史数据，新代码路径兼容读取旧格式，但新写入的数据统一为 UTC RFC3339。
+> 历史数据迁移可运行：`go run scripts/migrate_time_format.go -db data/tasks.db -dry-run`
 
 ## 业务约束
 

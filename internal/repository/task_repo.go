@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"todo/internal/models"
+	"todo/internal/utils"
 )
 
 type TaskRepo struct {
@@ -159,8 +161,8 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 		return r.GetByID(ctx, userID, id)
 	}
 
-	setClauses = append(setClauses, "updated_at = datetime('now','localtime')")
-	args = append(args, id, userID)
+	setClauses = append(setClauses, "updated_at = ?")
+	args = append(args, time.Now().UTC().Format(time.RFC3339), id, userID)
 
 	query := "UPDATE tasks SET " + strings.Join(setClauses, ", ") + " WHERE id = ? AND user_id = ?"
 	result, err := r.db.ExecContext(ctx, query, args...)
@@ -185,7 +187,8 @@ func (r *TaskRepo) Delete(ctx context.Context, userID, id int64) (bool, error) {
 
 func (r *TaskRepo) ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error) {
 	result, err := r.db.ExecContext(ctx, `
-		UPDATE tasks SET completed = CASE WHEN completed = 0 THEN 1 ELSE 0 END, updated_at = datetime('now','localtime') WHERE id = ? AND user_id = ?`, id, userID)
+		UPDATE tasks SET completed = CASE WHEN completed = 0 THEN 1 ELSE 0 END, updated_at = ? WHERE id = ? AND user_id = ?`,
+		time.Now().UTC().Format(time.RFC3339), id, userID)
 	if err != nil {
 		return nil, fmt.Errorf("toggle complete: %w", err)
 	}
@@ -196,7 +199,7 @@ func (r *TaskRepo) ToggleComplete(ctx context.Context, userID, id int64) (*model
 	return r.GetByID(ctx, userID, id)
 }
 
-func (r *TaskRepo) GetPendingReminders(ctx context.Context) ([]models.Task, error) {
+func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]models.Task, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
 		       repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at,
@@ -204,18 +207,28 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context) ([]models.Task, erro
 		FROM tasks
 		WHERE user_id IS NOT NULL
 		  AND remind_at IS NOT NULL
-		  AND reminder_sent = 0
-		  AND remind_at <= datetime('now','localtime')`)
+		  AND reminder_sent = 0`)
 	if err != nil {
 		return nil, fmt.Errorf("query pending reminders: %w", err)
 	}
 	defer rows.Close()
 
 	var tasks []models.Task
+	nowUTC := now.UTC()
 	for rows.Next() {
 		var t models.Task
 		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan reminder task: %w", err)
+		}
+		// 运行时兼容：解析 remind_at（支持 RFC3339 和旧格式），在 Go 侧比较
+		if t.RemindAt != nil {
+			remindTime, err := utils.ParseDBTime(*t.RemindAt)
+			if err != nil {
+				continue
+			}
+			if remindTime.After(nowUTC) {
+				continue
+			}
 		}
 		tasks = append(tasks, t)
 	}
@@ -227,7 +240,8 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context) ([]models.Task, erro
 
 func (r *TaskRepo) MarkReminderSent(ctx context.Context, id int64) (bool, error) {
 	result, err := r.db.ExecContext(ctx, `
-		UPDATE tasks SET reminder_sent = 1, reminder_sent_at = datetime('now','localtime') WHERE id = ? AND reminder_sent = 0`, id)
+		UPDATE tasks SET reminder_sent = 1, reminder_sent_at = ? WHERE id = ? AND reminder_sent = 0`,
+		time.Now().UTC().Format(time.RFC3339), id)
 	if err != nil {
 		return false, fmt.Errorf("mark reminder sent: %w", err)
 	}

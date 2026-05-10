@@ -113,15 +113,44 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+// 将 datetime-local 值（本地时间）转为 ISO 8601 UTC
+function localDateTimeToISOString(value: string): string {
+  return new Date(value).toISOString()
+}
+
+// 将 ISO 8601 UTC 转为 datetime-local 本地时间字符串
+function isoToLocalDateTimeInputValue(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// 将 date 值转为 ISO 8601 UTC（当天 23:59:59）
+function dateToEndOfDayISOString(value: string): string {
+  return new Date(value + 'T23:59:59').toISOString()
+}
+
+// 将 ISO 8601 UTC 转为 date 输入的 YYYY-MM-DD 格式
+function isoToLocalDateInputValue(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// 初始化表单：将后端 UTC RFC3339 转为本地输入格式
+// initialData 可能是 snake_case（CreateTaskPayload）或 camelCase（Task model）
+const d = props.initialData as any
 const form = reactive<CreateTaskPayload>({
-  title: props.initialData?.title || '',
-  description: props.initialData?.description || undefined,
-  priority: props.initialData?.priority || undefined,
-  due_at: props.initialData?.due_at || undefined,
-  remind_at: props.initialData?.remind_at || undefined,
-  repeat_type: props.initialData?.repeat_type || 'none',
-  repeat_interval: props.initialData?.repeat_interval || 1,
-  repeat_end_date: props.initialData?.repeat_end_date || undefined,
+  title: d?.title || '',
+  description: d?.description || undefined,
+  priority: d?.priority || undefined,
+  due_at: (d?.due_at || d?.dueAt) ? isoToLocalDateTimeInputValue(d.due_at || d.dueAt) : undefined,
+  remind_at: (d?.remind_at || d?.remindAt) ? isoToLocalDateTimeInputValue(d.remind_at || d.remindAt) : undefined,
+  repeat_type: d?.repeat_type || d?.repeatType || 'none',
+  repeat_interval: d?.repeat_interval || d?.repeatInterval || 1,
+  repeat_end_date: (d?.repeat_end_date || d?.repeatEndDate) ? isoToLocalDateInputValue(d.repeat_end_date || d.repeatEndDate) : undefined,
 })
 
 const errors = reactive({
@@ -153,7 +182,18 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    emit('submit', { ...form })
+    const payload = { ...form }
+    // 将 datetime-local 本地时间转为 RFC3339 UTC
+    if (payload.due_at) {
+      payload.due_at = localDateTimeToISOString(payload.due_at)
+    }
+    if (payload.remind_at) {
+      payload.remind_at = localDateTimeToISOString(payload.remind_at)
+    }
+    if (payload.repeat_end_date) {
+      payload.repeat_end_date = dateToEndOfDayISOString(payload.repeat_end_date)
+    }
+    emit('submit', payload)
   } finally {
     submitting.value = false
   }

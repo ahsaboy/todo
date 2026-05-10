@@ -247,13 +247,13 @@
                     },
                     {
                         "type": "string",
-                        "description": "截止时间上限 (2006-01-02 15:04:05)",
+                        "description": "截止时间上限 (RFC3339 UTC，例如 2026-05-10T10:30:00Z)",
                         "name": "due_before",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "截止时间下限 (2006-01-02 15:04:05)",
+                        "description": "截止时间下限 (RFC3339 UTC，例如 2026-05-10T10:30:00Z)",
                         "name": "due_after",
                         "in": "query"
                     },

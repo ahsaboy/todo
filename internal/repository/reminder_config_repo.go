@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"todo/internal/models"
 )
@@ -123,8 +124,8 @@ func (r *ReminderConfigRepo) Update(ctx context.Context, id, userID int64, req m
 		return r.GetByID(ctx, id, userID)
 	}
 
-	setClauses = append(setClauses, "updated_at = datetime('now','localtime')")
-	args = append(args, id, userID)
+	setClauses = append(setClauses, "updated_at = ?")
+	args = append(args, time.Now().UTC().Format(time.RFC3339), id, userID)
 
 	query := "UPDATE user_reminder_configs SET " + joinClauses(setClauses) + " WHERE id = ? AND user_id = ?"
 	result, err := r.db.ExecContext(ctx, query, args...)

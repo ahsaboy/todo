@@ -93,15 +93,13 @@ type Pagination struct {
 	TotalPages int   `json:"total_pages"`
 }
 
-// CalculateNextDueDate 计算重复任务的下一次日期
-func CalculateNextDueDate(current string, repeatType string, interval int) string {
-	t, err := time.Parse("2006-01-02 15:04:05", current)
+// CalculateNextDueDate 计算重复任务的下一次日期，返回 UTC RFC3339。
+func CalculateNextDueDate(current string, repeatType string, interval int) (string, error) {
+	t, err := time.Parse(time.RFC3339, current)
 	if err != nil {
-		t, err = time.Parse(time.RFC3339, current)
-		if err != nil {
-			return current
-		}
+		return "", err
 	}
+	t = t.UTC()
 
 	switch repeatType {
 	case "daily":
@@ -113,8 +111,8 @@ func CalculateNextDueDate(current string, repeatType string, interval int) strin
 	case "yearly":
 		t = t.AddDate(interval, 0, 0)
 	default:
-		return current
+		return t.Format(time.RFC3339), nil
 	}
 
-	return t.Format("2006-01-02 15:04:05")
+	return t.Format(time.RFC3339), nil
 }

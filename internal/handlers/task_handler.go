@@ -49,7 +49,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 
 	task, err := h.svc.Create(c.Request.Context(), userID, req)
 	if err != nil {
-		if errors.Is(err, service.ErrReminderChannelMissing) {
+		if errors.Is(err, service.ErrReminderChannelMissing) || errors.Is(err, service.ErrInvalidTime) {
 			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 			return
 		}
@@ -109,8 +109,8 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 // @Param        order     query string false "排序方向"    default(desc)        Enums(asc, desc)
 // @Param        status    query string false "任务状态"                         Enums(pending, completed, all)
 // @Param        priority  query int    false "优先级筛选"                       Enums(1, 2, 3)
-// @Param        due_before query string false "截止时间上限 (2006-01-02 15:04:05)"
-// @Param        due_after  query string false "截止时间下限 (2006-01-02 15:04:05)"
+// @Param        due_before query string false "截止时间上限 (RFC3339 UTC，例如 2026-05-10T10:30:00Z)"
+// @Param        due_after  query string false "截止时间下限 (RFC3339 UTC，例如 2026-05-10T10:30:00Z)"
 // @Param        search    query string false "搜索关键字（标题/描述）"
 // @Success      200  {object} utils.PaginatedResponse{data=[]models.Task}
 // @Failure      500  {object} utils.ErrorResponse
@@ -192,6 +192,10 @@ func (h *TaskHandler) Update(c *gin.Context) {
 
 	task, err := h.svc.Update(c.Request.Context(), userID, id, req)
 	if err != nil {
+		if errors.Is(err, service.ErrInvalidTime) || errors.Is(err, service.ErrReminderChannelMissing) {
+			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
+			return
+		}
 		utils.RespondError(c, http.StatusInternalServerError, "failed to update task", utils.CodeInternalError)
 		return
 	}

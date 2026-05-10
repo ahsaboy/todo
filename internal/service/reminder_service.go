@@ -80,7 +80,7 @@ func (s *ReminderService) Start(ctx context.Context) {
 }
 
 func (s *ReminderService) processReminders(ctx context.Context) {
-	tasks, err := s.taskRepo.GetPendingReminders(ctx)
+	tasks, err := s.taskRepo.GetPendingReminders(ctx, time.Now())
 	if err != nil {
 		s.logger.Error("get pending reminders failed", zap.Error(err))
 		return

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"todo/internal/models"
 )
@@ -95,16 +96,16 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, 
 
 func (r *UserRepo) UpdateProfile(ctx context.Context, id int64, email string) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE users SET email = ?, updated_at = datetime('now','localtime') WHERE id = ?`,
-		email, id,
+		`UPDATE users SET email = ?, updated_at = ? WHERE id = ?`,
+		email, time.Now().UTC().Format(time.RFC3339), id,
 	)
 	return err
 }
 
 func (r *UserRepo) UpdatePassword(ctx context.Context, id int64, passwordHash string) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE users SET password_hash = ?, updated_at = datetime('now','localtime') WHERE id = ?`,
-		passwordHash, id,
+		`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`,
+		passwordHash, time.Now().UTC().Format(time.RFC3339), id,
 	)
 	return err
 }
