@@ -42,6 +42,10 @@ defineEmits<{
           <span class="nav-icon">🔔</span>
           <span class="nav-text" v-if="!collapsed">提醒配置</span>
         </router-link>
+        <router-link to="/reminder-logs" class="nav-item">
+          <span class="nav-icon">🧾</span>
+          <span class="nav-text" v-if="!collapsed">提醒日志</span>
+        </router-link>
         <router-link to="/api-keys" class="nav-item">
           <span class="nav-icon">🔑</span>
           <span class="nav-text" v-if="!collapsed">API Key</span>

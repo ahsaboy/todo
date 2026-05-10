@@ -21,6 +21,7 @@ const pageTitle = computed(() => {
     'tasks-upcoming': '即将到期',
     'tasks-board': '看板',
     'reminder-configs': '提醒配置',
+    'reminder-logs': '提醒日志',
     'api-keys': 'API Key',
     profile: '个人资料',
   }

@@ -65,6 +65,22 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at TEXT DEFAULT (datetime('now','localtime')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS reminder_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    task_id INTEGER NOT NULL,
+    reminder_config_id INTEGER,
+    channel_name TEXT NOT NULL,
+    channel_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('success','failed')),
+    attempts INTEGER NOT NULL DEFAULT 1,
+    error_message TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (reminder_config_id) REFERENCES user_reminder_configs(id) ON DELETE SET NULL
+);
 `
 
 const indexes = `
@@ -79,6 +95,10 @@ CREATE INDEX IF NOT EXISTS idx_tasks_reminder_pending
 CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON tasks(due_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+CREATE INDEX IF NOT EXISTS idx_reminder_logs_user_id_created_at ON reminder_logs(user_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reminder_logs_task_config
+    ON reminder_logs(task_id, reminder_config_id)
+    WHERE reminder_config_id IS NOT NULL;
 `
 
 func Init(dbPath string) (*sql.DB, error) {

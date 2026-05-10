@@ -18,6 +18,20 @@ type UserReminderConfig struct {
 	UpdatedAt           string            `json:"updated_at"`
 }
 
+type ReminderLog struct {
+	ID               int64  `json:"id"`
+	UserID           int64  `json:"user_id"`
+	TaskID           int64  `json:"task_id"`
+	TaskTitle        string `json:"task_title"`
+	ReminderConfigID *int64 `json:"reminder_config_id"`
+	ChannelName      string `json:"channel_name"`
+	ChannelType      string `json:"channel_type"`
+	Status           string `json:"status"`
+	Attempts         int    `json:"attempts"`
+	ErrorMessage     string `json:"error_message"`
+	CreatedAt        string `json:"created_at"`
+}
+
 type CreateReminderConfigRequest struct {
 	Name                string            `json:"name" binding:"required,max=64"`
 	ChannelType         string            `json:"channel_type" binding:"required,oneof=webhook feishu dingtalk wecom slack"`

@@ -51,6 +51,11 @@ const router = createRouter({
           component: () => import('@/pages/ReminderConfigsPage.vue'),
         },
         {
+          path: 'reminder-logs',
+          name: 'reminder-logs',
+          component: () => import('@/pages/ReminderLogsPage.vue'),
+        },
+        {
           path: 'api-keys',
           name: 'api-keys',
           component: () => import('@/pages/ApiKeysPage.vue'),

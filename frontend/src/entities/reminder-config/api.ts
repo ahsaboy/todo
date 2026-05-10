@@ -1,7 +1,8 @@
-import type { ApiResponse } from '@/shared/api/types'
+import type { ApiResponse, PaginatedResponse } from '@/shared/api/types'
 import { api } from '@/shared/api/client'
 import type {
   ReminderConfigDto,
+  ReminderLogDto,
   ReminderTemplatesDto,
   CreateReminderConfigPayload,
   UpdateReminderConfigPayload,
@@ -29,4 +30,8 @@ export function updateReminderConfig(id: number, payload: UpdateReminderConfigPa
 
 export function deleteReminderConfig(id: number) {
   return api.delete<ApiResponse<void>>(`/user/reminder-configs/${id}`)
+}
+
+export function getReminderLogs(page = 1, limit = 20) {
+  return api.get<PaginatedResponse<ReminderLogDto>>(`/user/reminder-logs?page=${page}&limit=${limit}`)
 }

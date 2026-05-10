@@ -139,6 +139,7 @@ func main() {
 	userRepo := repository.NewUserRepo(db)
 	apiKeyRepo := repository.NewAPIKeyRepo(db)
 	reminderConfigRepo := repository.NewReminderConfigRepo(db)
+	reminderLogRepo := repository.NewReminderLogRepo(db)
 	taskRepo := repository.NewTaskRepo(db)
 
 	authSvc := service.NewAuthService(userRepo, apiKeyRepo)
@@ -148,11 +149,12 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authSvc)
 	logHandler := handlers.NewLogHandler(cfg.Logging, logger)
 	reminderConfigHandler := handlers.NewReminderConfigHandler(reminderConfigSvc)
+	reminderLogHandler := handlers.NewReminderLogHandler(reminderLogRepo)
 	taskHandler := handlers.NewTaskHandler(taskSvc)
 
 	// 初始化提醒服务
 	reminderSvc, err := service.NewReminderService(
-		taskRepo, reminderConfigRepo,
+		taskRepo, reminderConfigRepo, reminderLogRepo,
 		cfg.Reminder,
 		logger,
 	)
@@ -220,6 +222,7 @@ func main() {
 		api.GET("/user/reminder-configs/:id", reminderConfigHandler.GetByID)
 		api.PUT("/user/reminder-configs/:id", reminderConfigHandler.Update)
 		api.DELETE("/user/reminder-configs/:id", reminderConfigHandler.Delete)
+		api.GET("/user/reminder-logs", reminderLogHandler.List)
 	}
 
 	// 静态资源服务

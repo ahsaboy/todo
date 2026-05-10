@@ -1,4 +1,4 @@
-import type { ReminderConfigDto, ReminderConfig } from './model'
+import type { ReminderConfigDto, ReminderConfig, ReminderLogDto, ReminderLog } from './model'
 
 export function toReminderConfig(dto: ReminderConfigDto): ReminderConfig {
   return {
@@ -15,5 +15,21 @@ export function toReminderConfig(dto: ReminderConfigDto): ReminderConfig {
     webhookHeaders: dto.webhook_headers ?? {},
     webhookMethod: dto.webhook_method,
     webhookUrl: dto.webhook_url,
+  }
+}
+
+export function toReminderLog(dto: ReminderLogDto): ReminderLog {
+  return {
+    attempts: dto.attempts,
+    channelName: dto.channel_name,
+    channelType: dto.channel_type,
+    createdAt: dto.created_at,
+    errorMessage: dto.error_message,
+    id: dto.id,
+    reminderConfigId: dto.reminder_config_id,
+    status: dto.status,
+    taskId: dto.task_id,
+    taskTitle: dto.task_title,
+    userId: dto.user_id,
   }
 }

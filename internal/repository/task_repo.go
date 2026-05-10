@@ -173,6 +173,11 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 	if rows == 0 {
 		return nil, nil
 	}
+	if req.RemindAt != nil {
+		if _, err := r.db.ExecContext(ctx, `DELETE FROM reminder_logs WHERE task_id = ?`, id); err != nil {
+			return nil, fmt.Errorf("clear reminder logs: %w", err)
+		}
+	}
 	return r.GetByID(ctx, userID, id)
 }
 

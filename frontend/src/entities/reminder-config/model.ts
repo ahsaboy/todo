@@ -43,6 +43,34 @@ export interface ReminderConfig {
   webhookUrl: string
 }
 
+export interface ReminderLogDto {
+  id: number
+  user_id: number
+  task_id: number
+  task_title: string
+  reminder_config_id: number | null
+  channel_name: string
+  channel_type: string
+  status: 'success' | 'failed'
+  attempts: number
+  error_message: string
+  created_at: string
+}
+
+export interface ReminderLog {
+  id: number
+  userId: number
+  taskId: number
+  taskTitle: string
+  reminderConfigId: number | null
+  channelName: string
+  channelType: string
+  status: 'success' | 'failed'
+  attempts: number
+  errorMessage: string
+  createdAt: string
+}
+
 export interface CreateReminderConfigPayload {
   channel_type: ChannelType
   enabled?: boolean
