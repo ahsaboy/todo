@@ -186,9 +186,13 @@ func main() {
 	r.GET("/api/v1/runtime-config", logHandler.RuntimeConfig)
 	r.POST("/api/v1/logs/frontend", logHandler.FrontendLogs)
 	r.GET("/api/v1/templates", reminderTemplatesHandler(cfg))
-	r.GET("/docs/*any", func(c *gin.Context) {
-		httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
-	})
+
+	// Swagger 文档（仅在启用时）
+	if cfg.Swagger {
+		r.GET("/docs/*any", func(c *gin.Context) {
+			httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
+		})
+	}
 
 	// 公开路由（无需认证）
 	auth := r.Group("/api/v1/auth")
