@@ -12,6 +12,9 @@ server:
 database:
   path: "./data/tasks.db"  # SQLite 数据库文件路径
 
+# Swagger 配置
+swagger: false            # 是否启用 Swagger 文档
+
 # 提醒服务配置
 reminder:
   enabled: true                    # 是否启用后台提醒扫描

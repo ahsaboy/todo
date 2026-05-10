@@ -13,6 +13,7 @@ type Config struct {
 	Reminder ReminderConfig `yaml:"reminder"`
 	CORS     CORSConfig     `yaml:"cors"`
 	Logging  LoggingConfig  `yaml:"logging"`
+	Swagger  bool           `yaml:"swagger"`
 }
 
 type ServerConfig struct {

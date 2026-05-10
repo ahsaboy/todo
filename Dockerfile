@@ -1,5 +1,10 @@
+ARG APP_VERSION=dev
+
 # 前端构建阶段
 FROM node:20-alpine AS frontend-builder
+
+ARG APP_VERSION
+ENV VITE_APP_VERSION=${APP_VERSION}
 
 WORKDIR /app
 
@@ -28,12 +33,13 @@ RUN go install github.com/swaggo/swag/cmd/swag@latest && \
     swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal && \
     sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
 
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /server ./cmd/server
+ARG APP_VERSION
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -X main.version=${APP_VERSION}" -o /server ./cmd/server
 
 # 运行阶段
 FROM alpine:3.19
 
-RUN apk add --no-cache ca-certificates tzdata wget
+RUN apk add --no-cache ca-certificates tzdata curl
 
 WORKDIR /app
 

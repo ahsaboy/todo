@@ -15,7 +15,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 
-	_ "todo/docs"
+	docs "todo/docs"
 	"todo/internal/config"
 	"todo/internal/database"
 	"todo/internal/handlers"
@@ -38,7 +38,7 @@ import (
 // @in header
 // @name api-key
 
-const version = "2.0.0"
+var version = "dev"
 
 func main() {
 	cfgPath := flag.String("config", "config.yaml", "配置文件路径")
@@ -128,6 +128,8 @@ func main() {
 		zap.String("mode", cfg.Server.Mode),
 	)
 
+	docs.SwaggerInfo.Version = version
+
 	// 初始化数据库
 	db, err := database.Init(cfg.Database.Path)
 	if err != nil {
@@ -184,9 +186,13 @@ func main() {
 	r.GET("/api/v1/runtime-config", logHandler.RuntimeConfig)
 	r.POST("/api/v1/logs/frontend", logHandler.FrontendLogs)
 	r.GET("/api/v1/templates", reminderTemplatesHandler(cfg))
-	r.GET("/docs/*any", func(c *gin.Context) {
-		httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
-	})
+
+	// Swagger 文档（仅在启用时）
+	if cfg.Swagger {
+		r.GET("/docs/*any", func(c *gin.Context) {
+			httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
+		})
+	}
 
 	// 公开路由（无需认证）
 	auth := r.Group("/api/v1/auth")
