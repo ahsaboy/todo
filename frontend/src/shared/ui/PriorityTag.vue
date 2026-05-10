@@ -12,13 +12,13 @@ const props = defineProps<{
 }>()
 
 const level = computed(() => {
-  if (props.priority === 3) return 'high'
+  if (props.priority === 1) return 'high'
   if (props.priority === 2) return 'medium'
   return 'low'
 })
 
 const label = computed(() => {
-  if (props.priority === 3) return '高'
+  if (props.priority === 1) return '高'
   if (props.priority === 2) return '中'
   return '低'
 })
