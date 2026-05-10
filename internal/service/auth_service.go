@@ -80,6 +80,9 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest) (*mode
 		return nil, "", fmt.Errorf("invalid username or password")
 	}
 
+	// 清理过期的 login API Key（last_used_at 超过 24 小时）
+	s.apiKeyRepo.CleanupExpiredLoginKeys(ctx, user.ID)
+
 	// 登录时生成新的 API Key
 	apiKey, err := s.generateKey(ctx, user.ID, "login")
 	if err != nil {

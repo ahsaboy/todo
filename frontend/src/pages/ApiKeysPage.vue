@@ -7,6 +7,7 @@
 
     <div class="info-banner">
       API Key 用于第三方应用访问你的任务数据。请妥善保管，创建后仅显示一次。
+      登录时自动生成的 "login" 类型 Key 在最后使用超过 24 小时后会自动清理。
     </div>
 
     <div v-if="loading" class="page-loading">加载中...</div>

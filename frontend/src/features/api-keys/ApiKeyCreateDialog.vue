@@ -80,11 +80,22 @@ async function handleCreate() {
   }
 }
 
-function copyKey() {
-  if (newKey.value) {
-    window.navigator.clipboard.writeText(newKey.value)
-    window.alert('已复制到剪贴板')
+async function copyKey() {
+  if (!newKey.value) return
+  try {
+    await navigator.clipboard.writeText(newKey.value)
+  } catch {
+    // fallback for non-HTTPS environments
+    const textarea = document.createElement('textarea')
+    textarea.value = newKey.value
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
   }
+  window.alert('已复制到剪贴板')
 }
 
 function handleClose() {

@@ -92,3 +92,17 @@ func (r *APIKeyRepo) DeleteByID(ctx context.Context, id, userID int64) (bool, er
 	rows, _ := result.RowsAffected()
 	return rows > 0, nil
 }
+
+// CleanupExpiredLoginKeys 删除指定用户下名为 "login" 且 last_used_at 超过 24 小时的 API Key。
+func (r *APIKeyRepo) CleanupExpiredLoginKeys(ctx context.Context, userID int64) (int64, error) {
+	cutoff := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
+	result, err := r.db.ExecContext(ctx,
+		`DELETE FROM user_api_keys WHERE user_id = ? AND name = 'login' AND last_used_at IS NOT NULL AND last_used_at < ?`,
+		userID, cutoff,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup expired login keys: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	return rows, nil
+}
