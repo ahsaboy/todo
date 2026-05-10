@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth.store'
 
 defineProps<{
-  sidebarCollapsed: boolean
+  showSidebarToggle: boolean
 }>()
 
 defineEmits<{
@@ -35,14 +35,22 @@ const userInitial = computed(() => {
 
 <template>
   <header class="app-topbar">
-    <button class="sidebar-toggle" @click="$emit('toggleSidebar')">
+    <button v-if="showSidebarToggle" class="sidebar-toggle" type="button" @click="$emit('toggleSidebar')">
       <span>☰</span>
     </button>
     <h1 class="page-title">{{ pageTitle }}</h1>
     <div class="topbar-actions">
       <div class="user-menu">
-        <button class="user-btn">{{ userInitial }}</button>
+        <button class="user-btn" type="button" aria-label="用户菜单">{{ userInitial }}</button>
       </div>
     </div>
   </header>
 </template>
+
+<style scoped>
+.user-menu {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+</style>

@@ -101,10 +101,17 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import type { CreateTaskPayload, UpdateTaskPayload } from '@/entities/task/model'
+import type { CreateTaskPayload, Task, UpdateTaskPayload } from '@/entities/task/model'
+
+type TaskFormInitialData = Partial<CreateTaskPayload> &
+  Partial<Pick<Task, 'dueAt' | 'remindAt' | 'repeatEndDate' | 'repeatInterval' | 'repeatType'>> & {
+    title?: string
+    description?: string
+    priority?: 1 | 2 | 3
+  }
 
 const props = defineProps<{
-  initialData?: Partial<CreateTaskPayload>
+  initialData?: TaskFormInitialData
   mode?: 'create' | 'edit'
 }>()
 
@@ -141,7 +148,7 @@ function isoToLocalDateInputValue(iso: string): string {
 
 // 初始化表单：将后端 UTC RFC3339 转为本地输入格式
 // initialData 可能是 snake_case（CreateTaskPayload）或 camelCase（Task model）
-const d = props.initialData as any
+const d = props.initialData
 const form = reactive<CreateTaskPayload>({
   title: d?.title || '',
   description: d?.description || undefined,

@@ -1,5 +1,10 @@
 # TODO 任务管理系统
 
+[![Version](https://img.shields.io/github/v/release/ahsaboy/todo?color=blue&label=version)](https://github.com/ahsaboy/todo/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/ahsaboy/todo/releases)
+[![Built with Go](https://img.shields.io/badge/built%20with-Go-orange.svg)](https://go.dev/)
+[![Downloads](https://img.shields.io/github/downloads/ahsaboy/todo/total)](https://github.com/ahsaboy/todo/releases/latest)
+
 一个轻量级的多用户 TODO 任务管理服务，基于 Go + Gin + SQLite，支持用户注册/登录、个人 API Key、多渠道提醒推送。
 
 ## 功能特性
@@ -96,7 +101,7 @@ todo-server [选项]
 
 `config.yaml` 包含所有可配置项：
 
-```yaml
+```
 server:
   host: "0.0.0.0"
   port: 8080

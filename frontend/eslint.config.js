@@ -15,6 +15,7 @@ const browserGlobals = {
   HTMLTextAreaElement: 'readonly',
   InputEvent: 'readonly',
   MouseEvent: 'readonly',
+  MediaQueryList: 'readonly',
   PromiseRejectionEvent: 'readonly',
   RequestInit: 'readonly',
   Response: 'readonly',

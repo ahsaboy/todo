@@ -39,7 +39,8 @@
         :tasks="tasks"
         @toggle="toggleComplete"
         @open="openTask"
-        @more="openTask"
+        @edit="editTask"
+        @delete="handleDelete"
       />
 
       <!-- 桌面端表格 -->
@@ -155,22 +156,28 @@ async function handleDelete(id: number) {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .page-header h2 {
   margin: 0;
   font-size: 20px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .header-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .btn-primary {
@@ -213,6 +220,7 @@ async function handleDelete(id: number) {
   align-items: center;
   gap: 16px;
   padding: 16px 0;
+  flex-wrap: wrap;
 }
 
 .pagination button {
@@ -263,8 +271,8 @@ async function handleDelete(id: number) {
   .fab {
     display: flex;
     position: fixed;
-    bottom: 72px;
-    right: 20px;
+    right: 16px;
+    bottom: calc(var(--bottom-nav-height) + 16px);
     width: 56px;
     height: 56px;
     background: var(--color-primary);
@@ -281,6 +289,42 @@ async function handleDelete(id: number) {
 
   .page-toolbar {
     display: none;
+  }
+
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .page-header h2 {
+    font-size: 18px;
+    line-height: 1.4;
+  }
+
+  .pagination {
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 72px 8px 0;
+  }
+
+  .pagination span {
+    order: -1;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 359px) {
+  .page-header {
+    flex-wrap: wrap;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .pagination {
+    padding-right: 0;
   }
 }
 </style>

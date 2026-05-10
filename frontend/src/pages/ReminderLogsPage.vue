@@ -16,39 +16,74 @@
       <p>暂无提醒日志</p>
     </div>
 
-    <div v-else class="log-table-wrap">
-      <table class="log-table">
-        <thead>
-          <tr>
-            <th>时间</th>
-            <th>任务</th>
-            <th>渠道</th>
-            <th>状态</th>
-            <th>尝试</th>
-            <th>错误</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in logs" :key="item.id">
-            <td>{{ formatDate(item.createdAt) }}</td>
-            <td class="task-cell">{{ item.taskTitle || `任务 #${item.taskId}` }}</td>
-            <td>{{ item.channelName }}</td>
-            <td>
-              <span class="status-tag" :class="item.status">
-                {{ item.status === 'success' ? '成功' : '失败' }}
-              </span>
-            </td>
-            <td>{{ item.attempts }}</td>
-            <td class="error-cell">{{ item.errorMessage || '-' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <template v-else>
+      <div class="log-card-list">
+        <article v-for="item in logs" :key="item.id" class="log-card">
+          <div class="log-card-header">
+            <span class="status-tag" :class="item.status">
+              {{ item.status === 'success' ? '成功' : '失败' }}
+            </span>
+            <time class="log-card-time">{{ formatDate(item.createdAt) }}</time>
+          </div>
 
-    <div v-if="meta.totalPages > 1" class="pager">
+          <div class="log-card-title">{{ item.taskTitle || `任务 #${item.taskId}` }}</div>
+
+          <dl class="log-meta-list">
+            <div class="log-meta-row">
+              <dt>渠道</dt>
+              <dd>{{ item.channelName }}</dd>
+            </div>
+            <div class="log-meta-row">
+              <dt>类型</dt>
+              <dd>{{ item.channelType }}</dd>
+            </div>
+            <div class="log-meta-row">
+              <dt>尝试</dt>
+              <dd>{{ item.attempts }}</dd>
+            </div>
+          </dl>
+
+          <div v-if="item.errorMessage" class="log-card-error">
+            <div class="log-card-error-label">错误信息</div>
+            <p>{{ item.errorMessage }}</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="log-table-wrap">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>任务</th>
+              <th>渠道</th>
+              <th>状态</th>
+              <th>尝试</th>
+              <th>错误</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in logs" :key="item.id">
+              <td>{{ formatDate(item.createdAt) }}</td>
+              <td class="task-cell">{{ item.taskTitle || `任务 #${item.taskId}` }}</td>
+              <td>{{ item.channelName }}</td>
+              <td>
+                <span class="status-tag" :class="item.status">
+                  {{ item.status === 'success' ? '成功' : '失败' }}
+                </span>
+              </td>
+              <td>{{ item.attempts }}</td>
+              <td class="error-cell">{{ item.errorMessage || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <div v-if="meta.total_pages > 1" class="pager">
       <button type="button" :disabled="page <= 1" @click="changePage(page - 1)">上一页</button>
-      <span>{{ page }} / {{ meta.totalPages }}</span>
-      <button type="button" :disabled="page >= meta.totalPages" @click="changePage(page + 1)">
+      <span>{{ page }} / {{ meta.total_pages }}</span>
+      <button type="button" :disabled="page >= meta.total_pages" @click="changePage(page + 1)">
         下一页
       </button>
     </div>
@@ -112,17 +147,22 @@ function formatDate(value: string) {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .page-header h2 {
   margin: 0;
   font-size: 20px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .btn-secondary,
@@ -154,6 +194,91 @@ function formatDate(value: string) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 6px;
+}
+
+.log-card-list {
+  display: none;
+}
+
+.log-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.log-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.log-card-time {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.log-card-title {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.log-meta-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.log-meta-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.log-meta-row dt {
+  color: var(--color-text-muted);
+}
+
+.log-meta-row dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.log-card-error {
+  padding: 10px 12px;
+  background: var(--color-surface-muted);
+  border-radius: 6px;
+}
+
+.log-card-error-label {
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.log-card-error p {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .log-table {
@@ -219,5 +344,58 @@ function formatDate(value: string) {
   align-items: center;
   gap: 12px;
   color: var(--color-text-muted);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .page-header h2 {
+    font-size: 18px;
+    line-height: 1.4;
+  }
+
+  .log-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .log-table-wrap {
+    display: none;
+  }
+
+  .pager {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+  }
+
+  .pager button {
+    width: 100%;
+    min-height: 36px;
+  }
+
+  .pager button:last-child {
+    justify-self: end;
+  }
+
+  .pager span {
+    text-align: center;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 359px) {
+  .page-header {
+    flex-wrap: wrap;
+  }
+
+  .page-header .btn-secondary {
+    width: 100%;
+  }
 }
 </style>

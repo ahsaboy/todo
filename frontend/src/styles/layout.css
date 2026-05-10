@@ -115,6 +115,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 }
 
 .app-sidebar.collapsed ~ .app-main {
@@ -158,12 +159,14 @@
   margin: 0;
   font-size: 18px;
   font-weight: 600;
+  min-width: 0;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .user-btn {
@@ -192,6 +195,7 @@
 .page-content {
   flex: 1;
   padding: var(--content-padding);
+  min-width: 0;
 }
 
 /* 移动端底部导航 */
@@ -205,8 +209,17 @@
     display: none;
   }
 
+  .app-sidebar.collapsed ~ .app-main {
+    margin-left: 0;
+  }
+
   .app-main {
     margin-left: 0;
+    width: 100%;
+  }
+
+  .sidebar-toggle {
+    display: none;
   }
 
   .mobile-bottom-nav {
@@ -240,8 +253,41 @@
     font-size: 20px;
   }
 
+  .app-topbar {
+    gap: 12px;
+    padding: 0 16px;
+  }
+
+  .page-title {
+    font-size: 17px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .page-content {
-    padding-bottom: calc(var(--bottom-nav-height) + var(--content-padding));
+    padding: 16px 16px calc(var(--bottom-nav-height) + var(--content-padding));
+    overflow-x: clip;
+  }
+
+  .page-content {
+    overflow-wrap: anywhere;
+  }
+
+  .page-content > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 359px) {
+  .app-topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .page-title {
+    font-size: 16px;
   }
 }
 
