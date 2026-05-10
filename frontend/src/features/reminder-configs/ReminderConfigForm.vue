@@ -197,7 +197,7 @@ const form = reactive<{
   enabled: props.initialData?.enabled ?? true,
   webhook_url: props.initialData?.webhook_url || '',
   webhook_method: props.initialData?.webhook_method || 'POST',
-  webhook_headers: props.initialData?.webhook_headers || '',
+  webhook_headers: props.initialData?.webhook_headers || {},
   webhook_body_template: props.initialData?.webhook_body_template || '',
   max_retries: props.initialData?.max_retries ?? 3,
   retry_delay_seconds: props.initialData?.retry_delay_seconds ?? 5,
@@ -280,9 +280,7 @@ function applyTemplate(name: string) {
   webhookHeadersError.value = ''
   webhookBodyTemplateError.value = ''
 
-  if (!form.webhook_url && template.webhook_url) {
-    form.webhook_url = template.webhook_url
-  }
+  form.webhook_url = template.webhook_url || form.webhook_url
   if (!form.name) {
     form.name = formatTemplateName(name)
   }
