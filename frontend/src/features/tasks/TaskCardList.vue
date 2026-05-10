@@ -52,7 +52,6 @@
         </div>
       </div>
       <div class="task-actions">
-        <button class="action-btn" type="button" @click="$emit('open', task)">查看</button>
         <button class="action-btn" type="button" @click="$emit('edit', task)">编辑</button>
         <button class="action-btn action-btn-danger" type="button" @click="$emit('delete', task.id)">
           删除
@@ -229,7 +228,7 @@ function formatRepeat(type: string, interval: number): string {
 
 .task-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
