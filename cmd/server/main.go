@@ -15,7 +15,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 
-	_ "todo/docs"
+	docs "todo/docs"
 	"todo/internal/config"
 	"todo/internal/database"
 	"todo/internal/handlers"
@@ -38,7 +38,7 @@ import (
 // @in header
 // @name api-key
 
-const version = "2.0.0"
+var version = "dev"
 
 func main() {
 	cfgPath := flag.String("config", "config.yaml", "配置文件路径")
@@ -127,6 +127,8 @@ func main() {
 		zap.Int("port", cfg.Server.Port),
 		zap.String("mode", cfg.Server.Mode),
 	)
+
+	docs.SwaggerInfo.Version = version
 
 	// 初始化数据库
 	db, err := database.Init(cfg.Database.Path)

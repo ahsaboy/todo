@@ -3,8 +3,9 @@
 GOOS   ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 APP    := todo
+GIT_TAG := $(shell git describe --tags --abbrev=0 2>/dev/null || echo dev)
 LDFLAGS := -s -w
-BUILDFLAGS := -trimpath -ldflags="$(LDFLAGS)"
+BUILDFLAGS := -trimpath -ldflags="$(LDFLAGS) -X main.version=$(GIT_TAG)"
 
 ifeq ($(OS),Windows_NT)
 	SHELL := cmd.exe
@@ -48,11 +49,11 @@ endif
 # 前端构建
 frontend-build: frontend-install
 ifeq ($(OS),Windows_NT)
-	cd /d frontend && npm run build
+	cd /d frontend && set "VITE_APP_VERSION=$(GIT_TAG)" && npm run build
 	if exist web\dist rmdir /s /q web\dist
 	xcopy /E /I /Y frontend\dist web\dist
 else
-	cd frontend && npm run build && cd .. && rm -rf web/dist && cp -r frontend/dist web/dist
+	cd frontend && VITE_APP_VERSION=$(GIT_TAG) npm run build && cd .. && rm -rf web/dist && cp -r frontend/dist web/dist
 endif
 
 # 前端清理
