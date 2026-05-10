@@ -61,9 +61,9 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/todo:${{ github.event.release.tag_name }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/todo:${{ github.ref_name }}
             ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest
-            ${{ secrets.ALICLOUD_REGISTRY }}/${{ secrets.ALICLOUD_REGISTRY_NAMESPACE }}/todo:${{ github.event.release.tag_name }}
+            ${{ secrets.ALICLOUD_REGISTRY }}/${{ secrets.ALICLOUD_REGISTRY_NAMESPACE }}/todo:${{ github.ref_name }}
             ${{ secrets.ALICLOUD_REGISTRY }}/${{ secrets.ALICLOUD_REGISTRY_NAMESPACE }}/todo:latest
           build-args: |
-            APP_VERSION=${{ github.event.release.tag_name }}
+            APP_VERSION=${{ github.ref_name }}

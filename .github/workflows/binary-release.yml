@@ -8,6 +8,8 @@ on:
 jobs:
   release-assets:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       APP: todo
       LDFLAGS: -s -w
@@ -29,6 +31,7 @@ jobs:
         run: |
           cd frontend
           npm run build
+          cp -r dist ../web/
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -56,26 +59,19 @@ jobs:
             os=${target%/*}
             arch=${target#*/}
             ext=""
-            out="artifacts/${APP}-${os}-${arch}"
             if [ "$os" = "windows" ]; then
               ext=".exe"
-              out="artifacts/${APP}-${os}-${arch}.exe"
             fi
-            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build $LDFLAGS -o "$out$ext" ./cmd/server
-            upx --best --lzma "$out$ext"
+            out="artifacts/${APP}-${os}-${arch}${ext}"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -ldflags "$LDFLAGS" -o "$out" ./cmd/server
+            if [ "$os" != "darwin" ]; then
+              upx --best --lzma "$out"
+            fi
           done
 
-      - name: Package release assets
-        run: |
-          mkdir -p release-artifacts
-          zip -j release-artifacts/${APP}-${{ github.event.release.tag_name }}-binaries.zip artifacts/*
-
-      - name: Upload release asset
-        uses: actions/upload-release-asset@v2
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: release-artifacts/${APP}-${{ github.event.release.tag_name }}-binaries.zip
-          asset_name: ${APP}-${{ github.event.release.tag_name }}-binaries.zip
-          asset_content_type: application/zip
+          files: artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
