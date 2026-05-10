@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ListTodo, Bell, ScrollText, KeyRound, UserCircle } from 'lucide-vue-next'
+import { ListTodo, Bell, ScrollText, KeyRound } from 'lucide-vue-next'
 </script>
 
 <template>
@@ -19,10 +19,6 @@ import { ListTodo, Bell, ScrollText, KeyRound, UserCircle } from 'lucide-vue-nex
     <router-link to="/api-keys" class="nav-item">
       <KeyRound class="nav-icon" :size="20" />
       <span class="nav-text">Key</span>
-    </router-link>
-    <router-link to="/profile" class="nav-item">
-      <UserCircle class="nav-icon" :size="20" />
-      <span class="nav-text">我的</span>
     </router-link>
   </nav>
 </template>

@@ -7,7 +7,6 @@ import {
   BellRing,
   ScrollText,
   KeyRound,
-  UserCircle,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-vue-next'
@@ -62,14 +61,6 @@ defineEmits<{
         <router-link to="/api-keys" class="nav-item">
           <KeyRound class="nav-icon" :size="18" />
           <span class="nav-text" v-if="!collapsed">API Key</span>
-        </router-link>
-      </div>
-
-      <div class="nav-section">
-        <div class="nav-label" v-if="!collapsed">账户</div>
-        <router-link to="/profile" class="nav-item">
-          <UserCircle class="nav-icon" :size="18" />
-          <span class="nav-text" v-if="!collapsed">个人资料</span>
         </router-link>
       </div>
     </nav>
