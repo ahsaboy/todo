@@ -1,5 +1,5 @@
 <template>
-  <div class="keys-page">
+  <div class="page">
     <div class="page-header">
       <h2>API Key</h2>
       <button class="btn-primary" type="button" @click="showCreate = true">生成 API Key</button>
@@ -66,23 +66,6 @@ async function handleRevoke(id: number) {
 </script>
 
 <style scoped>
-.keys-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
 .info-banner {
   background: color-mix(in srgb, var(--color-glow-info) 78%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-info) 22%, transparent);
@@ -90,31 +73,5 @@ async function handleRevoke(id: number) {
   padding: 12px;
   color: var(--color-info);
   font-size: 14px;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.page-loading,
-.page-error,
-.page-empty {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--color-text-muted);
-}
-
-.page-error button {
-  margin-top: 12px;
-  padding: 8px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
 }
 </style>

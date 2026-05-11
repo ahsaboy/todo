@@ -2,8 +2,10 @@
   <div class="key-list">
     <article v-for="key in keys" :key="key.id" class="key-card">
       <div class="key-card-header">
-        <div class="key-card-title">{{ key.name || '未命名' }}</div>
-        <span class="key-prefix">{{ getKeyPrefix() }}</span>
+        <div class="key-card-heading">
+          <div class="key-card-title">{{ key.name || '未命名' }}</div>
+          <span class="key-prefix">{{ getKeyPrefix() }}</span>
+        </div>
       </div>
 
       <dl class="key-meta-list">
@@ -94,14 +96,23 @@ function formatDate(dateStr: string): string {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   min-width: 0;
+  transition: background-color 0.15s ease;
+}
+
+.key-card:hover {
+  background-color: var(--color-surface-muted);
 }
 
 .key-card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
   min-width: 0;
+}
+
+.key-card-heading {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
 }
 
 .key-card-title {
@@ -220,11 +231,59 @@ function formatDate(dateStr: string): string {
   .key-table-wrap {
     display: none;
   }
+
+  .key-card {
+    gap: 14px;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .key-meta-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .key-meta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    background: var(--color-surface-muted);
+    border-radius: 10px;
+  }
+
+  .key-meta-row dt,
+  .key-meta-row dd {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .key-meta-row dd {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .key-prefix {
+    justify-self: flex-start;
+    width: fit-content;
+  }
+
+  .action-btn {
+    min-height: 40px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+}
+
+@media (max-width: 479px) {
+  .key-meta-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 359px) {
-  .key-card-header {
-    flex-direction: column;
+  .key-prefix {
+    max-width: 100%;
   }
 }
 </style>

@@ -71,7 +71,7 @@ function formatDue(dateStr: string): string {
 .task-card-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
 }
 

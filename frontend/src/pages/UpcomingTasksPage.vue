@@ -1,5 +1,5 @@
 <template>
-  <div class="upcoming-page">
+  <div class="page">
     <h2>即将到期</h2>
 
     <div v-if="loading" class="page-loading">加载中...</div>
@@ -76,26 +76,8 @@ const upcomingGroups = computed(() => {
 </script>
 
 <style scoped>
-.upcoming-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.upcoming-page h2 {
+.page h2 {
   margin: 0;
   font-size: 20px;
-}
-
-.page-loading,
-.page-error,
-.page-empty {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--color-text-muted);
-}
-
-.page-error {
-  color: var(--color-danger);
 }
 </style>

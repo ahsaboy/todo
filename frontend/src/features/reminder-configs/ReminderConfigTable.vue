@@ -2,7 +2,13 @@
   <div class="config-list">
     <article v-for="config in configs" :key="config.id" class="config-card">
       <div class="config-card-header">
-        <div class="config-card-title">{{ config.name }}</div>
+        <div class="config-card-heading">
+          <div class="config-card-title">{{ config.name }}</div>
+          <div class="config-card-subtitle">
+            <span class="config-chip">{{ formatChannelType(config.channelType) }}</span>
+            <span class="config-chip">{{ config.webhookMethod || 'POST' }}</span>
+          </div>
+        </div>
         <span class="status-badge" :class="{ enabled: config.enabled }">
           {{ config.enabled ? '启用' : '禁用' }}
         </span>
@@ -134,6 +140,11 @@ function formatRetry(maxRetries: number, retryDelaySeconds: number): string {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   min-width: 0;
+  transition: background-color 0.15s ease;
+}
+
+.config-card:hover {
+  background-color: var(--color-surface-muted);
 }
 
 .config-card-header {
@@ -144,12 +155,37 @@ function formatRetry(maxRetries: number, retryDelaySeconds: number): string {
   min-width: 0;
 }
 
+.config-card-heading {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
 .config-card-title {
   color: var(--color-text);
   font-size: 15px;
   font-weight: 600;
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+.config-card-subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.config-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1;
 }
 
 .config-meta-list {
@@ -284,11 +320,66 @@ function formatRetry(maxRetries: number, retryDelaySeconds: number): string {
   .config-table-wrap {
     display: none;
   }
+
+  .config-card {
+    gap: 14px;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .config-meta-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .config-meta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    background: var(--color-surface-muted);
+    border-radius: 10px;
+  }
+
+  .config-meta-row dt,
+  .config-meta-row dd {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .config-meta-row dd {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .card-actions {
+    gap: 10px;
+  }
+
+  .action-btn {
+    min-height: 40px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+}
+
+@media (max-width: 479px) {
+  .config-card-header {
+    flex-direction: column;
+  }
+
+  .status-badge {
+    align-self: flex-start;
+  }
+
+  .config-meta-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 359px) {
-  .config-card-header {
-    flex-direction: column;
+  .card-actions {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

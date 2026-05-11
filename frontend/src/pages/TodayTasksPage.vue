@@ -1,5 +1,5 @@
 <template>
-  <div class="today-page">
+  <div class="page">
     <h2>今日任务</h2>
 
     <QuickCreateTask @create="handleQuickCreate" />
@@ -74,26 +74,8 @@ async function handleQuickCreate(title: string) {
 </script>
 
 <style scoped>
-.today-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.today-page h2 {
+.page h2 {
   margin: 0;
   font-size: 20px;
-}
-
-.page-loading,
-.page-error,
-.page-empty {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--color-text-muted);
-}
-
-.page-error {
-  color: var(--color-danger);
 }
 </style>

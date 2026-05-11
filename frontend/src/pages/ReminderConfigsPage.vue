@@ -1,5 +1,5 @@
 <template>
-  <div class="configs-page">
+  <div class="page">
     <div class="page-header">
       <h2>提醒配置</h2>
       <button class="btn-primary" type="button" @click="openCreate">新增配置</button>
@@ -115,48 +115,3 @@ async function handleDelete(id: number) {
   await fetchConfigs()
 }
 </script>
-
-<style scoped>
-.configs-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.page-loading,
-.page-error,
-.page-empty {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--color-text-muted);
-}
-
-.page-error button {
-  margin-top: 12px;
-  padding: 8px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-}
-</style>

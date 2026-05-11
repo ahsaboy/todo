@@ -1,5 +1,5 @@
 <template>
-  <div class="tasks-page">
+  <div class="page">
     <div class="page-header">
       <h2>全部任务</h2>
       <div class="header-actions">
@@ -145,46 +145,10 @@ async function handleDelete(id: number) {
 </script>
 
 <style scoped>
-.tasks-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 .header-actions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-primary:hover {
-  background: var(--color-primary-hover);
 }
 
 .page-toolbar {
@@ -193,18 +157,6 @@ async function handleDelete(id: number) {
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-}
-
-.page-loading,
-.page-error,
-.page-empty {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--color-text-muted);
-}
-
-.page-error {
-  color: var(--color-danger);
 }
 
 .pagination {
@@ -284,15 +236,6 @@ async function handleDelete(id: number) {
     display: none;
   }
 
-  .page-header {
-    align-items: flex-start;
-  }
-
-  .page-header h2 {
-    font-size: 18px;
-    line-height: 1.4;
-  }
-
   .pagination {
       padding: 8px 72px 8px 0;
       display: flex;
@@ -307,10 +250,6 @@ async function handleDelete(id: number) {
 }
 
 @media (max-width: 359px) {
-  .page-header {
-    flex-wrap: wrap;
-  }
-
   .header-actions {
     width: 100%;
     justify-content: flex-end;

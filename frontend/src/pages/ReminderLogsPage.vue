@@ -1,5 +1,5 @@
 <template>
-  <div class="logs-page">
+  <div class="page">
     <div class="page-header">
       <h2>提醒日志</h2>
       <button class="btn-secondary" type="button" @click="fetchLogs"><RefreshCw :size="14" /> 刷新</button>
@@ -20,13 +20,14 @@
       <div class="log-card-list">
         <article v-for="item in logs" :key="item.id" class="log-card">
           <div class="log-card-header">
-            <span class="status-tag" :class="item.status">
-              {{ item.status === 'success' ? '成功' : '失败' }}
-            </span>
+            <div class="log-card-heading">
+              <span class="status-tag" :class="item.status">
+                {{ item.status === 'success' ? '成功' : '失败' }}
+              </span>
+              <div class="log-card-title">{{ item.taskTitle || `任务 #${item.taskId}` }}</div>
+            </div>
             <time class="log-card-time">{{ formatDate(item.createdAt) }}</time>
           </div>
-
-          <div class="log-card-title">{{ item.taskTitle || `任务 #${item.taskId}` }}</div>
 
           <dl class="log-meta-list">
             <div class="log-meta-row">
@@ -144,31 +145,8 @@ function formatDate(value: string) {
 </script>
 
 <style scoped>
-.logs-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 .btn-secondary,
-.pager button,
-.page-error button {
+.pager button {
   padding: 8px 14px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -180,14 +158,6 @@ function formatDate(value: string) {
 .pager button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-.page-loading,
-.page-error,
-.page-empty {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--color-text-muted);
 }
 
 .log-table-wrap {
@@ -209,6 +179,11 @@ function formatDate(value: string) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.log-card:hover {
+  background-color: var(--color-surface-muted);
 }
 
 .log-card-header {
@@ -218,11 +193,19 @@ function formatDate(value: string) {
   gap: 12px;
 }
 
+.log-card-heading {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
 .log-card-time {
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.5;
   text-align: right;
+  white-space: nowrap;
 }
 
 .log-card-title {
@@ -351,15 +334,6 @@ function formatDate(value: string) {
 }
 
 @media (max-width: 767px) {
-  .page-header {
-    align-items: flex-start;
-  }
-
-  .page-header h2 {
-    font-size: 18px;
-    line-height: 1.4;
-  }
-
   .log-card-list {
     display: flex;
     flex-direction: column;
@@ -368,6 +342,43 @@ function formatDate(value: string) {
 
   .log-table-wrap {
     display: none;
+  }
+
+  .log-card {
+    gap: 14px;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .log-meta-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .log-meta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    background: var(--color-surface-muted);
+    border-radius: 10px;
+  }
+
+  .log-meta-row dt,
+  .log-meta-row dd {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .log-meta-row dd {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .log-card-error {
+    padding: 12px;
+    border-left: 3px solid color-mix(in srgb, var(--color-danger) 55%, transparent);
+    border-radius: 10px;
   }
 
   .pager {
@@ -392,11 +403,21 @@ function formatDate(value: string) {
   }
 }
 
-@media (max-width: 359px) {
-  .page-header {
-    flex-wrap: wrap;
+@media (max-width: 479px) {
+  .log-card-header {
+    flex-direction: column;
   }
 
+  .log-card-time {
+    text-align: left;
+  }
+
+  .log-meta-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 359px) {
   .page-header .btn-secondary {
     width: 100%;
   }
