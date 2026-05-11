@@ -1,0 +1,34 @@
+ARG APP_VERSION=dev
+
+FROM golang:1.25-alpine AS builder
+
+ENV GOPROXY=https://goproxy.cn,https://goproxy.io,direct
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+    swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal && \
+    sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
+
+ARG APP_VERSION
+RUN CGO_ENABLED=0 GOOS=linux go build -tags separate_frontend -trimpath -ldflags="-s -w -X main.version=${APP_VERSION}" -o /server ./cmd/server
+
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata curl
+
+WORKDIR /app
+
+RUN mkdir -p /app/data
+
+COPY --from=builder /server .
+COPY config.yaml .
+
+EXPOSE 8080
+
+CMD ["./server"]

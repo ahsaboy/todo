@@ -4,10 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -23,7 +23,6 @@ import (
 	"todo/internal/middleware"
 	"todo/internal/repository"
 	"todo/internal/service"
-	"todo/web"
 )
 
 // @title           TODO 任务管理系统 API
@@ -231,43 +230,7 @@ func main() {
 		api.GET("/user/reminder-logs", reminderLogHandler.List)
 	}
 
-	// 静态资源服务
-	distFS, err := fs.Sub(web.Files, "dist")
-	if err != nil {
-		logger.Fatal("无法加载静态资源", zap.Error(err))
-	}
-	assetsFS, err := fs.Sub(distFS, "assets")
-	if err != nil {
-		logger.Fatal("无法加载 assets 资源", zap.Error(err))
-	}
-	indexHTML, err := fs.ReadFile(distFS, "index.html")
-	if err != nil {
-		logger.Fatal("无法加载 index.html", zap.Error(err))
-	}
-
-	// 静态文件（优先级高于 NoRoute）
-	r.StaticFS("/assets", http.FS(assetsFS))
-	r.StaticFileFS("/favicon.svg", "favicon.svg", http.FS(distFS))
-	r.StaticFileFS("/icons.svg", "icons.svg", http.FS(distFS))
-
-	// SPA fallback
-	r.NoRoute(func(c *gin.Context) {
-		path := c.Request.URL.Path
-
-		// API 路由返回 JSON
-		if len(path) >= 4 && path[:4] == "/api" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"success": false,
-				"error":   "endpoint not found",
-				"code":    "NOT_FOUND",
-			})
-			return
-		}
-
-		// 其他路由返回 index.html。不要用 FileFromFS("index.html")，它底层的
-		// http.FileServer 会把 /index.html 规范化重定向到 ./，导致根路径循环跳转。
-		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
-	})
+	registerStaticRoutes(r, logger)
 
 	// 启动 HTTP 服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -360,11 +323,10 @@ func applyLogOutputMode(mode string) (bool, bool, error) {
 
 func corsMiddleware(origins []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		origin := "*"
-		if len(origins) > 0 {
-			origin = origins[0]
+		if origin, ok := allowedCORSOrigin(c.GetHeader("Origin"), origins); ok {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
 		}
-		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, api-key, X-API-Key")
 
@@ -374,4 +336,23 @@ func corsMiddleware(origins []string) gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func allowedCORSOrigin(requestOrigin string, allowedOrigins []string) (string, bool) {
+	for _, origin := range allowedOrigins {
+		origin = strings.TrimSpace(origin)
+		if origin == "" {
+			continue
+		}
+		if origin == "*" {
+			if requestOrigin != "" {
+				return requestOrigin, true
+			}
+			return "*", true
+		}
+		if requestOrigin != "" && origin == requestOrigin {
+			return requestOrigin, true
+		}
+	}
+	return "", false
 }

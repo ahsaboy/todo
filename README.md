@@ -67,8 +67,57 @@ make build-darwin    # 交叉编译 macOS (arm64)
 
 ### Docker 部署
 
+单体部署仍使用当前 `Dockerfile`：Docker 会先构建 Vue 前端，复制到 `web/dist`，再由 Go 后端 embed 到同一个镜像中。
+
 ```bash
+# 本地二进制单体构建
+make build
+
+# 单体 Docker 镜像
+docker build -t todo-app:latest .
+
+# 单体 Compose 启动
 docker compose up --build -d
+```
+
+### 前后端分离部署
+
+后端纯 API 模式使用 `separate_frontend` 构建标签，不再注册前端静态资源路由：
+
+```bash
+# 本地构建纯 API 后端二进制
+make build-backend
+
+# 构建后端 Docker 镜像
+docker build -f Dockerfile.backend -t todo-backend:latest .
+```
+
+前端独立构建时通过 `API_BASE_URL` 指定浏览器访问后端 API 的地址。该值会在 Vite 构建阶段写入前端产物，对应环境变量为 `VITE_API_BASE_URL`。
+
+```bash
+# 本地构建前端 dist，不复制到 web/dist
+make frontend-build-standalone API_BASE_URL=http://localhost:8080/api/v1
+
+# 构建 nginx 静态前端镜像
+docker build -f frontend/Dockerfile \
+  --build-arg API_BASE_URL=http://localhost:8080/api/v1 \
+  -t todo-frontend:latest \
+  ./frontend
+```
+
+也可以直接使用分离部署 Compose 示例：
+
+```bash
+docker compose -f docker-compose.separated.yml up --build -d
+```
+
+默认示例中后端监听 `http://localhost:8080`，前端监听 `http://localhost:3000`。如果生产环境前端域名不是同源地址，需要在后端 `config.yaml` 中允许前端来源：
+
+```yaml
+cors:
+  enabled: true
+  allowed_origins:
+    - "https://todo.example.com"
 ```
 
 ### CLI 参数
@@ -226,13 +275,17 @@ TODO/
 │       └── validator.go            # 参数校验
 ├── docs/                           # Swagger 文档（自动生成）
 ├── frontend/                       # Vue 前端源码
-│   └── src/shared/logger/           # 前端日志封装和上报
+│   ├── Dockerfile                  # 分离部署前端 nginx 镜像
+│   ├── nginx.conf                  # 前端 SPA fallback 配置
+│   └── src/shared/logger/          # 前端日志封装和上报
 ├── web/                            # Go embed 前端构建产物入口
 │   ├── embed.go                    # 使用 //go:embed all:dist
 │   └── dist/                       # make build 生成并复制的静态文件
 ├── config.yaml                     # 配置文件
-├── Dockerfile                      # 多阶段构建
-├── docker-compose.yml              # 容器编排
+├── Dockerfile                      # 单体镜像多阶段构建
+├── Dockerfile.backend              # 分离部署纯 API 后端镜像
+├── docker-compose.yml              # 单体容器编排
+├── docker-compose.separated.yml    # 前后端分离容器编排示例
 └── Makefile                        # 构建命令
 ```
 
@@ -243,6 +296,8 @@ make build          # 编译当前平台（自动生成 Swagger 文档，支持 
 make build-linux    # 交叉编译 Linux amd64
 make build-windows  # 交叉编译 Windows amd64
 make build-darwin   # 交叉编译 macOS arm64
+make build-backend  # 编译当前平台纯 API 后端（-tags separate_frontend）
+make build-separated API_BASE_URL=http://localhost:8080/api/v1  # 纯 API 后端 + 独立前端 dist
 make run            # 编译并运行
 make test           # 运行测试
 make dev            # 本地开发（go run，自动生成 Swagger 文档）

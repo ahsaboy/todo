@@ -1,4 +1,4 @@
-.PHONY: frontend-install frontend-build frontend-clean check-swag fix-swagger-docs swag build build-linux build-windows build-darwin run test dev clean docker-build docker-up docker-down docker-logs
+.PHONY: help frontend-install frontend-build frontend-build-standalone frontend-clean check-swag fix-swagger-docs swag build build-linux build-windows build-darwin build-backend build-backend-linux build-backend-windows build-backend-darwin build-separated run test dev clean docker-build docker-up docker-down docker-logs
 
 GOOS   ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
@@ -6,6 +6,7 @@ APP    := todo
 GIT_TAG := $(shell git describe --tags --abbrev=0 2>/dev/null || echo dev)
 LDFLAGS := -s -w
 BUILDFLAGS := -trimpath -ldflags="$(LDFLAGS) -X main.version=$(GIT_TAG)"
+BACKEND_BUILDFLAGS := $(BUILDFLAGS) -tags separate_frontend
 
 ifeq ($(OS),Windows_NT)
 	SHELL := cmd.exe
@@ -38,6 +39,43 @@ define upx_compress
 endef
 endif
 
+help:
+	@echo TODO 任务管理系统 Makefile 命令
+	@echo.
+	@echo 常用:
+	@echo   make help                         显示此帮助
+	@echo   make dev                          本地运行，先构建前端并生成 Swagger
+	@echo   make test                         运行 Go 测试
+	@echo   make clean                        清理构建产物和本地数据库
+	@echo.
+	@echo 单体构建（后端嵌入前端静态资源）:
+	@echo   make build                        编译当前平台
+	@echo   make build-linux                  编译 Linux amd64
+	@echo   make build-windows                编译 Windows amd64
+	@echo   make build-darwin                 编译 macOS arm64
+	@echo.
+	@echo 前后端分离构建:
+	@echo   make build-backend                编译当前平台纯 API 后端
+	@echo   make build-backend-linux          编译 Linux amd64 纯 API 后端
+	@echo   make build-backend-windows        编译 Windows amd64 纯 API 后端
+	@echo   make build-backend-darwin         编译 macOS arm64 纯 API 后端
+	@echo   make frontend-build-standalone API_BASE_URL=https://api.example.com/api/v1
+	@echo                                    构建独立前端静态资源
+	@echo   make build-separated API_BASE_URL=https://api.example.com/api/v1
+	@echo                                    同时构建纯 API 后端和独立前端
+	@echo.
+	@echo 前端与文档:
+	@echo   make frontend-install             安装前端依赖
+	@echo   make frontend-build               构建前端并复制到 web/dist
+	@echo   make frontend-clean               清理前端构建产物
+	@echo   make swag                         生成 Swagger 文档
+	@echo.
+	@echo Docker:
+	@echo   make docker-build                 构建单体 Docker 镜像
+	@echo   make docker-up                    启动 docker compose
+	@echo   make docker-down                  停止 docker compose
+	@echo   make docker-logs                  查看 docker compose 日志
+
 # 前端依赖安装
 frontend-install:
 ifeq ($(OS),Windows_NT)
@@ -54,6 +92,14 @@ ifeq ($(OS),Windows_NT)
 	xcopy /E /I /Y frontend\dist web\dist
 else
 	cd frontend && VITE_APP_VERSION=$(GIT_TAG) npm run build && cd .. && rm -rf web/dist && cp -r frontend/dist web/dist
+endif
+
+# 前端独立构建（不复制到 web/dist）
+frontend-build-standalone: frontend-install
+ifeq ($(OS),Windows_NT)
+	cd /d frontend && set "VITE_APP_VERSION=$(GIT_TAG)" && set "VITE_API_BASE_URL=$(API_BASE_URL)" && npm run build
+else
+	cd frontend && VITE_APP_VERSION=$(GIT_TAG) VITE_API_BASE_URL="$(API_BASE_URL)" npm run build
 endif
 
 # 前端清理
@@ -116,6 +162,53 @@ else
 	GOOS=darwin GOARCH=arm64 go build $(BUILDFLAGS) -o "bin/$(APP)-darwin-arm64" ./cmd/server
 endif
 	$(call upx_compress,bin/$(APP)-darwin-arm64)
+
+# 编译当前平台纯 API 后端（分离前端）
+build-backend:
+ifeq ($(OS),Windows_NT)
+	if not exist bin mkdir bin
+	set "GOOS=$(GOOS)" && set "GOARCH=$(GOARCH)" && go build $(BACKEND_BUILDFLAGS) -o "bin\$(APP)-backend-$(GOOS)-$(GOARCH)$(EXT)" ".\cmd\server"
+else
+	mkdir -p bin
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(BACKEND_BUILDFLAGS) -o "bin/$(APP)-backend-$(GOOS)-$(GOARCH)$(EXT)" ./cmd/server
+endif
+	$(call upx_compress,bin/$(APP)-backend-$(GOOS)-$(GOARCH)$(EXT))
+
+# 交叉编译 Linux 纯 API 后端
+build-backend-linux:
+ifeq ($(OS),Windows_NT)
+	if not exist bin mkdir bin
+	set "GOOS=linux" && set "GOARCH=amd64" && go build $(BACKEND_BUILDFLAGS) -o "bin\$(APP)-backend-linux-amd64" ".\cmd\server"
+else
+	mkdir -p bin
+	GOOS=linux GOARCH=amd64 go build $(BACKEND_BUILDFLAGS) -o "bin/$(APP)-backend-linux-amd64" ./cmd/server
+endif
+	$(call upx_compress,bin/$(APP)-backend-linux-amd64)
+
+# 交叉编译 Windows 纯 API 后端
+build-backend-windows:
+ifeq ($(OS),Windows_NT)
+	if not exist bin mkdir bin
+	set "GOOS=windows" && set "GOARCH=amd64" && go build $(BACKEND_BUILDFLAGS) -o "bin\$(APP)-backend-windows-amd64.exe" ".\cmd\server"
+else
+	mkdir -p bin
+	GOOS=windows GOARCH=amd64 go build $(BACKEND_BUILDFLAGS) -o "bin/$(APP)-backend-windows-amd64.exe" ./cmd/server
+endif
+	$(call upx_compress,bin/$(APP)-backend-windows-amd64.exe)
+
+# 交叉编译 macOS 纯 API 后端
+build-backend-darwin:
+ifeq ($(OS),Windows_NT)
+	if not exist bin mkdir bin
+	set "GOOS=darwin" && set "GOARCH=arm64" && go build $(BACKEND_BUILDFLAGS) -o "bin\$(APP)-backend-darwin-arm64" ".\cmd\server"
+else
+	mkdir -p bin
+	GOOS=darwin GOARCH=arm64 go build $(BACKEND_BUILDFLAGS) -o "bin/$(APP)-backend-darwin-arm64" ./cmd/server
+endif
+	$(call upx_compress,bin/$(APP)-backend-darwin-arm64)
+
+# 分离部署构建：纯 API 后端 + 独立前端 dist
+build-separated: build-backend frontend-build-standalone
 
 run: build
 	.\bin\$(APP)-$(GOOS)-$(GOARCH)$(EXT)
