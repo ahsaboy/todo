@@ -217,8 +217,9 @@ function formatRetry(maxRetries: number, retryDelaySeconds: number): string {
 }
 
 .status-badge.enabled {
-  background: #dcfce7;
-  color: #16a34a;
+  background: color-mix(in srgb, var(--color-glow-success) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-success) 18%, transparent);
+  color: var(--color-success);
 }
 
 .name-cell {

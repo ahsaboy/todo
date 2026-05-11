@@ -104,8 +104,13 @@ async function handleSubmit() {
   align-items: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, rgb(37 111 108 / 12%), transparent 32%),
-    linear-gradient(135deg, #f7f8fa 0%, #eef3f2 100%);
+    radial-gradient(circle at top left, var(--color-bg-radial-a), transparent 32%),
+    radial-gradient(circle at top right, var(--color-bg-radial-b), transparent 28%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-bg) 96%, var(--color-surface) 4%) 0%,
+      color-mix(in srgb, var(--color-bg) 88%, var(--color-surface-muted) 12%) 100%
+    );
 }
 
 .auth-card {
@@ -115,7 +120,7 @@ async function handleSubmit() {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface);
-  box-shadow: 0 18px 48px rgb(31 35 40 / 10%);
+  box-shadow: var(--shadow-panel);
 }
 
 .auth-header {
@@ -162,22 +167,24 @@ input {
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font-size: 15px;
   transition:
+    background-color 0.2s,
     border-color 0.2s,
     box-shadow 0.2s;
 }
 
 input::placeholder {
-  color: #9aa3aa;
+  color: var(--color-text-muted);
 }
 
 input:focus {
   outline: none;
+  background: var(--color-surface);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(37 111 108 / 14%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
 button {
@@ -207,9 +214,9 @@ button:disabled {
 .error-message {
   margin: 0 0 16px;
   padding: 10px 12px;
-  border: 1px solid rgb(217 45 32 / 20%);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
   border-radius: 6px;
-  background: rgb(217 45 32 / 8%);
+  background: color-mix(in srgb, var(--color-glow-danger) 72%, transparent);
   color: var(--color-danger);
   font-size: 14px;
   line-height: 20px;

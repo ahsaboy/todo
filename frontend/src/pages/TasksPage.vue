@@ -283,7 +283,7 @@ async function handleDelete(id: number) {
     font-size: 24px;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-glow-primary);
     z-index: 50;
     cursor: pointer;
   }

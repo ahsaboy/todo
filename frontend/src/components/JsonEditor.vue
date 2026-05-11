@@ -434,7 +434,7 @@ defineExpose({ textareaRef, format })
 
 .json-editor:focus-within .json-editor-container {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(37 111 108 / 12%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .json-editor.is-disabled {
@@ -498,7 +498,7 @@ defineExpose({ textareaRef, format })
 }
 
 .json-highlight :deep(.json-bool) {
-  color: #8f5cf6;
+  color: var(--color-info);
 }
 
 .json-highlight :deep(.json-null) {
@@ -551,7 +551,7 @@ defineExpose({ textareaRef, format })
 }
 
 .json-textarea::selection {
-  background: rgb(37 111 108 / 20%);
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .json-textarea::placeholder {

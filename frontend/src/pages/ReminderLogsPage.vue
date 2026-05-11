@@ -330,12 +330,14 @@ function formatDate(value: string) {
 }
 
 .status-tag.success {
-  background: #dcfce7;
+  background: color-mix(in srgb, var(--color-glow-success) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-success) 18%, transparent);
   color: var(--color-success);
 }
 
 .status-tag.failed {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--color-glow-danger) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 26%, transparent);
   color: var(--color-danger);
 }
 

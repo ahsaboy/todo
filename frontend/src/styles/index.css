@@ -14,7 +14,11 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(circle at top left, var(--color-bg-radial-a), transparent 32%),
+    radial-gradient(circle at top right, var(--color-bg-radial-b), transparent 28%);
+  background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-sans);
 }
@@ -51,7 +55,7 @@ select {
   border-radius: 8px;
   background: var(--color-surface);
   padding: 28px;
-  box-shadow: 0 16px 40px rgb(31 35 40 / 8%);
+  box-shadow: var(--shadow-panel);
 }
 
 .app-panel h1 {

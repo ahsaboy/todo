@@ -12,6 +12,7 @@
   top: 0;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
+  box-shadow: var(--shadow-panel);
   transition: width 200ms;
   z-index: 100;
   display: flex;
@@ -30,6 +31,7 @@
   font-size: 20px;
   font-weight: 700;
   color: var(--color-primary);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -59,20 +61,26 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
+  border: 1px solid transparent;
   border-radius: 6px;
   color: var(--color-text);
   text-decoration: none;
   font-size: 14px;
-  transition: background-color 150ms;
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    color 150ms;
 }
 
 .nav-item:hover {
   background: var(--color-surface-muted);
+  border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
 }
 
 .nav-item.router-link-active {
-  background: var(--color-primary);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+  color: var(--color-primary);
 }
 
 .nav-icon {
@@ -101,17 +109,30 @@
   align-items: center;
   justify-content: center;
   padding: 4px;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
   border-radius: 4px;
   color: var(--color-text-muted);
-  transition: background-color 150ms, color 150ms;
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms,
+    color 150ms;
 }
 
 .btn-icon:hover {
   background: var(--color-surface-muted);
+  border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
   color: var(--color-text);
+}
+
+.btn-icon:focus-visible {
+  background: var(--color-surface-muted);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-text);
+  outline: none;
 }
 
 .btn-icon svg {
@@ -177,11 +198,25 @@
   cursor: pointer;
   font-size: 14px;
   color: var(--color-text-muted);
-  transition: background-color 150ms;
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms,
+    color 150ms;
 }
 
 .collapse-btn:hover {
   background: var(--color-surface-muted);
+  border-color: color-mix(in srgb, var(--color-border) 80%, var(--color-primary));
+  color: var(--color-text);
+}
+
+.collapse-btn:focus-visible {
+  background: var(--color-surface-muted);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-text);
+  outline: none;
 }
 
 /* 主内容区 */
@@ -206,6 +241,7 @@
   padding: 0 var(--content-padding);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-border) 55%, transparent);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -255,6 +291,11 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms,
+    color 150ms;
 }
 
 /* 视图工具栏 */
@@ -307,6 +348,7 @@
     height: var(--bottom-nav-height);
     background: var(--color-surface);
     border-top: 1px solid var(--color-border);
+    box-shadow: 0 -1px 0 color-mix(in srgb, var(--color-border) 55%, transparent);
     z-index: 100;
     justify-content: space-around;
     align-items: center;
@@ -316,13 +358,15 @@
     flex-direction: column;
     gap: 2px;
     padding: 8px 12px;
+    border-color: transparent;
     font-size: 11px;
     color: var(--color-text-muted);
   }
 
   .mobile-bottom-nav .nav-item.router-link-active {
     color: var(--color-primary);
-    background: transparent;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border-color: transparent;
   }
 
   .mobile-bottom-nav .nav-icon {

@@ -33,20 +33,28 @@ const label = computed(() => {
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
+  border: 1px solid transparent;
+  box-shadow: inset 0 0 0 1px transparent;
 }
 
 .status-tag.pending {
-  background: #f1f5f9;
-  color: #475569;
+  background: color-mix(in srgb, var(--color-glow-info) 84%, transparent);
+  border-color: color-mix(in srgb, var(--color-info) 22%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-glow-info) 72%, transparent);
+  color: var(--color-info);
 }
 
 .status-tag.completed {
-  background: #dcfce7;
-  color: #16a34a;
+  background: color-mix(in srgb, var(--color-glow-success) 72%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 18%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-glow-success) 56%, transparent);
+  color: color-mix(in srgb, var(--color-success) 88%, var(--color-text) 12%);
 }
 
 .status-tag.overdue {
-  background: #fee2e2;
-  color: #dc2626;
+  background: color-mix(in srgb, var(--color-glow-danger) 84%, transparent);
+  border-color: color-mix(in srgb, var(--color-danger) 26%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-glow-danger) 80%, transparent);
+  color: var(--color-danger);
 }
 </style>

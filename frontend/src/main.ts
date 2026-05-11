@@ -4,6 +4,7 @@ import router from '@/app/router'
 import { setupRouterGuards } from '@/app/router/guards'
 import { setUnauthorizedHandler } from '@/shared/api/client'
 import { useAuthStore } from '@/app/stores/auth.store'
+import { useThemeStore } from '@/app/stores/theme.store'
 import { loadLoggerConfig, logger } from '@/shared/logger'
 import '@/styles/index.css'
 import App from './App.vue'
@@ -13,6 +14,8 @@ const pinia = createPinia()
 
 app.use(pinia)
 app.use(router)
+
+useThemeStore(pinia).initTheme()
 
 setupRouterGuards(router)
 

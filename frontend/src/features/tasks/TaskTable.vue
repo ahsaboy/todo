@@ -151,7 +151,7 @@ th {
 }
 
 tr.completed {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 
 tr.completed .task-title-btn {
@@ -169,13 +169,22 @@ tr.completed .task-title-btn {
   cursor: pointer;
   color: var(--color-text-muted);
   font-size: 13px;
+  border-radius: 6px;
+  transition:
+    color 150ms,
+    background-color 150ms,
+    box-shadow 150ms;
 }
 
 .btn-icon:hover {
   color: var(--color-text);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .btn-danger:hover {
   color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 14%, transparent);
 }
 </style>

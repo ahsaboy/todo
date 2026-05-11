@@ -36,15 +36,20 @@ function formatDate(dateStr: string): string {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   cursor: pointer;
-  transition: box-shadow 200ms;
+  transition:
+    box-shadow 200ms,
+    border-color 200ms,
+    transform 200ms;
 }
 
 .board-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  transform: translateY(-1px);
 }
 
 .board-card.completed {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 
 .card-title {

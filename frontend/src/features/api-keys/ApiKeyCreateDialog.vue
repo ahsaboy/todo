@@ -115,7 +115,7 @@ function handleClose() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--el-mask-color);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -127,7 +127,7 @@ function handleClose() {
   max-width: 90vw;
   background: var(--color-surface);
   border-radius: 8px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-panel);
 }
 
 .dialog-header {
@@ -169,15 +169,17 @@ function handleClose() {
   padding: 8px 12px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
 }
 
 .warning-banner {
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
+  background: color-mix(in srgb, var(--color-glow-warning) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 24%, transparent);
   border-radius: 6px;
   padding: 12px;
   margin-bottom: 16px;
-  color: #92400e;
+  color: var(--color-warning);
   font-size: 14px;
 }
 

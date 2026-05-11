@@ -3,5 +3,19 @@
   --el-color-danger: var(--color-danger);
   --el-color-warning: var(--color-warning);
   --el-color-success: var(--color-success);
+  --el-bg-color: var(--color-surface);
+  --el-bg-color-page: var(--color-bg);
+  --el-bg-color-overlay: var(--color-surface);
+  --el-fill-color-blank: var(--color-surface);
+  --el-fill-color-light: var(--color-surface-muted);
+  --el-fill-color: var(--color-surface-muted);
+  --el-text-color-primary: var(--color-text);
+  --el-text-color-regular: var(--color-text);
+  --el-text-color-secondary: var(--color-text-muted);
+  --el-border-color: var(--color-border);
+  --el-border-color-light: var(--color-border);
+  --el-border-color-lighter: color-mix(in srgb, var(--color-border) 72%, transparent);
+  --el-mask-color: rgb(0 0 0 / 45%);
+  --el-box-shadow-light: var(--shadow-panel);
   --el-border-radius-base: 6px;
 }

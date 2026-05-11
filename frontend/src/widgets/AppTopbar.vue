@@ -2,7 +2,8 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth.store'
-import { LogOut, Menu, UserCircle } from 'lucide-vue-next'
+import { useThemeStore } from '@/app/stores/theme.store'
+import { LogOut, Menu, Moon, Sun, UserCircle } from 'lucide-vue-next'
 
 defineProps<{
   showSidebarToggle: boolean
@@ -15,6 +16,7 @@ defineEmits<{
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const themeStore = useThemeStore()
 const isUserMenuOpen = ref(false)
 
 const pageTitle = computed(() => {
@@ -33,6 +35,14 @@ const pageTitle = computed(() => {
 
 const userInitial = computed(() => {
   return authStore.user?.username?.charAt(0).toUpperCase() || '?'
+})
+
+const themeToggleLabel = computed(() => {
+  return themeStore.isDark ? '切换到浅色主题' : '切换到深色主题'
+})
+
+const themeToggleIcon = computed(() => {
+  return themeStore.isDark ? Sun : Moon
 })
 
 function openUserMenu() {
@@ -61,6 +71,9 @@ async function handleLogout() {
     </button>
     <h1 class="page-title">{{ pageTitle }}</h1>
     <div class="topbar-actions">
+      <button class="btn-icon theme-toggle-btn" type="button" :aria-label="themeToggleLabel" @click="themeStore.toggleTheme()">
+        <component :is="themeToggleIcon" :size="16" />
+      </button>
       <div class="user-menu" @mouseenter="openUserMenu" @mouseleave="closeUserMenu">
         <button
           class="user-btn"
@@ -89,6 +102,30 @@ async function handleLogout() {
 </template>
 
 <style scoped>
+.theme-toggle-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  transition:
+    border-color 150ms,
+    background-color 150ms,
+    box-shadow 150ms,
+    color 150ms;
+}
+
+.theme-toggle-btn:hover,
+.theme-toggle-btn:focus-visible {
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-text);
+  outline: none;
+}
+
 .user-menu {
   position: relative;
   display: flex;
@@ -106,9 +143,9 @@ async function handleLogout() {
 .user-btn:hover,
 .user-btn:focus-visible,
 .user-btn[aria-expanded='true'] {
-  background: #fff;
+  background: var(--color-surface);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(37 111 108 / 12%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
   outline: none;
 }
 
@@ -121,7 +158,7 @@ async function handleLogout() {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface);
-  box-shadow: 0 16px 36px rgb(31 35 40 / 14%);
+  box-shadow: var(--shadow-panel);
   z-index: 120;
 }
 

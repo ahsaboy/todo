@@ -32,20 +32,28 @@ const label = computed(() => {
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
+  border: 1px solid transparent;
+  box-shadow: inset 0 0 0 1px transparent;
 }
 
 .priority-tag.high {
-  background: #fee2e2;
-  color: #dc2626;
+  background: color-mix(in srgb, var(--color-glow-danger) 84%, transparent);
+  border-color: color-mix(in srgb, var(--color-danger) 26%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-glow-danger) 80%, transparent);
+  color: var(--color-danger);
 }
 
 .priority-tag.medium {
-  background: #ffedd5;
-  color: #ea580c;
+  background: color-mix(in srgb, var(--color-glow-warning) 84%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning) 24%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-glow-warning) 78%, transparent);
+  color: var(--color-warning);
 }
 
 .priority-tag.low {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: color-mix(in srgb, var(--color-glow-info) 78%, transparent);
+  border-color: color-mix(in srgb, var(--color-info) 18%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-glow-info) 68%, transparent);
+  color: color-mix(in srgb, var(--color-info) 90%, var(--color-text) 10%);
 }
 </style>

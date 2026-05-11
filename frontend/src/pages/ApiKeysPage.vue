@@ -84,11 +84,11 @@ async function handleRevoke(id: number) {
 }
 
 .info-banner {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
+  background: color-mix(in srgb, var(--color-glow-info) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-info) 22%, transparent);
   border-radius: 6px;
   padding: 12px;
-  color: #0369a1;
+  color: var(--color-info);
   font-size: 14px;
 }
 
