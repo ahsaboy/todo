@@ -1,11 +1,15 @@
 package config
 
 import (
+	_ "embed"
 	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed default_config.yaml
+var defaultConfigYAML []byte
 
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
@@ -72,7 +76,10 @@ type FrontendLoggingConfig struct {
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		data = defaultConfigYAML
 	}
 
 	cfg := &Config{

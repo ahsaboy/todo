@@ -1,0 +1,73 @@
+# ==============================
+# TODO 任务管理系统内置配置文件
+# ==============================
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  mode: "release"
+
+database:
+  path: "./data/tasks.db"
+
+swagger: false
+
+reminder:
+  enabled: true
+  scan_interval_seconds: 30
+  webhook_timeout_seconds: 10
+  max_retries: 3
+  retry_delay_seconds: 5
+  webhook_body_template: |
+    {"msg_type":"text","content":{"text":"[TODO] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
+  default_templates:
+    feishu:
+      channel_type: "webhook"
+      webhook_url: "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: application/json; charset=utf-8
+      webhook_body_template: |
+        {"msg_type":"text","content":{"text":"[TODO] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
+    dingtalk:
+      channel_type: "webhook"
+      webhook_url: "https://oapi.dingtalk.com/robot/send?access_token=xxxxxx"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: application/json
+      webhook_body_template: |
+        {"msgtype":"text","text":{"content":"[TODO] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"},"at":{"isAtAll":false}}
+    wecom:
+      channel_type: "webhook"
+      webhook_url: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxx"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: application/json
+      webhook_body_template: |
+        {"msgtype":"text","text":{"content":"[TODO提醒] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
+    gotify:
+      channel_type: "webhook"
+      webhook_url: "http://localhost:8008/message?token=<apptoken>"
+      webhook_method: "POST"
+      webhook_headers:
+        Content-Type: application/json
+      webhook_body_template: |
+        {"title":"[TODO] {{.Title}}","message":"优先级: {{.PriorityText}}\n截止: {{.DueAt}}","priority":5}
+
+cors:
+  enabled: true
+  allowed_origins:
+    - "*"
+
+logging:
+  level: "debug"
+  format: "json"
+  path: "./logs"
+  max_days: 7
+  backend:
+    console_enabled: true
+    file_enabled: true
+  frontend:
+    console_enabled: true
+    file_enabled: true
+    level: "warn"

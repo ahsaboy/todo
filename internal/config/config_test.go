@@ -116,3 +116,29 @@ logging:
 		t.Fatalf("frontend level = %q, want %q", got, want)
 	}
 }
+
+func TestLoadUsesEmbeddedDefaultWhenConfigFileIsMissing(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "missing.yaml")
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("load missing config: %v", err)
+	}
+
+	if got, want := cfg.Server.Host, "0.0.0.0"; got != want {
+		t.Fatalf("server host = %q, want %q", got, want)
+	}
+	if got, want := cfg.Server.Port, 8080; got != want {
+		t.Fatalf("server port = %d, want %d", got, want)
+	}
+	if got, want := cfg.Database.Path, "./data/tasks.db"; got != want {
+		t.Fatalf("database path = %q, want %q", got, want)
+	}
+	if !cfg.CORS.Enabled {
+		t.Fatalf("cors enabled = false, want true")
+	}
+	if got, want := cfg.Logging.Frontend.Level, "warn"; got != want {
+		t.Fatalf("frontend level = %q, want %q", got, want)
+	}
+}
