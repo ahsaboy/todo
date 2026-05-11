@@ -5,7 +5,10 @@
         <div class="drawer-content">
           <div class="drawer-header">
             <h3>{{ title || (task ? '编辑任务' : '创建任务') }}</h3>
-            <button class="btn-close" type="button" @click="handleClose">×</button>
+            <div class="drawer-header-actions">
+              <button v-if="task" class="btn-delete" type="button" @click="handleDelete">删除</button>
+              <button class="btn-close" type="button" @click="handleClose">×</button>
+            </div>
           </div>
 
           <div class="drawer-body">
@@ -62,6 +65,12 @@ function handleClose() {
   emit('update:visible', false)
 }
 
+function handleDelete() {
+  if (props.task) {
+    emit('delete', props.task.id)
+  }
+}
+
 function handleSubmit(payload: CreateTaskPayload | UpdateTaskPayload) {
   emit('submit', payload)
   emit('update:visible', false)
@@ -101,6 +110,26 @@ function handleSubmit(payload: CreateTaskPayload | UpdateTaskPayload) {
 .drawer-header h3 {
   margin: 0;
   font-size: 16px;
+}
+
+.drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-delete {
+  padding: 4px 12px;
+  background: none;
+  border: 1px solid var(--color-danger);
+  border-radius: 6px;
+  color: var(--color-danger);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
 }
 
 .btn-close {

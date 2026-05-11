@@ -10,7 +10,6 @@
           <th class="col-remind">提醒时间</th>
           <th class="col-repeat">重复</th>
           <th class="col-created">创建时间</th>
-          <th class="col-actions">操作</th>
         </tr>
       </thead>
       <tbody>
@@ -47,10 +46,6 @@
           <td class="col-created">
             {{ formatDate(task.createdAt) }}
           </td>
-          <td class="col-actions">
-            <button class="btn-icon btn-icon-text" type="button" @click="$emit('edit', task)"><Pencil :size="14" /> 编辑</button>
-            <button class="btn-icon btn-icon-text btn-danger" type="button" @click="$emit('delete', task.id)"><Trash2 :size="14" /> 删除</button>
-          </td>
         </tr>
       </tbody>
     </table>
@@ -60,7 +55,6 @@
 <script setup lang="ts">
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
-import { Pencil, Trash2 } from 'lucide-vue-next'
 
 defineProps<{
   tasks: Task[]
@@ -69,8 +63,6 @@ defineProps<{
 defineEmits<{
   toggle: [id: number]
   open: [task: Task]
-  edit: [task: Task]
-  delete: [id: number]
 }>()
 
 function isOverdue(task: Task): boolean {
@@ -81,12 +73,7 @@ function isOverdue(task: Task): boolean {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
-  return date.toLocaleDateString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 function formatRepeat(type: string, interval: number): string {
@@ -133,10 +120,6 @@ th {
   min-width: 200px;
 }
 
-.col-actions {
-  width: 120px;
-}
-
 .task-title-btn {
   background: none;
   border: none;
@@ -160,31 +143,5 @@ tr.completed .task-title-btn {
 
 .overdue {
   color: var(--color-danger);
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  cursor: pointer;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  border-radius: 6px;
-  transition:
-    color 150ms,
-    background-color 150ms,
-    box-shadow 150ms;
-}
-
-.btn-icon:hover {
-  color: var(--color-text);
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 10%, transparent);
-}
-
-.btn-danger:hover {
-  color: var(--color-danger);
-  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 14%, transparent);
 }
 </style>

@@ -39,8 +39,6 @@
         :tasks="tasks"
         @toggle="toggleComplete"
         @open="openTask"
-        @edit="editTask"
-        @delete="handleDelete"
       />
 
       <!-- 桌面端表格 -->
@@ -49,8 +47,6 @@
         :tasks="tasks"
         @toggle="toggleComplete"
         @open="openTask"
-        @edit="editTask"
-        @delete="handleDelete"
       />
 
       <div class="pagination">
@@ -69,7 +65,7 @@
     <MobileFilters v-model:visible="showFilters" :filters="filters" @change="setFilters" />
 
     <!-- 抽屉 -->
-    <TaskDetailDrawer v-model:visible="drawerVisible" :task="selectedTask" @submit="handleSubmit" />
+    <TaskDetailDrawer v-model:visible="drawerVisible" :task="selectedTask" @submit="handleSubmit" @delete="handleDelete" />
   </div>
 </template>
 
@@ -132,11 +128,6 @@ function openTask(task: Task) {
   drawerVisible.value = true
 }
 
-function editTask(task: Task) {
-  selectedTask.value = task
-  drawerVisible.value = true
-}
-
 async function handleSubmit(payload: CreateTaskPayload | UpdateTaskPayload) {
   if (selectedTask.value) {
     await updateTask(selectedTask.value.id, payload)
@@ -148,6 +139,7 @@ async function handleSubmit(payload: CreateTaskPayload | UpdateTaskPayload) {
 async function handleDelete(id: number) {
   if (window.confirm('确定要删除这个任务吗？')) {
     await deleteTask(id)
+    drawerVisible.value = false
   }
 }
 </script>

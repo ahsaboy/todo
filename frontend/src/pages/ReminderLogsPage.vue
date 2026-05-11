@@ -139,7 +139,7 @@ function formatDate(value: string) {
   if (Number.isNaN(date.getTime())) {
     return value
   }
-  return date.toLocaleString()
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 </script>
 

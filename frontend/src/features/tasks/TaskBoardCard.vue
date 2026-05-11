@@ -25,7 +25,7 @@ defineEmits<{
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
   const date = new Date(dateStr)
-  return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+  return `${date.getMonth() + 1}月${date.getDate()}日`
 }
 </script>
 

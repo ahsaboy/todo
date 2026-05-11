@@ -59,7 +59,8 @@ watch(
 
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('zh-CN')
+  const d = new Date(dateStr)
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
 }
 
 async function handleSubmit() {

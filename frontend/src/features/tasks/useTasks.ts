@@ -33,8 +33,8 @@ export function useTasks() {
   })
 
   const sort = reactive<TaskSort>({
-    field: 'created_at',
-    order: 'desc',
+    field: 'due_at',
+    order: 'asc',
   })
 
   async function fetchTasks() {

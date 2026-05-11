@@ -28,32 +28,25 @@ const label = computed(() => {
 .priority-tag {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 1px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  border: 1px solid transparent;
-  box-shadow: inset 0 0 0 1px transparent;
+  flex-shrink: 0;
 }
 
 .priority-tag.high {
-  background: color-mix(in srgb, var(--color-glow-danger) 84%, transparent);
-  border-color: color-mix(in srgb, var(--color-danger) 26%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--color-glow-danger) 80%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
   color: var(--color-danger);
 }
 
 .priority-tag.medium {
-  background: color-mix(in srgb, var(--color-glow-warning) 84%, transparent);
-  border-color: color-mix(in srgb, var(--color-warning) 24%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--color-glow-warning) 78%, transparent);
+  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
   color: var(--color-warning);
 }
 
 .priority-tag.low {
-  background: color-mix(in srgb, var(--color-glow-info) 78%, transparent);
-  border-color: color-mix(in srgb, var(--color-info) 18%, transparent);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--color-glow-info) 68%, transparent);
-  color: color-mix(in srgb, var(--color-info) 90%, var(--color-text) 10%);
+  background: color-mix(in srgb, var(--color-info) 12%, transparent);
+  color: var(--color-info);
 }
 </style>
