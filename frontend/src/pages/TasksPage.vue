@@ -294,9 +294,9 @@ async function handleDelete(id: number) {
   }
 
   .pagination {
-    justify-content: space-between;
-    gap: 8px;
-    padding: 8px 72px 8px 0;
+      padding: 8px 72px 8px 0;
+      display: flex;
+      text-align: center;
   }
 
   .pagination span {

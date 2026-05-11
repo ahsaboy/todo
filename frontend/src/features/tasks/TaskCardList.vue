@@ -5,6 +5,7 @@
       :key="task.id"
       class="task-card"
       :class="{ completed: task.completed }"
+      @click="$emit('open', task)"
     >
       <input
         :id="`task-card-completed-${task.id}`"
@@ -12,12 +13,13 @@
         type="checkbox"
         :checked="task.completed"
         class="task-checkbox"
+        @click.stop
         @change="$emit('toggle', task.id)"
       />
       <label class="sr-only" :for="`task-card-completed-${task.id}`">
         {{ task.completed ? '标记为未完成' : '标记为完成' }}：{{ task.title }}
       </label>
-      <button class="task-body" type="button" @click="$emit('open', task)">
+      <div class="task-body">
         <div class="task-top">
           <span class="task-title">{{ task.title }}</span>
           <PriorityTag :priority="task.priority" />
@@ -25,7 +27,7 @@
         <div v-if="task.dueAt" class="task-due" :class="{ overdue: isOverdue(task) }">
           {{ formatDue(task.dueAt) }}
         </div>
-      </button>
+      </div>
     </div>
   </div>
 </template>
@@ -56,10 +58,12 @@ function formatDue(dateStr: string): string {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const isTomorrow = date.toDateString() === tomorrow.toDateString()
 
-  const time = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  if (isToday) return `今天 ${time}`
-  if (isTomorrow) return `明天 ${time}`
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${time}`
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const weekday = weekdays[date.getDay()]
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  if (isToday) return `今天 ${time} · ${weekday}`
+  if (isTomorrow) return `明天 ${time} · ${weekday}`
+  return `${date.getMonth() + 1}月${date.getDate()}日 · ${weekday} ${time} `
 }
 </script>
 
@@ -68,7 +72,6 @@ function formatDue(dateStr: string): string {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-bottom: 88px;
   min-width: 0;
 }
 
@@ -81,6 +84,12 @@ function formatDue(dateStr: string): string {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   min-width: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.task-card:hover {
+  background-color: var(--color-surface-muted);
 }
 
 .task-card.completed {
@@ -106,7 +115,6 @@ function formatDue(dateStr: string): string {
   border: none;
   text-align: left;
   color: inherit;
-  cursor: pointer;
 }
 
 .task-top {
