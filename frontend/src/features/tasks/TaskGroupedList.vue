@@ -19,7 +19,7 @@
             :name="`task_group_completed_${task.id}`"
             type="checkbox"
             :checked="task.completed"
-            class="task-checkbox"
+            class="checkbox-circle"
             @change="$emit('toggle', task.id)"
           />
           <label class="sr-only" :for="`task-group-completed-${task.id}`">
@@ -144,10 +144,6 @@ function formatDate(dateStr: string): string {
 
 .task-card.completed {
   opacity: 0.6;
-}
-
-.task-checkbox {
-  margin-top: 2px;
 }
 
 .task-content {

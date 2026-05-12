@@ -81,3 +81,60 @@ select {
   letter-spacing: 0;
   text-transform: uppercase;
 }
+
+/* 圆形勾选框 - Todoist 风格 */
+.checkbox-circle {
+  --cb-size: 20px;
+  --cb-border: var(--color-border);
+  --cb-checked: #4caf50;
+  flex-shrink: 0;
+  position: relative;
+  width: var(--cb-size);
+  height: var(--cb-size);
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--cb-border);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.checkbox-circle:hover {
+  border-color: var(--cb-checked);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cb-checked) 15%, transparent);
+}
+
+.checkbox-circle:checked {
+  border-color: var(--cb-checked);
+  background: var(--cb-checked);
+}
+
+.checkbox-circle:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 5px;
+  height: 9px;
+  border: 2px solid white;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+  animation: checkmark 150ms ease-in-out;
+}
+
+@keyframes checkmark {
+  from {
+    transform: rotate(45deg) scale(0);
+  }
+  to {
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+.checkbox-circle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}

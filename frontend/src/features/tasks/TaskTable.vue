@@ -20,6 +20,7 @@
               :name="`task_table_completed_${task.id}`"
               type="checkbox"
               :checked="task.completed"
+              class="checkbox-circle"
               @change="$emit('toggle', task.id)"
             />
             <label class="sr-only" :for="`task-table-completed-${task.id}`">

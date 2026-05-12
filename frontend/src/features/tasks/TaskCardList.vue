@@ -12,7 +12,7 @@
         :name="`task_card_completed_${task.id}`"
         type="checkbox"
         :checked="task.completed"
-        class="task-checkbox"
+        class="checkbox-circle"
         @click.stop
         @change="$emit('toggle', task.id)"
       />
@@ -94,13 +94,6 @@ function formatDue(dateStr: string): string {
 
 .task-card.completed {
   opacity: 0.6;
-}
-
-.task-checkbox {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-primary);
 }
 
 .task-body {

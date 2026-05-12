@@ -146,6 +146,7 @@
         v-model="form.enabled"
         name="reminder_config_enabled"
         type="checkbox"
+        class="checkbox-circle"
       />
       <span>启用此通知渠道</span>
     </label>
@@ -491,11 +492,6 @@ async function handleSubmit() {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text);
-}
-
-.checkbox-label input {
-  width: 16px;
-  height: 16px;
 }
 
 .form-row {

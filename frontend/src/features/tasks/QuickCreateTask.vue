@@ -38,10 +38,12 @@ function handleCreate() {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .quick-input {
   flex: 1;
+  min-width: 0;
   padding: 8px 12px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
