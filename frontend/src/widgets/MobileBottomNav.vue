@@ -1,24 +1,52 @@
 <script setup lang="ts">
-import { ListTodo, Bell, ScrollText, KeyRound } from 'lucide-vue-next'
+import {
+  AlarmClock,
+  CalendarDays,
+  LayoutDashboard,
+  ListTodo,
+} from 'lucide-vue-next'
+import { useRoute } from 'vue-router'
+
+type NavItem = {
+  to: string
+  label: string
+  icon: typeof ListTodo
+}
+
+const route = useRoute()
+
+const navItems: NavItem[] = [
+  { to: '/tasks', label: '全部任务', icon: ListTodo },
+  { to: '/tasks/today', label: '今日', icon: CalendarDays },
+  { to: '/tasks/upcoming', label: '即将到期', icon: AlarmClock },
+  { to: '/tasks/board', label: '看板', icon: LayoutDashboard },
+]
+
+const isNavActive = (to: string) => route.path === to
 </script>
 
 <template>
   <nav class="mobile-bottom-nav">
-    <router-link to="/tasks" class="nav-item">
-      <ListTodo class="nav-icon" :size="20" />
-      <span class="nav-text">任务</span>
-    </router-link>
-    <router-link to="/reminder-configs" class="nav-item">
-      <Bell class="nav-icon" :size="20" />
-      <span class="nav-text">提醒</span>
-    </router-link>
-    <router-link to="/reminder-logs" class="nav-item">
-      <ScrollText class="nav-icon" :size="20" />
-      <span class="nav-text">日志</span>
-    </router-link>
-    <router-link to="/api-keys" class="nav-item">
-      <KeyRound class="nav-icon" :size="20" />
-      <span class="nav-text">Key</span>
+    <router-link
+      v-for="item in navItems"
+      v-slot="{ href, navigate }"
+      :key="item.to"
+      :to="item.to"
+      custom
+    >
+      <a
+        :href="href"
+        class="nav-item"
+        :class="{ 'router-link-active': isNavActive(item.to) }"
+        @click="navigate"
+      >
+        <component
+          :is="item.icon"
+          class="nav-icon"
+          :size="20"
+        />
+        <span class="nav-text">{{ item.label }}</span>
+      </a>
     </router-link>
   </nav>
 </template>

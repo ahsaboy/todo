@@ -5,9 +5,15 @@ import { useAuthStore } from '@/app/stores/auth.store'
 import { useThemeStore } from '@/app/stores/theme.store'
 import { LogOut, Menu, Moon, Sun, UserCircle } from 'lucide-vue-next'
 
-defineProps<{
-  showSidebarToggle: boolean
-}>()
+type SidebarToggleMode = 'desktop' | 'mobile' | null
+
+const props = withDefaults(defineProps<{
+  sidebarToggleMode?: SidebarToggleMode
+  isSidebarOpen?: boolean
+}>(), {
+  sidebarToggleMode: null,
+  isSidebarOpen: false,
+})
 
 defineEmits<{
   toggleSidebar: []
@@ -45,6 +51,16 @@ const themeToggleIcon = computed(() => {
   return themeStore.isDark ? Sun : Moon
 })
 
+const showSidebarToggle = computed(() => props.sidebarToggleMode !== null)
+
+const sidebarToggleLabel = computed(() => {
+  if (props.sidebarToggleMode === 'mobile') {
+    return props.isSidebarOpen ? '关闭导航菜单' : '打开导航菜单'
+  }
+
+  return props.isSidebarOpen ? '折叠侧边栏' : '展开侧边栏'
+})
+
 function openUserMenu() {
   isUserMenuOpen.value = true
 }
@@ -66,15 +82,35 @@ async function handleLogout() {
 
 <template>
   <header class="app-topbar">
-    <button v-if="showSidebarToggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏" @click="$emit('toggleSidebar')">
-      <Menu :size="18" />
+    <button
+      v-if="showSidebarToggle"
+      class="sidebar-toggle"
+      type="button"
+      :aria-label="sidebarToggleLabel"
+      @click="$emit('toggleSidebar')"
+    >
+      <Menu
+        :size="18"
+      />
     </button>
     <h1 class="page-title">{{ pageTitle }}</h1>
     <div class="topbar-actions">
-      <button class="btn-icon theme-toggle-btn" type="button" :aria-label="themeToggleLabel" @click="themeStore.toggleTheme()">
-        <component :is="themeToggleIcon" :size="16" />
+      <button
+        class="btn-icon theme-toggle-btn"
+        type="button"
+        :aria-label="themeToggleLabel"
+        @click="themeStore.toggleTheme()"
+      >
+        <component
+          :is="themeToggleIcon"
+          :size="16"
+        />
       </button>
-      <div class="user-menu" @mouseenter="openUserMenu" @mouseleave="closeUserMenu">
+      <div
+        class="user-menu"
+        @mouseenter="openUserMenu"
+        @mouseleave="closeUserMenu"
+      >
         <button
           class="user-btn"
           type="button"
@@ -86,12 +122,26 @@ async function handleLogout() {
         >
           {{ userInitial }}
         </button>
-        <div v-show="isUserMenuOpen" class="user-dropdown" role="menu">
-          <router-link class="user-menu-item" to="/profile" role="menuitem" @click="closeUserMenu">
+        <div
+          v-show="isUserMenuOpen"
+          class="user-dropdown"
+          role="menu"
+        >
+          <router-link
+            class="user-menu-item"
+            to="/profile"
+            role="menuitem"
+            @click="closeUserMenu"
+          >
             <UserCircle :size="16" />
             <span>个人资料</span>
           </router-link>
-          <button class="user-menu-item danger" type="button" role="menuitem" @click="handleLogout">
+          <button
+            class="user-menu-item danger"
+            type="button"
+            role="menuitem"
+            @click="handleLogout"
+          >
             <LogOut :size="16" />
             <span>退出登录</span>
           </button>
