@@ -212,7 +212,8 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]mo
 		FROM tasks
 		WHERE user_id IS NOT NULL
 		  AND remind_at IS NOT NULL
-		  AND reminder_sent = 0`)
+		  AND reminder_sent = 0
+		  AND completed = 0`)
 	if err != nil {
 		return nil, fmt.Errorf("query pending reminders: %w", err)
 	}

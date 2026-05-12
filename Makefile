@@ -1,4 +1,4 @@
-.PHONY: help frontend-install frontend-build frontend-build-standalone frontend-clean check-swag fix-swagger-docs swag build build-linux build-windows build-darwin build-backend build-backend-linux build-backend-windows build-backend-darwin build-separated run test dev clean docker-build docker-up docker-down docker-logs
+.PHONY: help frontend-install frontend-build frontend-build-standalone frontend-clean check-swag fix-swagger-docs swag build build-linux build-windows build-darwin build-backend build-backend-linux build-backend-windows build-backend-darwin build-separated run test dev clean docker-build docker-up docker-down docker-logs docker-build-backend docker-up-backend docker-down-backend docker-logs-backend
 
 GOOS   ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
@@ -40,41 +40,45 @@ endef
 endif
 
 help:
-	@echo TODO 任务管理系统 Makefile 命令
-	@echo.
-	@echo 常用:
-	@echo   make help                         显示此帮助
-	@echo   make dev                          本地运行，先构建前端并生成 Swagger
-	@echo   make test                         运行 Go 测试
-	@echo   make clean                        清理构建产物和本地数据库
-	@echo.
-	@echo 单体构建（后端嵌入前端静态资源）:
-	@echo   make build                        编译当前平台
-	@echo   make build-linux                  编译 Linux amd64
-	@echo   make build-windows                编译 Windows amd64
-	@echo   make build-darwin                 编译 macOS arm64
-	@echo.
-	@echo 前后端分离构建:
-	@echo   make build-backend                编译当前平台纯 API 后端
-	@echo   make build-backend-linux          编译 Linux amd64 纯 API 后端
-	@echo   make build-backend-windows        编译 Windows amd64 纯 API 后端
-	@echo   make build-backend-darwin         编译 macOS arm64 纯 API 后端
-	@echo   make frontend-build-standalone API_BASE_URL=https://api.example.com/api/v1
-	@echo                                    构建独立前端静态资源
-	@echo   make build-separated API_BASE_URL=https://api.example.com/api/v1
-	@echo                                    同时构建纯 API 后端和独立前端
-	@echo.
-	@echo 前端与文档:
-	@echo   make frontend-install             安装前端依赖
-	@echo   make frontend-build               构建前端并复制到 web/dist
-	@echo   make frontend-clean               清理前端构建产物
-	@echo   make swag                         生成 Swagger 文档
-	@echo.
-	@echo Docker:
-	@echo   make docker-build                 构建单体 Docker 镜像
-	@echo   make docker-up                    启动 docker compose
-	@echo   make docker-down                  停止 docker compose
-	@echo   make docker-logs                  查看 docker compose 日志
+	@echo "TODO 任务管理系统 Makefile 命令"
+	@echo ""
+	@echo "常用:"
+	@echo "  make help                         显示此帮助"
+	@echo "  make dev                          本地运行，先构建前端并生成 Swagger"
+	@echo "  make test                         运行 Go 测试"
+	@echo "  make clean                        清理构建产物和本地数据库"
+	@echo ""
+	@echo "单体构建（后端嵌入前端静态资源）:"
+	@echo "  make build                        编译当前平台"
+	@echo "  make build-linux                  编译 Linux amd64"
+	@echo "  make build-windows                编译 Windows amd64"
+	@echo "  make build-darwin                 编译 macOS arm64"
+	@echo ""
+	@echo "前后端分离构建:"
+	@echo "  make build-backend                编译当前平台纯 API 后端"
+	@echo "  make build-backend-linux          编译 Linux amd64 纯 API 后端"
+	@echo "  make build-backend-windows        编译 Windows amd64 纯 API 后端"
+	@echo "  make build-backend-darwin         编译 macOS arm64 纯 API 后端"
+	@echo "  make frontend-build-standalone API_BASE_URL=https://api.example.com/api/v1"
+	@echo "                                    构建独立前端静态资源"
+	@echo "  make build-separated API_BASE_URL=https://api.example.com/api/v1"
+	@echo "                                    同时构建纯 API 后端和独立前端"
+	@echo ""
+	@echo "前端与文档:"
+	@echo "  make frontend-install             安装前端依赖"
+	@echo "  make frontend-build               构建前端并复制到 web/dist"
+	@echo "  make frontend-clean               清理前端构建产物"
+	@echo "  make swag                         生成 Swagger 文档"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-build                 构建单体 Docker 镜像"
+	@echo "  make docker-up                    启动 docker compose"
+	@echo "  make docker-down                  停止 docker compose"
+	@echo "  make docker-logs                  查看 docker compose 日志"
+	@echo "  make docker-build-backend         构建纯后端 Docker 镜像"
+	@echo "  make docker-up-backend            启动纯后端服务"
+	@echo "  make docker-down-backend          停止纯后端服务"
+	@echo "  make docker-logs-backend          查看纯后端日志"
 
 # 前端依赖安装
 frontend-install:
@@ -211,7 +215,11 @@ endif
 build-separated: build-backend frontend-build-standalone
 
 run: build
+ifeq ($(OS),Windows_NT)
 	.\bin\$(APP)-$(GOOS)-$(GOARCH)$(EXT)
+else
+	./bin/$(APP)-$(GOOS)-$(GOARCH)$(EXT)
+endif
 
 test:
 	go test -v ./...
@@ -220,12 +228,18 @@ dev: frontend-build swag
 	go run ./cmd/server -c config.yaml
 
 clean:
+ifeq ($(OS),Windows_NT)
 	if exist bin rmdir /s /q bin
 	if exist data\*.db del /q data\*.db
 	if exist data\*.db-shm del /q data\*.db-shm
 	if exist data\*.db-wal del /q data\*.db-wal
 	if exist frontend\dist rmdir /s /q frontend\dist
 	if exist web\dist rmdir /s /q web\dist
+else
+	rm -rf bin
+	rm -f data/*.db data/*.db-shm data/*.db-wal
+	rm -rf frontend/dist web/dist
+endif
 
 docker-build:
 	docker build -t todo-app:latest .
@@ -238,3 +252,15 @@ docker-down:
 
 docker-logs:
 	docker compose logs -f
+
+docker-build-backend:
+	docker compose -f docker-compose.separated.yml build backend
+
+docker-up-backend:
+	docker compose -f docker-compose.separated.yml up backend -d
+
+docker-down-backend:
+	docker compose -f docker-compose.separated.yml down
+
+docker-logs-backend:
+	docker compose -f docker-compose.separated.yml logs -f backend
