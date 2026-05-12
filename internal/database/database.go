@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL UNIQUE,
     email TEXT,
     password_hash TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE TABLE IF NOT EXISTS user_api_keys (
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS user_api_keys (
     key_hash TEXT NOT NULL UNIQUE,
     name TEXT DEFAULT 'default',
     last_used_at TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS user_reminder_configs (
     max_retries INTEGER DEFAULT 3,
     retry_delay_seconds INTEGER DEFAULT 5,
     enabled INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now')),
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -61,8 +61,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     repeat_end_date TEXT,
     reminder_sent INTEGER DEFAULT 0,
     reminder_sent_at TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now')),
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS reminder_logs (
     status TEXT NOT NULL CHECK(status IN ('success','failed')),
     attempts INTEGER NOT NULL DEFAULT 1,
     error_message TEXT DEFAULT '',
-    created_at TEXT DEFAULT (datetime('now')),
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
     FOREIGN KEY (reminder_config_id) REFERENCES user_reminder_configs(id) ON DELETE SET NULL

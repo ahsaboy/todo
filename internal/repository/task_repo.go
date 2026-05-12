@@ -33,10 +33,11 @@ func (r *TaskRepo) Create(ctx context.Context, userID int64, req models.CreateTa
 		repeatInterval = *req.RepeatInterval
 	}
 
+	now := time.Now().UTC().Format(time.RFC3339)
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		userID, req.Title, req.Description, priority, req.DueAt, req.RemindAt, repeatType, repeatInterval, req.RepeatEndDate,
+		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		userID, req.Title, req.Description, priority, req.DueAt, req.RemindAt, repeatType, repeatInterval, req.RepeatEndDate, now, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert task: %w", err)
@@ -256,10 +257,11 @@ func (r *TaskRepo) MarkReminderSent(ctx context.Context, id int64) (bool, error)
 }
 
 func (r *TaskRepo) CreateRepeatTask(ctx context.Context, t *models.Task) error {
+	now := time.Now().UTC().Format(time.RFC3339)
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-		t.UserID, t.Title, t.Description, t.Priority, t.DueAt, t.RemindAt, t.RepeatType, t.RepeatInterval, t.RepeatEndDate,
+		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+		t.UserID, t.Title, t.Description, t.Priority, t.DueAt, t.RemindAt, t.RepeatType, t.RepeatInterval, t.RepeatEndDate, now, now,
 	)
 	return err
 }
