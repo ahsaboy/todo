@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Task struct {
 	ID             int64   `json:"id"`
@@ -18,6 +21,31 @@ type Task struct {
 	ReminderSentAt *string `json:"reminder_sent_at"`
 	CreatedAt      string  `json:"created_at"`
 	UpdatedAt      string  `json:"updated_at"`
+}
+
+// FormatReminderTime 将 RFC3339 时间格式化为 "M月D日 周X HH:MM" 格式
+// loc 为 nil 时使用本机本地时区
+func FormatReminderTime(timeStr string, loc *time.Location) string {
+	if timeStr == "" {
+		return ""
+	}
+
+	t, err := time.Parse(time.RFC3339, timeStr)
+	if err != nil {
+		return timeStr
+	}
+
+	if loc != nil {
+		t = t.In(loc)
+	} else {
+		t = t.Local()
+	}
+
+	weekdays := []string{"周日", "周一", "周二", "周三", "周四", "周五", "周六"}
+	weekday := weekdays[t.Weekday()]
+
+	return fmt.Sprintf("%d月%d日 %s %02d:%02d",
+		t.Month(), t.Day(), weekday, t.Hour(), t.Minute())
 }
 
 // TemplateData 用于 Webhook 模板渲染
@@ -49,10 +77,10 @@ func (t *Task) ToTemplateData() TemplateData {
 		Description:  t.Description,
 		Priority:     t.Priority,
 		PriorityText: priorityMap[t.Priority],
-		DueAt:        dueAt,
-		RemindAt:     remindAt,
+		DueAt:        FormatReminderTime(dueAt, nil),
+		RemindAt:     FormatReminderTime(remindAt, nil),
 		RepeatType:   t.RepeatType,
-		CreatedAt:    t.CreatedAt,
+		CreatedAt:    FormatReminderTime(t.CreatedAt, nil),
 	}
 }
 
