@@ -1,5 +1,5 @@
 <template>
-  <div class="task-grouped-list">
+  <div class="task-grouped-list motion-stagger">
     <div v-for="group in groups" :key="group.label" class="task-group">
       <div class="group-header" @click="toggleGroup(group.label)">
         <span class="group-arrow" :class="{ collapsed: collapsedGroups.has(group.label) }">▼</span>

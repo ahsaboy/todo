@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { resolvePageTransitionName } from '@/shared/motion/routes'
 import DesktopSidebar from './DesktopSidebar.vue'
 import AppTopbar from './AppTopbar.vue'
 import MobileBottomNav from './MobileBottomNav.vue'
@@ -121,26 +122,42 @@ onBeforeUnmount(() => {
         @toggle-sidebar="handleSidebarToggle"
       />
       <div class="page-content">
-        <router-view />
+        <div class="route-page-stage">
+          <router-view v-slot="{ Component, route: currentRoute }">
+            <Transition
+              :name="resolvePageTransitionName(currentRoute)"
+              mode="out-in"
+              appear
+            >
+              <div
+                :key="currentRoute.fullPath"
+                class="route-page-view"
+              >
+                <component :is="Component" />
+              </div>
+            </Transition>
+          </router-view>
+        </div>
       </div>
     </div>
-    <div
-      v-if="isMobile"
-      class="mobile-sidebar-layer"
-      :class="{ 'is-open': mobileSidebarOpen }"
-      :aria-hidden="!mobileSidebarOpen"
-    >
+    <Transition name="overlay-motion">
       <div
-        class="mobile-sidebar-backdrop"
-        @click="closeMobileSidebar"
-      />
-      <DesktopSidebar
-        mode="mobile"
-        :close-on-navigate="true"
-        :show-collapse-toggle="false"
-        @request-close="closeMobileSidebar"
-      />
-    </div>
+        v-if="isMobile && mobileSidebarOpen"
+        class="mobile-sidebar-layer"
+      >
+        <div
+          class="mobile-sidebar-backdrop"
+          @click="closeMobileSidebar"
+        />
+        <DesktopSidebar
+          mode="mobile"
+          class="motion-panel motion-panel--sidebar"
+          :close-on-navigate="true"
+          :show-collapse-toggle="false"
+          @request-close="closeMobileSidebar"
+        />
+      </div>
+    </Transition>
     <MobileBottomNav />
   </div>
 </template>

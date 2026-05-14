@@ -1,5 +1,5 @@
 <template>
-  <div class="config-list">
+  <div class="config-list motion-stagger">
     <article v-for="config in configs" :key="config.id" class="config-card">
       <div class="config-card-header">
         <div class="config-card-heading">
@@ -53,7 +53,7 @@
           <th>操作</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="motion-stagger">
         <tr v-for="config in configs" :key="config.id">
           <td class="name-cell">{{ config.name }}</td>
           <td>{{ formatChannelType(config.channelType) }}</td>

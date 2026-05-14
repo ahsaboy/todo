@@ -17,7 +17,7 @@
     </div>
 
     <template v-else>
-      <div class="log-card-list">
+      <div class="log-card-list motion-stagger">
         <article v-for="item in logs" :key="item.id" class="log-card">
           <div class="log-card-header">
             <div class="log-card-heading">
@@ -63,7 +63,7 @@
               <th>错误</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="motion-stagger">
             <tr v-for="item in logs" :key="item.id">
               <td>{{ formatDate(item.createdAt) }}</td>
               <td class="task-cell">{{ item.taskTitle || `任务 #${item.taskId}` }}</td>

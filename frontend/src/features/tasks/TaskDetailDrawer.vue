@@ -1,8 +1,8 @@
 <template>
   <Teleport to="body">
-    <Transition name="drawer">
+    <Transition name="overlay-motion" appear>
       <div v-if="visible" class="drawer-overlay" @click.self="handleClose">
-        <div class="drawer-content">
+        <div class="drawer-content motion-panel motion-panel--right">
           <div class="drawer-header">
             <h3>{{ title || (task ? '编辑任务' : '创建任务') }}</h3>
             <div class="drawer-header-actions">
@@ -145,28 +145,6 @@ function handleSubmit(payload: CreateTaskPayload | UpdateTaskPayload) {
   overflow-y: auto;
   padding: 20px;
 }
-
-/* 动画 */
-.drawer-enter-active,
-.drawer-leave-active {
-  transition: opacity 200ms;
-}
-
-.drawer-enter-active .drawer-content,
-.drawer-leave-active .drawer-content {
-  transition: transform 200ms;
-}
-
-.drawer-enter-from,
-.drawer-leave-to {
-  opacity: 0;
-}
-
-.drawer-enter-from .drawer-content,
-.drawer-leave-to .drawer-content {
-  transform: translateX(100%);
-}
-
 /* 移动端全屏 */
 @media (max-width: 767px) {
   .drawer-content {
@@ -174,4 +152,3 @@ function handleSubmit(payload: CreateTaskPayload | UpdateTaskPayload) {
   }
 }
 </style>
-

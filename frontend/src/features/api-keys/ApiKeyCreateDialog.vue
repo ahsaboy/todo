@@ -1,8 +1,8 @@
 <template>
   <Teleport to="body">
-    <Transition name="dialog">
+    <Transition name="overlay-motion" appear>
       <div v-if="visible" class="dialog-overlay" @click.self="handleClose">
-        <div class="dialog-content">
+        <div class="dialog-content motion-panel motion-panel--scale">
           <div class="dialog-header">
             <h3>创建 API Key</h3>
             <button class="btn-close" type="button" @click="handleClose">×</button>

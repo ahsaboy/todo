@@ -1,5 +1,5 @@
 <template>
-  <div class="task-board">
+  <div class="task-board motion-stagger">
     <TaskBoardColumn title="待处理" :tasks="pendingTasks" @cardClick="$emit('cardClick', $event)" />
     <TaskBoardColumn
       title="已完成"

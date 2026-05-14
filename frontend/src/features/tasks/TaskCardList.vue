@@ -1,5 +1,5 @@
 <template>
-  <div class="task-card-list">
+  <div class="task-card-list motion-stagger">
     <div
       v-for="task in tasks"
       :key="task.id"

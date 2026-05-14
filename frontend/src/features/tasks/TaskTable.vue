@@ -12,7 +12,7 @@
           <th class="col-created">创建时间</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="motion-stagger">
         <tr v-for="task in tasks" :key="task.id" :class="{ completed: task.completed }">
           <td class="col-completed">
             <input

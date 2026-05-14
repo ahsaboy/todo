@@ -40,6 +40,17 @@ html[data-theme='light'] {
   --color-glow-danger: rgb(217 45 32 / 18%);
   --shadow-panel: 0 16px 40px rgb(31 35 40 / 8%);
   --shadow-glow-primary: 0 0 0 1px rgb(37 111 108 / 10%), 0 12px 32px rgb(37 111 108 / 12%);
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 260ms;
+  --motion-duration-slow: 420ms;
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-stagger-step: 46ms;
+  --motion-distance-sm: 10px;
+  --motion-distance-md: 18px;
+  --motion-distance-lg: 28px;
+  --motion-distance-xl: 40px;
+  --motion-scale-soft: 0.985;
 
   /* 响应式断点 */
   --bp-mobile: 767px;
@@ -48,7 +59,7 @@ html[data-theme='light'] {
   --bp-wide: 1440px;
 
   /* 布局尺寸 */
-  --sidebar-width: 248px;
+  --sidebar-width: 180px;
   --sidebar-collapsed-width: 64px;
   --topbar-height: 56px;
   --toolbar-height: 48px;

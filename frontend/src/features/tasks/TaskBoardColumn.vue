@@ -6,7 +6,7 @@
       <span class="column-count">{{ tasks.length }}</span>
     </div>
 
-    <div v-if="!collapsed" class="column-cards">
+    <div v-if="!collapsed" class="column-cards motion-stagger">
       <TaskBoardCard
         v-for="task in tasks"
         :key="task.id"

@@ -1,8 +1,8 @@
 <template>
   <Teleport to="body">
-    <Transition name="sheet">
+    <Transition name="overlay-motion" appear>
       <div v-if="visible" class="sheet-overlay" @click.self="$emit('update:visible', false)">
-        <div class="sheet-content">
+        <div class="sheet-content motion-panel motion-panel--bottom">
           <div class="sheet-handle"></div>
           <div class="sheet-body">
             <slot></slot>
@@ -56,26 +56,5 @@ defineEmits<{
   padding: 0 20px 20px;
   overflow-y: auto;
   max-height: calc(80vh - 40px);
-}
-
-/* 动画 */
-.sheet-enter-active,
-.sheet-leave-active {
-  transition: opacity 200ms;
-}
-
-.sheet-enter-active .sheet-content,
-.sheet-leave-active .sheet-content {
-  transition: transform 200ms;
-}
-
-.sheet-enter-from,
-.sheet-leave-to {
-  opacity: 0;
-}
-
-.sheet-enter-from .sheet-content,
-.sheet-leave-to .sheet-content {
-  transform: translateY(100%);
 }
 </style>
