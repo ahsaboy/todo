@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { resolvePageTransitionName } from '@/shared/motion/routes'
 import DesktopSidebar from './DesktopSidebar.vue'
 import AppTopbar from './AppTopbar.vue'
+import AppFooter from './AppFooter.vue'
 import MobileBottomNav from './MobileBottomNav.vue'
 
 const MOBILE_MEDIA_QUERY = '(max-width: 767px)'
@@ -139,6 +140,7 @@ onBeforeUnmount(() => {
           </router-view>
         </div>
       </div>
+      <AppFooter />
     </div>
     <Transition name="overlay-motion">
       <div

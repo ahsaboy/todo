@@ -11,7 +11,7 @@ export function getAppVersion(): string {
  */
 export function getVersionString(): string {
   const version = getAppVersion()
-  return `v${version}`
+  return `${version}`
 }
 
 /**
