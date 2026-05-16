@@ -146,6 +146,86 @@ todo-server [选项]
 > `GET /api/v1/runtime-config` 和 `POST /api/v1/logs/frontend` 属于内部运行时接口，供前端日志初始化和上报使用，不作为公开业务 API。
 
 
+## MCP 服务器
+
+除 REST API 外，本服务同时暴露一个基于 [Model Context Protocol](https://modelcontextprotocol.io/) 的端点，可被 LLM 客户端直接调用。
+
+- **端点**：`POST /mcp`（同时支持 `GET` 用于 SSE 事件流，`DELETE` 用于关闭 session）
+- **传输**：Streamable HTTP（MCP 协议版本 `2025-11-25`，由 [`github.com/mark3labs/mcp-go`](https://github.com/mark3labs/mcp-go) v0.54.0 实现）
+- **认证**：请求头 `api-key: <key>`（也接受 `Authorization: Bearer <key>` 或 legacy `X-API-Key: <key>`）—— 与 REST API 共享同一份 `user_api_keys` 表，按 `user_id` 隔离
+- **会话**：`initialize` 应答头会返回 `Mcp-Session-Id`，后续请求需通过 `Mcp-Session-Id` 请求头携带
+
+### 工具列表（共 12 个）
+
+任务管理（6 个，复用 `TaskService`）：
+
+| 工具 | 说明 |
+| --- | --- |
+| `create_task` | 创建任务，支持标题/描述/优先级/截止/提醒/重复规则 |
+| `list_tasks` | 分页查询当前用户任务，支持筛选与排序 |
+| `get_task` | 按 ID 获取任务详情 |
+| `update_task` | 局部更新任务字段（指针化的可选字段） |
+| `delete_task` | 按 ID 删除任务 |
+| `toggle_task_complete` | 切换任务完成状态（自动生成下一个重复任务） |
+
+提醒配置（5 个，复用 `ReminderConfigService`）：
+
+| 工具 | 说明 |
+| --- | --- |
+| `list_reminder_configs` | 列出当前用户的所有提醒渠道 |
+| `create_reminder_config` | 新建提醒渠道（webhook/feishu/dingtalk/wecom/slack） |
+| `get_reminder_config` | 按 ID 获取提醒渠道详情 |
+| `update_reminder_config` | 局部更新提醒渠道字段 |
+| `delete_reminder_config` | 按 ID 删除提醒渠道 |
+
+用户信息（1 个，复用 `AuthService`）：
+
+| 工具 | 说明 |
+| --- | --- |
+| `get_user_profile` | 获取当前认证用户的个人资料（不含密码哈希） |
+
+### 调用示例（curl）
+
+`initialize` —— 拿到 `Mcp-Session-Id`：
+
+```bash
+curl -i -X POST http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'api-key: <YOUR_API_KEY>' \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":1,
+    "method":"initialize",
+    "params":{
+      "protocolVersion":"2025-11-25",
+      "capabilities":{},
+      "clientInfo":{"name":"demo","version":"0.0.1"}
+    }
+  }'
+```
+
+完成 `initialize` 后必须先发一个 `notifications/initialized` 通知（MCP 协议要求），再发 `tools/list`：
+
+```bash
+curl -i -X POST http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'api-key: <YOUR_API_KEY>' \
+  -H 'Mcp-Session-Id: <SESSION_ID_FROM_INITIALIZE>' \
+  -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+
+curl -X POST http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'api-key: <YOUR_API_KEY>' \
+  -H 'Mcp-Session-Id: <SESSION_ID_FROM_INITIALIZE>' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+```
+
+无 `api-key` 直接访问会返回 `401`，错误结构与 REST API 一致（`success:false, code:"UNAUTHORIZED"`）。
+
+
 ## 配置文件
 
 `config.yaml` 包含所有可配置项：

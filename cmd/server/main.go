@@ -20,6 +20,7 @@ import (
 	"todo/internal/database"
 	"todo/internal/handlers"
 	"todo/internal/logging"
+	mcpserver "todo/internal/mcp"
 	"todo/internal/middleware"
 	"todo/internal/repository"
 	"todo/internal/service"
@@ -230,6 +231,18 @@ func main() {
 		api.GET("/user/reminder-logs", reminderLogHandler.List)
 	}
 
+	// MCP(Model Context Protocol)端点。
+	// 单一路径 /mcp 同时承载 POST(JSON-RPC 请求)、GET(SSE 事件流)、DELETE(关闭 session),
+	// 故用 r.Any 挂载,而不放进 /api/v1 的 AuthMiddleware 分组 —— handler 内部已自带
+	// api-key 认证,见 internal/mcp/auth.go。
+	mcpHandler := mcpserver.NewMCPServer(mcpserver.Dependencies{
+		TaskSvc:     taskSvc,
+		ReminderSvc: reminderConfigSvc,
+		AuthSvc:     authSvc,
+		APIKeyRepo:  apiKeyRepo,
+	})
+	r.Any("/mcp", gin.WrapH(mcpHandler))
+
 	registerStaticRoutes(r, logger)
 
 	// 启动 HTTP 服务器
@@ -328,7 +341,10 @@ func corsMiddleware(origins []string) gin.HandlerFunc {
 			c.Header("Vary", "Origin")
 		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, api-key, X-API-Key")
+		// Mcp-Session-Id / Last-Event-ID 由 MCP Streamable HTTP transport 使用(2025-11-25 规范)。
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, api-key, X-API-Key, Mcp-Session-Id, Last-Event-ID")
+		// 让浏览器客户端能读到 initialize 响应里的 Mcp-Session-Id。
+		c.Header("Access-Control-Expose-Headers", "Mcp-Session-Id")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
