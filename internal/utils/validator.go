@@ -15,13 +15,15 @@ func ValidateTimeFormat(s string) bool {
 	return err == nil
 }
 
-// ParseAPITime 解析 RFC3339 字符串并返回 UTC 时间。
+// ParseAPITime 解析 API 入参时间字符串并返回 UTC 时间。
 // 支持格式：
 //   - RFC3339："2026-05-10T18:30:00Z"、"2026-05-10T18:30:00+08:00"
 //   - ISO8601 无冒号时区偏移："2026-05-10T18:30:00+0800"、"2026-05-10T18:30:00-0500"
+//   - 无时区(naked):"2026-05-10T18:30:00"、"2026-05-10 18:30:00"(可带 .000 毫秒)
+//     无时区情况下按 defaultLoc 解释;defaultLoc 为 nil 时回退到 time.Local。
 //
 // 空字符串由调用方决定是否允许。
-func ParseAPITime(value string) (time.Time, error) {
+func ParseAPITime(value string, defaultLoc *time.Location) (time.Time, error) {
 	// 尝试标准 RFC3339 格式
 	t, err := time.Parse(time.RFC3339, value)
 	if err == nil {
@@ -34,7 +36,13 @@ func ParseAPITime(value string) (time.Time, error) {
 		return t.UTC(), nil
 	}
 
-	return time.Time{}, fmt.Errorf("不支持的时间格式，请使用 RFC3339 格式")
+	// 尝试无时区格式,按 defaultLoc 解释
+	t, err = parseNakedTime(value, defaultLoc)
+	if err == nil {
+		return t.UTC(), nil
+	}
+
+	return time.Time{}, fmt.Errorf("不支持的时间格式,请使用 RFC3339 或带时区的 ISO8601 格式")
 }
 
 // parseISO8601NoColonTimezone 解析 ISO8601 格式但时区偏移没有冒号的情况
@@ -66,14 +74,40 @@ func parseISO8601NoColonTimezone(value string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("不支持的时间格式")
 }
 
+// parseNakedTime 解析不带时区的本地时间字符串,按 loc 解释。
+// loc 为 nil 时回退到 time.Local。
+// 例如(loc=Asia/Shanghai):
+//   - "2026-05-10T18:30:00"     → 2026-05-10 10:30:00 UTC
+//   - "2026-05-10 18:30:00"     → 2026-05-10 10:30:00 UTC
+//   - "2026-05-10T18:30:00.123" → 2026-05-10 10:30:00.123 UTC
+func parseNakedTime(value string, loc *time.Location) (time.Time, error) {
+	if loc == nil {
+		loc = time.Local
+	}
+	layouts := []string{
+		"2006-01-02T15:04:05",
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05.000",
+		"2006-01-02 15:04:05.000",
+	}
+	for _, layout := range layouts {
+		t, err := time.ParseInLocation(layout, value, loc)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("不支持的无时区时间格式")
+}
+
 // FormatDBTime 将 time.Time 格式化为 UTC RFC3339 字符串，用于数据库存储。
 func FormatDBTime(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
 // NormalizeAPITime 解析 API 入参并返回标准 UTC RFC3339 字符串。
-func NormalizeAPITime(value string) (string, error) {
-	t, err := ParseAPITime(value)
+// defaultLoc 用于解释不带时区的时间字符串;为 nil 时回退到 time.Local。
+func NormalizeAPITime(value string, defaultLoc *time.Location) (string, error) {
+	t, err := ParseAPITime(value, defaultLoc)
 	if err != nil {
 		return "", err
 	}

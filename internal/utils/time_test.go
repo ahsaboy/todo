@@ -6,25 +6,35 @@ import (
 )
 
 func TestParseAPITime(t *testing.T) {
+	asiaShanghai, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		t.Fatalf("load Asia/Shanghai: %v", err)
+	}
 	tests := []struct {
 		name    string
 		input   string
+		loc     *time.Location
 		want    time.Time
 		wantErr bool
 	}{
-		{"RFC3339 UTC", "2026-05-10T10:30:00Z", time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
-		{"RFC3339 +08:00", "2026-05-10T18:30:00+08:00", time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
-		{"ISO8601 T分隔 +0800", "2026-05-10T18:30:00+0800", time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
-		{"ISO8601 空格分隔 +0800", "2026-05-10 18:30:00+0800", time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
-		{"ISO8601 T分隔 -0500", "2026-05-10T18:30:00-0500", time.Date(2026, 5, 10, 23, 30, 0, 0, time.UTC), false},
-		{"ISO8601 空格分隔 -0500", "2026-05-10 18:30:00-0500", time.Date(2026, 5, 10, 23, 30, 0, 0, time.UTC), false},
-		{"空字符串", "", time.Time{}, true},
-		{"旧格式无时区", "2026-05-10 18:30:00", time.Time{}, true},
-		{"非法字符串", "not a time", time.Time{}, true},
+		{"RFC3339 UTC", "2026-05-10T10:30:00Z", nil, time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
+		{"RFC3339 +08:00", "2026-05-10T18:30:00+08:00", nil, time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
+		{"ISO8601 T分隔 +0800", "2026-05-10T18:30:00+0800", nil, time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
+		{"ISO8601 空格分隔 +0800", "2026-05-10 18:30:00+0800", nil, time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
+		{"ISO8601 T分隔 -0500", "2026-05-10T18:30:00-0500", nil, time.Date(2026, 5, 10, 23, 30, 0, 0, time.UTC), false},
+		{"ISO8601 空格分隔 -0500", "2026-05-10 18:30:00-0500", nil, time.Date(2026, 5, 10, 23, 30, 0, 0, time.UTC), false},
+		{"无时区 T分隔 → Asia/Shanghai", "2026-05-10T18:30:00", asiaShanghai, time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
+		{"无时区 空格分隔 → Asia/Shanghai", "2026-05-10 18:30:00", asiaShanghai, time.Date(2026, 5, 10, 10, 30, 0, 0, time.UTC), false},
+		{"无时区 + 毫秒 T分隔 → Asia/Shanghai", "2026-05-10T18:30:00.123", asiaShanghai, time.Date(2026, 5, 10, 10, 30, 0, 123000000, time.UTC), false},
+		{"无时区 + 毫秒 空格分隔 → Asia/Shanghai", "2026-05-10 18:30:00.123", asiaShanghai, time.Date(2026, 5, 10, 10, 30, 0, 123000000, time.UTC), false},
+		{"无时区 + loc=UTC", "2026-05-10T18:30:00", time.UTC, time.Date(2026, 5, 10, 18, 30, 0, 0, time.UTC), false},
+		{"空字符串", "", nil, time.Time{}, true},
+		{"非法字符串", "not a time", nil, time.Time{}, true},
+		{"只有日期", "2026-05-10", asiaShanghai, time.Time{}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseAPITime(tt.input)
+			got, err := ParseAPITime(tt.input, tt.loc)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("ParseAPITime(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
 			}
@@ -45,24 +55,31 @@ func TestFormatDBTime(t *testing.T) {
 }
 
 func TestNormalizeAPITime(t *testing.T) {
+	asiaShanghai, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		t.Fatalf("load Asia/Shanghai: %v", err)
+	}
 	tests := []struct {
 		name    string
 		input   string
+		loc     *time.Location
 		want    string
 		wantErr bool
 	}{
-		{"RFC3339 UTC", "2026-05-10T10:30:00Z", "2026-05-10T10:30:00Z", false},
-		{"RFC3339 +08:00", "2026-05-10T18:30:00+08:00", "2026-05-10T10:30:00Z", false},
-		{"ISO8601 T分隔 +0800", "2026-05-10T18:30:00+0800", "2026-05-10T10:30:00Z", false},
-		{"ISO8601 空格分隔 +0800", "2026-05-10 18:30:00+0800", "2026-05-10T10:30:00Z", false},
-		{"ISO8601 T分隔 -0500", "2026-05-10T18:30:00-0500", "2026-05-10T23:30:00Z", false},
-		{"ISO8601 空格分隔 -0500", "2026-05-10 18:30:00-0500", "2026-05-10T23:30:00Z", false},
-		{"旧格式无时区", "2026-05-10 18:30:00", "", true},
-		{"空字符串", "", "", true},
+		{"RFC3339 UTC", "2026-05-10T10:30:00Z", nil, "2026-05-10T10:30:00Z", false},
+		{"RFC3339 +08:00", "2026-05-10T18:30:00+08:00", nil, "2026-05-10T10:30:00Z", false},
+		{"ISO8601 T分隔 +0800", "2026-05-10T18:30:00+0800", nil, "2026-05-10T10:30:00Z", false},
+		{"ISO8601 空格分隔 +0800", "2026-05-10 18:30:00+0800", nil, "2026-05-10T10:30:00Z", false},
+		{"ISO8601 T分隔 -0500", "2026-05-10T18:30:00-0500", nil, "2026-05-10T23:30:00Z", false},
+		{"ISO8601 空格分隔 -0500", "2026-05-10 18:30:00-0500", nil, "2026-05-10T23:30:00Z", false},
+		{"无时区 T分隔 → Asia/Shanghai", "2026-05-10T18:30:00", asiaShanghai, "2026-05-10T10:30:00Z", false},
+		{"无时区 空格分隔 → Asia/Shanghai", "2026-05-10 18:30:00", asiaShanghai, "2026-05-10T10:30:00Z", false},
+		{"无时区 → UTC", "2026-05-10T18:30:00", time.UTC, "2026-05-10T18:30:00Z", false},
+		{"空字符串", "", nil, "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NormalizeAPITime(tt.input)
+			got, err := NormalizeAPITime(tt.input, tt.loc)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("NormalizeAPITime(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
 			}

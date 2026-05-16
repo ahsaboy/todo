@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"todo/internal/models"
 	"todo/internal/repository"
+	"todo/internal/timezone"
 	"todo/internal/utils"
 )
 
@@ -133,32 +135,36 @@ func (s *TaskService) createNextOccurrence(ctx context.Context, t *models.Task) 
 }
 
 // normalizeCreateTaskTimes 标准化创建任务请求中的时间字段。
-// nil 和空字符串视为未设置；RFC3339 字符串转为 UTC RFC3339；非法字符串返回错误。
+// nil 和空字符串视为未设置；RFC3339 字符串转为 UTC RFC3339；
+// 无时区时间按 server.timezone 解释;非法字符串返回错误。
 func normalizeCreateTaskTimes(req *models.CreateTaskRequest) error {
+	loc := timezone.Get()
 	var err error
-	if req.DueAt, err = normalizeOptionalTime(req.DueAt, true); err != nil {
+	if req.DueAt, err = normalizeOptionalTime(req.DueAt, true, loc); err != nil {
 		return fmt.Errorf("due_at: %w", err)
 	}
-	if req.RemindAt, err = normalizeOptionalTime(req.RemindAt, true); err != nil {
+	if req.RemindAt, err = normalizeOptionalTime(req.RemindAt, true, loc); err != nil {
 		return fmt.Errorf("remind_at: %w", err)
 	}
-	if req.RepeatEndDate, err = normalizeOptionalTime(req.RepeatEndDate, true); err != nil {
+	if req.RepeatEndDate, err = normalizeOptionalTime(req.RepeatEndDate, true, loc); err != nil {
 		return fmt.Errorf("repeat_end_date: %w", err)
 	}
 	return nil
 }
 
 // normalizeUpdateTaskTimes 标准化更新任务请求中的时间字段。
-// nil 表示不修改；空字符串表示清空；RFC3339 字符串转为 UTC RFC3339；非法字符串返回错误。
+// nil 表示不修改；空字符串表示清空；RFC3339 字符串转为 UTC RFC3339；
+// 无时区时间按 server.timezone 解释;非法字符串返回错误。
 func normalizeUpdateTaskTimes(req *models.UpdateTaskRequest) error {
+	loc := timezone.Get()
 	var err error
-	if req.DueAt, err = normalizeOptionalTime(req.DueAt, false); err != nil {
+	if req.DueAt, err = normalizeOptionalTime(req.DueAt, false, loc); err != nil {
 		return fmt.Errorf("due_at: %w", err)
 	}
-	if req.RemindAt, err = normalizeOptionalTime(req.RemindAt, false); err != nil {
+	if req.RemindAt, err = normalizeOptionalTime(req.RemindAt, false, loc); err != nil {
 		return fmt.Errorf("remind_at: %w", err)
 	}
-	if req.RepeatEndDate, err = normalizeOptionalTime(req.RepeatEndDate, false); err != nil {
+	if req.RepeatEndDate, err = normalizeOptionalTime(req.RepeatEndDate, false, loc); err != nil {
 		return fmt.Errorf("repeat_end_date: %w", err)
 	}
 	return nil
@@ -166,7 +172,8 @@ func normalizeUpdateTaskTimes(req *models.UpdateTaskRequest) error {
 
 // normalizeOptionalTime 规范化可选时间字段。
 // isCreate 为 true 时，空字符串视为 nil（未设置）；为 false 时，空字符串保留（清空字段）。
-func normalizeOptionalTime(p *string, isCreate bool) (*string, error) {
+// defaultLoc 用于解释不带时区的时间字符串。
+func normalizeOptionalTime(p *string, isCreate bool, defaultLoc *time.Location) (*string, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -176,7 +183,7 @@ func normalizeOptionalTime(p *string, isCreate bool) (*string, error) {
 		}
 		return p, nil
 	}
-	normalized, err := utils.NormalizeAPITime(*p)
+	normalized, err := utils.NormalizeAPITime(*p, defaultLoc)
 	if err != nil {
 		return nil, ErrInvalidTime
 	}
