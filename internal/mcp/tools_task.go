@@ -36,11 +36,11 @@ func buildCreateTaskTool() mcpgo.Tool {
 		mcpgo.WithString("title", mcpgo.Required(), mcpgo.Description("任务标题(1-255 字符,必填)"), mcpgo.MinLength(1), mcpgo.MaxLength(255)),
 		mcpgo.WithString("description", mcpgo.Description("任务描述(可选,最多 1000 字符)"), mcpgo.MaxLength(1000)),
 		mcpgo.WithNumber("priority", mcpgo.Description("优先级:1=高 / 2=中 / 3=低"), mcpgo.Min(1), mcpgo.Max(3)),
-		mcpgo.WithString("due_at", mcpgo.Description("截止时间,RFC3339 格式,例如 2026-05-10T10:30:00Z")),
-		mcpgo.WithString("remind_at", mcpgo.Description("提醒时间,RFC3339 格式,例如 2026-05-10T10:30:00Z")),
+		mcpgo.WithString("due_at", mcpgo.Description("截止时间,推荐格式 \"2026-05-10 18:30:00\"")),
+		mcpgo.WithString("remind_at", mcpgo.Description("提醒时间,推荐格式 \"2026-05-10 18:30:00\"")),
 		mcpgo.WithString("repeat_type", mcpgo.Description("重复类型"), mcpgo.Enum("none", "daily", "weekly", "monthly", "yearly")),
 		mcpgo.WithNumber("repeat_interval", mcpgo.Description("重复间隔(1-365)"), mcpgo.Min(1), mcpgo.Max(365)),
-		mcpgo.WithString("repeat_end_date", mcpgo.Description("重复结束时间,RFC3339 格式")),
+		mcpgo.WithString("repeat_end_date", mcpgo.Description("重复结束时间,推荐格式 \"2026-05-10 18:30:00\"")),
 	)
 }
 
@@ -49,8 +49,8 @@ func buildListTasksTool() mcpgo.Tool {
 		mcpgo.WithDescription("分页查询当前用户的任务列表,支持按状态/优先级/截止时间区间/关键字筛选,以及自定义排序。"),
 		mcpgo.WithString("status", mcpgo.Description("任务状态筛选"), mcpgo.Enum("pending", "completed", "all")),
 		mcpgo.WithNumber("priority", mcpgo.Description("优先级筛选:1/2/3"), mcpgo.Min(1), mcpgo.Max(3)),
-		mcpgo.WithString("due_before", mcpgo.Description("截止时间上限,RFC3339")),
-		mcpgo.WithString("due_after", mcpgo.Description("截止时间下限,RFC3339")),
+		mcpgo.WithString("due_before", mcpgo.Description("截止时间上限,推荐格式 \"2026-05-10 18:30:00\"")),
+		mcpgo.WithString("due_after", mcpgo.Description("截止时间下限,推荐格式 \"2026-05-10 18:30:00\"")),
 		mcpgo.WithString("search", mcpgo.Description("搜索关键字(匹配标题/描述)")),
 		mcpgo.WithNumber("page", mcpgo.Description("页码,默认 1"), mcpgo.Min(1), mcpgo.DefaultNumber(1)),
 		mcpgo.WithNumber("limit", mcpgo.Description("每页数量,默认 20,最大 100"), mcpgo.Min(1), mcpgo.Max(100), mcpgo.DefaultNumber(20)),
@@ -73,11 +73,11 @@ func buildUpdateTaskTool() mcpgo.Tool {
 		mcpgo.WithString("title", mcpgo.Description("新的任务标题"), mcpgo.MinLength(1), mcpgo.MaxLength(255)),
 		mcpgo.WithString("description", mcpgo.Description("新的任务描述"), mcpgo.MaxLength(1000)),
 		mcpgo.WithNumber("priority", mcpgo.Description("优先级:1/2/3"), mcpgo.Min(1), mcpgo.Max(3)),
-		mcpgo.WithString("due_at", mcpgo.Description("新的截止时间,RFC3339;空字符串清空")),
-		mcpgo.WithString("remind_at", mcpgo.Description("新的提醒时间,RFC3339;空字符串清空")),
+		mcpgo.WithString("due_at", mcpgo.Description("新的截止时间,推荐格式 \"2026-05-10 18:30:00\";空字符串清空")),
+		mcpgo.WithString("remind_at", mcpgo.Description("新的提醒时间,推荐格式 \"2026-05-10 18:30:00\";空字符串清空")),
 		mcpgo.WithString("repeat_type", mcpgo.Description("新的重复类型"), mcpgo.Enum("none", "daily", "weekly", "monthly", "yearly")),
 		mcpgo.WithNumber("repeat_interval", mcpgo.Description("新的重复间隔(1-365)"), mcpgo.Min(1), mcpgo.Max(365)),
-		mcpgo.WithString("repeat_end_date", mcpgo.Description("新的重复结束时间,RFC3339;空字符串清空")),
+		mcpgo.WithString("repeat_end_date", mcpgo.Description("新的重复结束时间,推荐格式 \"2026-05-10 18:30:00\";空字符串清空")),
 	)
 }
 
@@ -113,7 +113,7 @@ func mapTaskServiceError(err error) *mcpgo.CallToolResult {
 	case errors.Is(err, service.ErrReminderChannelMissing):
 		return mcpgo.NewToolResultError("reminder channel required: please configure at least one enabled reminder channel before setting remind_at")
 	case errors.Is(err, service.ErrInvalidTime):
-		return mcpgo.NewToolResultError("invalid time format: use RFC3339 e.g. 2026-05-10T10:30:00Z")
+		return mcpgo.NewToolResultError("invalid time format: use \"2026-05-10 18:30:00\"")
 	}
 	return nil
 }
