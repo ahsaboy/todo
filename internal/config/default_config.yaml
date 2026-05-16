@@ -6,6 +6,7 @@ server:
   host: "0.0.0.0"
   port: 8080
   mode: "release"
+  timezone: ""  # 空 / "Local" → 服务器本地时区;"UTC";IANA 名(Asia/Shanghai);固定偏移(+08:00)
 
 database:
   path: "./data/tasks.db"

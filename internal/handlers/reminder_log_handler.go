@@ -8,7 +8,9 @@ import (
 
 	"todo/internal/middleware"
 	"todo/internal/repository"
+	"todo/internal/timezone"
 	"todo/internal/utils"
+	"todo/internal/views"
 )
 
 type ReminderLogHandler struct {
@@ -38,7 +40,7 @@ func (h *ReminderLogHandler) List(c *gin.Context) {
 		return
 	}
 
-	utils.RespondPaginated(c, logs, page, limit, total)
+	utils.RespondPaginated(c, views.ReminderLogsView(logs, timezone.Get()), page, limit, total)
 }
 
 func parsePositiveInt(raw string, fallback int) int {

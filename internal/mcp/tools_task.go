@@ -7,6 +7,7 @@ import (
 
 	"todo/internal/models"
 	"todo/internal/service"
+	"todo/internal/views"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	mcpsrv "github.com/mark3labs/mcp-go/server"
@@ -124,12 +125,13 @@ func hasArg(req mcpgo.CallToolRequest, key string) bool {
 }
 
 // structuredTask 用 task 对象做结构化返回,fallback 文本写成简短摘要,便于纯文本客户端显示。
+// 出口前用 views.TaskView 把时间字段转成 per-request / 全局时区的带偏移格式。
 func structuredTask(ctx context.Context, t *models.Task) (*mcpgo.CallToolResult, error) {
 	if t == nil {
 		return mcpgo.NewToolResultError("task not found"), nil
 	}
 	fallback := fmt.Sprintf("task #%d %q (priority=%d, completed=%v)", t.ID, t.Title, t.Priority, t.Completed)
-	return buildToolResult(ctx, t, fallback)
+	return buildToolResult(ctx, views.TaskView(t, resolveLoc(ctx)), fallback)
 }
 
 // ---------- handler 实现 ----------
@@ -228,7 +230,7 @@ func listTasksHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 		}
 
 		payload := map[string]any{
-			"tasks": tasks,
+			"tasks": views.TasksView(tasks, resolveLoc(ctx)),
 			"meta": map[string]any{
 				"page":        page,
 				"limit":       limit,

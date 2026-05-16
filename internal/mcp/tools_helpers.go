@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
+
+	"todo/internal/timezone"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 )
@@ -29,4 +32,14 @@ func buildToolResult(ctx context.Context, data any, fallback string) (*mcpgo.Cal
 		return nil, fmt.Errorf("marshal tool result: %w", err)
 	}
 	return mcpgo.NewToolResultText(string(raw)), nil
+}
+
+// resolveLoc 统一读取目标时区。
+// 优先使用请求级 X-MCP-Timezone(经 auth 中间件注入到 ctx);否则回落到进程级 timezone.Get()。
+// 永远返回非 nil 的 *time.Location。
+func resolveLoc(ctx context.Context) *time.Location {
+	if loc, ok := TimezoneFromContext(ctx); ok {
+		return loc
+	}
+	return timezone.Get()
 }

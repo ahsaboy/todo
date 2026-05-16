@@ -24,6 +24,8 @@ import (
 	"todo/internal/middleware"
 	"todo/internal/repository"
 	"todo/internal/service"
+	"todo/internal/timezone"
+	"todo/internal/utils"
 )
 
 // @title           TODO 任务管理系统 API
@@ -127,6 +129,18 @@ func main() {
 		zap.Int("port", cfg.Server.Port),
 		zap.String("mode", cfg.Server.Mode),
 	)
+
+	// 初始化进程级时区(供 view 函数和提醒模板使用)。
+	// 失败时回退到 time.Local 并 warn,不阻断启动。
+	loc, tzErr := utils.ResolveTimezone(cfg.Server.Timezone)
+	timezone.Init(loc)
+	if tzErr != nil {
+		logger.Warn("解析 server.timezone 失败,已回退到 Local",
+			zap.String("config", cfg.Server.Timezone),
+			zap.Error(tzErr))
+	} else {
+		logger.Info("时区配置完成", zap.String("location", loc.String()))
+	}
 
 	docs.SwaggerInfo.Version = version
 
@@ -342,8 +356,8 @@ func corsMiddleware(origins []string) gin.HandlerFunc {
 		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		// Mcp-Session-Id / Last-Event-ID 由 MCP Streamable HTTP transport 使用(2025-11-25 规范)。
-		// X-MCP-Structured-Output / X-MCP-Include-Reminders 是本服务自定义的 MCP 客户端选项 header。
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, api-key, X-API-Key, Mcp-Session-Id, Last-Event-ID, X-MCP-Structured-Output, X-MCP-Include-Reminders")
+		// X-MCP-Structured-Output / X-MCP-Include-Reminders / X-MCP-Timezone 是本服务自定义的 MCP 客户端选项 header。
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, api-key, X-API-Key, Mcp-Session-Id, Last-Event-ID, X-MCP-Structured-Output, X-MCP-Include-Reminders, X-MCP-Timezone")
 		// 让浏览器客户端能读到 initialize 响应里的 Mcp-Session-Id。
 		c.Header("Access-Control-Expose-Headers", "Mcp-Session-Id")
 

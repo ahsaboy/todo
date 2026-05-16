@@ -9,7 +9,9 @@ import (
 	"todo/internal/middleware"
 	"todo/internal/models"
 	"todo/internal/service"
+	"todo/internal/timezone"
 	"todo/internal/utils"
+	"todo/internal/views"
 )
 
 type ReminderConfigHandler struct {
@@ -51,7 +53,7 @@ func (h *ReminderConfigHandler) Create(c *gin.Context) {
 		return
 	}
 
-	utils.RespondCreated(c, cfg)
+	utils.RespondCreated(c, views.UserReminderConfigView(cfg, timezone.Get()))
 }
 
 // List 列出提醒配置
@@ -76,7 +78,7 @@ func (h *ReminderConfigHandler) List(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, configs)
+	utils.RespondSuccess(c, views.UserReminderConfigsView(configs, timezone.Get()))
 }
 
 // GetByID 获取单个提醒配置
@@ -111,7 +113,7 @@ func (h *ReminderConfigHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, cfg)
+	utils.RespondSuccess(c, views.UserReminderConfigView(cfg, timezone.Get()))
 }
 
 // Update 更新提醒配置
@@ -155,7 +157,7 @@ func (h *ReminderConfigHandler) Update(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, cfg)
+	utils.RespondSuccess(c, views.UserReminderConfigView(cfg, timezone.Get()))
 }
 
 // Delete 删除提醒配置

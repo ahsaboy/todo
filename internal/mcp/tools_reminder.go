@@ -6,6 +6,7 @@ import (
 
 	"todo/internal/models"
 	"todo/internal/service"
+	"todo/internal/views"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	mcpsrv "github.com/mark3labs/mcp-go/server"
@@ -110,12 +111,13 @@ func extractWebhookHeaders(request mcpgo.CallToolRequest) map[string]string {
 }
 
 // structuredReminderConfig 把提醒渠道对象转为结构化结果,nil 时返回 not found 错误。
+// 出口前用 views.UserReminderConfigView 把时间字段转成 per-request / 全局时区。
 func structuredReminderConfig(ctx context.Context, c *models.UserReminderConfig) (*mcpgo.CallToolResult, error) {
 	if c == nil {
 		return mcpgo.NewToolResultError("reminder config not found"), nil
 	}
 	fallback := fmt.Sprintf("reminder config #%d %q (%s, enabled=%v)", c.ID, c.Name, c.ChannelType, c.Enabled)
-	return buildToolResult(ctx, c, fallback)
+	return buildToolResult(ctx, views.UserReminderConfigView(c, resolveLoc(ctx)), fallback)
 }
 
 // requireRemindersEnabled 检查 ctx 中的开关;未启用时返回标准 "tool not available" 错误结果。
@@ -146,7 +148,7 @@ func listReminderConfigsHandler(svc *service.ReminderConfigService) mcpsrv.ToolH
 			configs = []models.UserReminderConfig{}
 		}
 		payload := map[string]any{
-			"configs": configs,
+			"configs": views.UserReminderConfigsView(configs, resolveLoc(ctx)),
 			"total":   len(configs),
 		}
 		fallback := fmt.Sprintf("returned %d reminder config(s)", len(configs))

@@ -61,7 +61,9 @@ type TemplateData struct {
 	CreatedAt     string
 }
 
-func (t *Task) ToTemplateData() TemplateData {
+// ToTemplateData 渲染提醒 webhook 模板所需的数据。
+// loc 用于把时间字段按目标时区格式化(M月D日 周X HH:MM);loc 为 nil 时回退到本机本地时区。
+func (t *Task) ToTemplateData(loc *time.Location) TemplateData {
 	priorityMap := map[int]string{1: "高", 2: "中", 3: "低"}
 	dueAt := ""
 	if t.DueAt != nil {
@@ -77,10 +79,10 @@ func (t *Task) ToTemplateData() TemplateData {
 		Description:  t.Description,
 		Priority:     t.Priority,
 		PriorityText: priorityMap[t.Priority],
-		DueAt:        FormatReminderTime(dueAt, nil),
-		RemindAt:     FormatReminderTime(remindAt, nil),
+		DueAt:        FormatReminderTime(dueAt, loc),
+		RemindAt:     FormatReminderTime(remindAt, loc),
 		RepeatType:   t.RepeatType,
-		CreatedAt:    FormatReminderTime(t.CreatedAt, nil),
+		CreatedAt:    FormatReminderTime(t.CreatedAt, loc),
 	}
 }
 

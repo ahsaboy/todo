@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"todo/internal/repository"
+	"todo/internal/utils"
 )
 
 // apiKeyAuthMiddleware 从请求头(Authorization: Bearer / api-key / X-API-Key)取出 API Key,
@@ -32,6 +33,12 @@ func apiKeyAuthMiddleware(repo *repository.APIKeyRepo) func(http.Handler) http.H
 			ctx := WithUserID(r.Context(), userID)
 			ctx = WithStructuredOutput(ctx, headerEnabled(r.Header.Get("X-MCP-Structured-Output")))
 			ctx = WithRemindersEnabled(ctx, headerEnabled(r.Header.Get("X-MCP-Include-Reminders")))
+			// 解析 X-MCP-Timezone 覆盖全局时区。解析失败时不注入,让工具回落到全局配置。
+			if rawTZ := strings.TrimSpace(r.Header.Get("X-MCP-Timezone")); rawTZ != "" {
+				if loc, err := utils.ResolveTimezone(rawTZ); err == nil {
+					ctx = WithTimezone(ctx, loc)
+				}
+			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

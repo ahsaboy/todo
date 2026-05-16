@@ -157,12 +157,13 @@ todo-server [选项]
 
 ### 客户端选项 Header
 
-下面两个可选请求头按需启用（**任意非空字符串都视为开启**，例如 `1` / `true` / `on`；缺失或空字符串为关闭）：
+下面三个可选请求头按需启用(**任意非空字符串都视为开启**,例如 `1` / `true` / `on`;缺失或空字符串为关闭):
 
 | Header | 默认 | 启用后 |
 | --- | --- | --- |
-| `X-MCP-Include-Reminders` | `tools/list` 隐藏 5 个 `*_reminder_config` 工具；`tools/call` 调用它们时返回 `tool not available` 错误。任务工具与 `get_user_profile` 不受影响。 | 5 个 reminder 工具正常列出与调用。 |
-| `X-MCP-Structured-Output` | `tools/call` 的结果把完整 JSON 序列化后塞进 `content[0].text`，**不**返回 `structuredContent`，方便纯文本客户端。 | `content` 仅放简短摘要，`structuredContent` 放完整结构化对象（沿用 mcp-go 的 `NewToolResultStructured`）。 |
+| `X-MCP-Include-Reminders` | `tools/list` 隐藏 5 个 `*_reminder_config` 工具;`tools/call` 调用它们时返回 `tool not available` 错误。任务工具与 `get_user_profile` 不受影响。 | 5 个 reminder 工具正常列出与调用。 |
+| `X-MCP-Structured-Output` | `tools/call` 的结果把完整 JSON 序列化后塞进 `content[0].text`,**不**返回 `structuredContent`,方便纯文本客户端。 | `content` 仅放简短摘要,`structuredContent` 放完整结构化对象(沿用 mcp-go 的 `NewToolResultStructured`)。 |
+| `X-MCP-Timezone` | 工具结果中的时间字段按 `server.timezone` 配置输出。 | 改用 header 指定的时区(IANA 名 `Asia/Shanghai`、固定偏移 `+08:00`、`UTC`、`Local` 均可);非法值静默回退到全局配置。 |
 
 每次请求都按当时的 header 重新判定，无需重新 `initialize`。示例：
 
@@ -320,29 +321,62 @@ logging:
 
 ### Webhook 模板变量
 
-| 变量                | 说明       | 示例                 |
+| 变量                | 说明       | 示例(`server.timezone=Asia/Shanghai`) |
 | ------------------- | ---------- | -------------------- |
 | `{{.TaskID}}`       | 任务 ID    | `42`                 |
 | `{{.Title}}`        | 任务标题   | `"完成报告"`         |
 | `{{.Description}}`  | 任务描述   | `"Q2 报告"`          |
 | `{{.Priority}}`     | 优先级数字 | `1`                  |
 | `{{.PriorityText}}` | 优先级文字 | `"高"`               |
-| `{{.DueAt}}`        | 截止时间   | `"2026-05-20T06:00:00Z"` |
-| `{{.RemindAt}}`     | 提醒时间   | `"2026-05-19T01:00:00Z"` |
+| `{{.DueAt}}`        | 截止时间   | `"5月20日 周二 14:00"` |
+| `{{.RemindAt}}`     | 提醒时间   | `"5月19日 周一 09:00"` |
 | `{{.RepeatType}}`   | 重复类型   | `"weekly"`               |
-| `{{.CreatedAt}}`    | 创建时间   | `"2026-05-09T02:00:00Z"` |
+| `{{.CreatedAt}}`    | 创建时间   | `"5月9日 周日 10:00"` |
+
+> `DueAt` / `RemindAt` / `CreatedAt` 已在服务端按 `server.timezone` 格式化为 `M月D日 周X HH:MM`,直接渲染到模板。其他字段原样输出。
 
 ## 时间契约
 
-所有时间字段统一使用 **UTC RFC3339** 格式存储和传输。
+所有时间字段统一遵循"存 UTC,传 RFC3339,展示按配置时区输出"。
 
-- **API 入参/出参**：`2026-05-10T10:30:00Z`
-- **数据库存储**：SQLite `TEXT`，内容为 UTC RFC3339
-- **前端展示**：根据浏览器本地时区格式化
-- **涉及字段**：`due_at`、`remind_at`、`repeat_end_date`、`created_at`、`updated_at`、`reminder_sent_at`、`last_used_at`
+- **数据库存储**:SQLite `TEXT`,内容为 UTC RFC3339,例如 `2026-05-10T10:30:00Z`
+- **API 入参**:接受多种格式,内部一律 UTC 入库
+  - RFC3339:`2026-05-10T10:30:00Z`、`2026-05-10T18:30:00+08:00`
+  - ISO8601 无冒号时区:`2026-05-10T18:30:00+0800`、`2026-05-10 18:30:00-0500`
+- **API 出参**:按 `server.timezone` 配置的目标时区输出 RFC3339 with offset
+  - 默认服务器本地时区,例如 `2026-05-10T18:30:00+08:00`(UTC `2026-05-10T10:30:00Z` 在 `Asia/Shanghai` 下的展示)
+  - `server.timezone: "UTC"` 时仍输出 `2026-05-10T10:30:00Z`
+- **前端展示**:根据浏览器本地时区格式化(`new Date(...).toLocaleString()`)
+- **涉及字段**:`due_at`、`remind_at`、`repeat_end_date`、`created_at`、`updated_at`、`reminder_sent_at`、`last_used_at`
 
-> 数据库中可能存在旧格式（`YYYY-MM-DD HH:MM:SS`）的历史数据，新代码路径兼容读取旧格式，但新写入的数据统一为 UTC RFC3339。
-> 历史数据迁移可运行：`go run scripts/migrate_time_format.go -db data/tasks.db -dry-run`
+### `server.timezone` 配置项
+
+```yaml
+server:
+  timezone: "Asia/Shanghai"   # IANA 名;或固定偏移 "+08:00";空 / "Local" 表示服务器本地时区;"UTC" 显式 UTC
+```
+
+非法值(例如 `"Mars/Olympus"`)启动期记 warn 日志后回退到 `Local`,服务可正常启动。
+
+### MCP `X-MCP-Timezone` 请求头
+
+MCP 调用支持 per-request 覆盖输出时区,优先级:**请求头 > `server.timezone` 配置 > Local**。
+
+```bash
+# 用 America/New_York 时区返回 list_tasks 结果
+curl -X POST http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'api-key: <YOUR_API_KEY>' \
+  -H 'Mcp-Session-Id: <SESSION_ID>' \
+  -H 'X-MCP-Timezone: America/New_York' \
+  -d '{"jsonrpc":"2.0","id":101,"method":"tools/call","params":{"name":"list_tasks","arguments":{}}}'
+```
+
+非法值会被静默忽略,工具回落到全局配置(不返回 4xx,保证客户端健壮性)。
+
+> 数据库中可能存在旧格式(`YYYY-MM-DD HH:MM:SS`)的历史数据,读取路径兼容,但新写入数据统一为 UTC RFC3339。
+> 历史数据迁移可运行:`go run scripts/migrate_time_format.go -db data/tasks.db -dry-run`
 
 ## 业务约束
 

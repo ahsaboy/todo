@@ -97,3 +97,122 @@ func TestParseDBTime(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatOutputTime(t *testing.T) {
+	asiaShanghai, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		t.Fatalf("load Asia/Shanghai: %v", err)
+	}
+	newYork, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatalf("load America/New_York: %v", err)
+	}
+	fixed8, err := ResolveTimezone("+08:00")
+	if err != nil {
+		t.Fatalf("ResolveTimezone(+08:00): %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		input string
+		loc   *time.Location
+		want  string
+	}{
+		{"RFC3339 UTC → Asia/Shanghai", "2026-05-10T10:30:00Z", asiaShanghai, "2026-05-10T18:30:00+08:00"},
+		{"RFC3339 +08:00 → Asia/Shanghai", "2026-05-10T18:30:00+08:00", asiaShanghai, "2026-05-10T18:30:00+08:00"},
+		{"旧格式 → Asia/Shanghai", "2026-05-10 10:30:00", asiaShanghai, "2026-05-10T18:30:00+08:00"},
+		{"RFC3339 UTC → America/New_York (DST)", "2026-05-10T10:30:00Z", newYork, "2026-05-10T06:30:00-04:00"},
+		{"RFC3339 UTC → 固定偏移 +08:00", "2026-05-10T10:30:00Z", fixed8, "2026-05-10T18:30:00+08:00"},
+		{"空字符串保持空", "", asiaShanghai, ""},
+		{"非法字符串原样返回", "not a time", asiaShanghai, "not a time"},
+		{"loc=nil 兜底 UTC", "2026-05-10T10:30:00Z", nil, "2026-05-10T10:30:00Z"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FormatOutputTime(tt.input, tt.loc)
+			if got != tt.want {
+				t.Fatalf("FormatOutputTime(%q, %v) = %q, want %q", tt.input, tt.loc, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatOutputTimePtr(t *testing.T) {
+	asiaShanghai, _ := time.LoadLocation("Asia/Shanghai")
+
+	t.Run("nil 输入返回 nil", func(t *testing.T) {
+		if got := FormatOutputTimePtr(nil, asiaShanghai); got != nil {
+			t.Fatalf("expected nil, got %v", *got)
+		}
+	})
+	t.Run("非 nil 输入返回新指针", func(t *testing.T) {
+		in := "2026-05-10T10:30:00Z"
+		got := FormatOutputTimePtr(&in, asiaShanghai)
+		if got == nil {
+			t.Fatal("expected non-nil")
+		}
+		if &in == got {
+			t.Fatal("expected new pointer, got same pointer")
+		}
+		if *got != "2026-05-10T18:30:00+08:00" {
+			t.Fatalf("got %q, want %q", *got, "2026-05-10T18:30:00+08:00")
+		}
+		// 原对象未被修改
+		if in != "2026-05-10T10:30:00Z" {
+			t.Fatalf("original modified: %q", in)
+		}
+	})
+	t.Run("空字符串指针保持空字符串语义", func(t *testing.T) {
+		empty := ""
+		got := FormatOutputTimePtr(&empty, asiaShanghai)
+		if got == nil {
+			t.Fatal("expected non-nil")
+		}
+		if *got != "" {
+			t.Fatalf("got %q, want empty", *got)
+		}
+	})
+}
+
+func TestResolveTimezone(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantName  string // 期望的 loc.String();为 "" 时不校验
+		wantOff   int    // 期望的 UTC 偏移秒数;为 -1 时不校验
+		wantErr   bool
+		nonNilLoc bool // 期望返回的 loc 非 nil
+	}{
+		{name: "空", input: "", wantName: "Local", wantOff: -1, nonNilLoc: true},
+		{name: "Local 大小写", input: "local", wantName: "Local", wantOff: -1, nonNilLoc: true},
+		{name: "UTC", input: "UTC", wantName: "UTC", wantOff: 0, nonNilLoc: true},
+		{name: "IANA Asia/Shanghai", input: "Asia/Shanghai", wantName: "Asia/Shanghai", wantOff: 8 * 3600, nonNilLoc: true},
+		{name: "固定偏移 +08:00", input: "+08:00", wantName: "UTC+08:00", wantOff: 8 * 3600, nonNilLoc: true},
+		{name: "固定偏移 +0800", input: "+0800", wantName: "UTC+08:00", wantOff: 8 * 3600, nonNilLoc: true},
+		{name: "固定偏移 -05:00", input: "-05:00", wantName: "UTC-05:00", wantOff: -5 * 3600, nonNilLoc: true},
+		{name: "固定偏移 -0530", input: "-05:30", wantName: "UTC-05:30", wantOff: -5*3600 - 30*60, nonNilLoc: true},
+		{name: "非法 → fallback Local", input: "Mars/Olympus", wantName: "Local", wantOff: -1, wantErr: true, nonNilLoc: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			loc, err := ResolveTimezone(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ResolveTimezone(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+			if tt.nonNilLoc && loc == nil {
+				t.Fatalf("expected non-nil loc")
+			}
+			if tt.wantName != "" && loc.String() != tt.wantName {
+				t.Fatalf("ResolveTimezone(%q).String() = %q, want %q", tt.input, loc.String(), tt.wantName)
+			}
+			if tt.wantOff >= 0 {
+				// 用 2026 年 1 月避免 DST 干扰
+				_, off := time.Date(2026, 1, 15, 12, 0, 0, 0, loc).Zone()
+				if off != tt.wantOff {
+					t.Fatalf("ResolveTimezone(%q) offset = %d, want %d", tt.input, off, tt.wantOff)
+				}
+			}
+		})
+	}
+}
+

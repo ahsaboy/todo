@@ -21,9 +21,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
-	Mode string `yaml:"mode"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Mode     string `yaml:"mode"`
+	Timezone string `yaml:"timezone"` // 时间出参的目标时区。空 / "Local" 表示服务器本地;"UTC";IANA 名(Asia/Shanghai);固定偏移(+08:00)
 }
 
 type DatabaseConfig struct {
@@ -84,9 +85,10 @@ func Load(path string) (*Config, error) {
 
 	cfg := &Config{
 		Server: ServerConfig{
-			Host: "0.0.0.0",
-			Port: 8080,
-			Mode: "debug",
+			Host:     "0.0.0.0",
+			Port:     8080,
+			Mode:     "debug",
+			Timezone: "",
 		},
 		Database: DatabaseConfig{
 			Path: "./data/tasks.db",

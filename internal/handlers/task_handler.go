@@ -11,7 +11,9 @@ import (
 	"todo/internal/middleware"
 	"todo/internal/models"
 	"todo/internal/service"
+	"todo/internal/timezone"
 	"todo/internal/utils"
+	"todo/internal/views"
 )
 
 type TaskHandler struct {
@@ -57,7 +59,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		return
 	}
 
-	utils.RespondCreated(c, task)
+	utils.RespondCreated(c, views.TaskView(task, timezone.Get()))
 }
 
 // GetByID 获取单个任务
@@ -95,7 +97,7 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, task)
+	utils.RespondSuccess(c, views.TaskView(task, timezone.Get()))
 }
 
 // List 获取任务列表
@@ -154,7 +156,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 	if tasks == nil {
 		tasks = []models.Task{}
 	}
-	utils.RespondPaginated(c, tasks, page, limit, total)
+	utils.RespondPaginated(c, views.TasksView(tasks, timezone.Get()), page, limit, total)
 }
 
 // Update 更新任务
@@ -204,7 +206,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, task)
+	utils.RespondSuccess(c, views.TaskView(task, timezone.Get()))
 }
 
 // Delete 删除任务
@@ -280,7 +282,7 @@ func (h *TaskHandler) ToggleComplete(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, task)
+	utils.RespondSuccess(c, views.TaskView(task, timezone.Get()))
 }
 
 // HealthCheck 健康检查

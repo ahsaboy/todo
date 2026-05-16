@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"todo/internal/service"
+	"todo/internal/views"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	mcpsrv "github.com/mark3labs/mcp-go/server"
@@ -38,7 +39,7 @@ func getUserProfileHandler(svc *service.AuthService) mcpsrv.ToolHandlerFunc {
 		if user == nil {
 			return mcpgo.NewToolResultError("user not found"), nil
 		}
-		resp := user.ToResponse()
+		resp := views.UserResponseView(user.ToResponse(), resolveLoc(ctx))
 		fallback := fmt.Sprintf("user #%d %s", resp.ID, resp.Username)
 		return buildToolResult(ctx, resp, fallback)
 	}

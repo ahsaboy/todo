@@ -10,7 +10,9 @@ import (
 	"todo/internal/middleware"
 	"todo/internal/models"
 	"todo/internal/service"
+	"todo/internal/timezone"
 	"todo/internal/utils"
+	"todo/internal/views"
 )
 
 type AuthHandler struct {
@@ -49,8 +51,9 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	userView := views.UserResponseView(*user, timezone.Get())
 	utils.RespondCreated(c, gin.H{
-		"user":    user,
+		"user":    userView,
 		"api_key": apiKey,
 	})
 }
@@ -79,8 +82,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	userView := views.UserResponseView(*user, timezone.Get())
 	utils.RespondSuccess(c, gin.H{
-		"user":    user,
+		"user":    userView,
 		"api_key": apiKey,
 	})
 }
@@ -190,7 +194,7 @@ func (h *AuthHandler) ListAPIKeys(c *gin.Context) {
 		})
 	}
 
-	utils.RespondSuccess(c, infos)
+	utils.RespondSuccess(c, views.APIKeyInfosView(infos, timezone.Get()))
 }
 
 // GetProfile 获取用户信息
@@ -215,7 +219,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, user.ToResponse())
+	utils.RespondSuccess(c, views.UserResponseView(user.ToResponse(), timezone.Get()))
 }
 
 // UpdateProfile 更新用户信息
@@ -254,7 +258,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	user, _ := h.svc.GetUserByID(c.Request.Context(), userID)
-	utils.RespondSuccess(c, user.ToResponse())
+	utils.RespondSuccess(c, views.UserResponseView(user.ToResponse(), timezone.Get()))
 }
 
 // ChangePassword 修改密码

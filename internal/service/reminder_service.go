@@ -13,6 +13,7 @@ import (
 	"todo/internal/config"
 	"todo/internal/models"
 	"todo/internal/repository"
+	"todo/internal/timezone"
 )
 
 type ReminderService struct {
@@ -200,8 +201,8 @@ func (s *ReminderService) sendToChannel(ctx context.Context, task *models.Task, 
 		}
 	}
 
-	// 渲染模板
-	data := task.ToTemplateData()
+	// 渲染模板,按全局 server.timezone 格式化时间字段
+	data := task.ToTemplateData(timezone.Get())
 	var body bytes.Buffer
 	if err := tmpl.Execute(&body, data); err != nil {
 		return 0, fmt.Errorf("execute template: %w", err)

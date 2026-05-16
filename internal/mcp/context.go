@@ -1,6 +1,9 @@
 package mcp
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // ctxKey 是包私有的 context key 类型,避免与其他包发生冲突。
 type ctxKey struct{ name string }
@@ -9,6 +12,7 @@ var (
 	userIDKey            = ctxKey{name: "userID"}
 	structuredOutputKey  = ctxKey{name: "structuredOutput"}
 	remindersEnabledKey  = ctxKey{name: "remindersEnabled"}
+	timezoneKey          = ctxKey{name: "timezone"}
 )
 
 // WithUserID 把 user_id 写入 context,用于在 MCP 工具 handler 内取出。
@@ -46,4 +50,21 @@ func WithRemindersEnabled(ctx context.Context, enabled bool) context.Context {
 func RemindersEnabled(ctx context.Context) bool {
 	v, _ := ctx.Value(remindersEnabledKey).(bool)
 	return v
+}
+
+// WithTimezone 把 per-request 时区写入 context。
+// 用于 X-MCP-Timezone 请求头覆盖全局 server.timezone 配置。
+// loc 必须非 nil;nil 时不写入(保持调用方在 ctx 中无 timezone 标记)。
+func WithTimezone(ctx context.Context, loc *time.Location) context.Context {
+	if loc == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, timezoneKey, loc)
+}
+
+// TimezoneFromContext 从 context 中读出时区;不存在或为 nil 时返回 (nil, false)。
+// 调用方应在返回 false 时回落到 timezone.Get() 全局时区。
+func TimezoneFromContext(ctx context.Context) (*time.Location, bool) {
+	loc, ok := ctx.Value(timezoneKey).(*time.Location)
+	return loc, ok && loc != nil
 }
