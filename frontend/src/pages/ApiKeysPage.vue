@@ -10,6 +10,61 @@
       登录时自动生成的 "login" 类型 Key 在最后使用超过 24 小时后会自动清理。
     </div>
 
+    <details class="mcp-card">
+      <summary class="mcp-summary">
+        <span class="mcp-summary-title">MCP 配置 / 使用说明</span>
+        <span class="mcp-summary-hint">点击展开</span>
+      </summary>
+
+      <div class="mcp-body">
+        <p class="mcp-intro">
+          本服务支持通过 <strong>MCP（Model Context Protocol）</strong>协议让 AI 客户端（如 Claude Desktop、Cursor、VS Code Copilot 等）直接读写你的任务。
+        </p>
+
+        <div class="mcp-section">
+          <div class="mcp-label">端点 URL</div>
+          <div class="mcp-inline-row">
+            <code class="mcp-code-inline">{{ mcpEndpoint }}</code>
+            <button class="mcp-copy-btn" type="button" @click="copyEndpoint">
+              {{ endpointCopied ? '已复制 ✓' : '复制' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mcp-section">
+          <div class="mcp-label">认证方式</div>
+          <div class="mcp-text">
+            请求头携带 <code class="mcp-code-inline">api-key: &lt;你在上方创建的 Key&gt;</code>（也兼容 <code class="mcp-code-inline">Authorization: Bearer &lt;key&gt;</code>）。
+          </div>
+        </div>
+
+        <div class="mcp-section">
+          <div class="mcp-label">可用工具（共 12 个）</div>
+          <ul class="mcp-tool-list">
+            <li><strong>任务管理</strong>：创建 / 查询 / 更新 / 删除 / 切换完成 / 详情（6 个）</li>
+            <li><strong>提醒配置</strong>：列表 / 新建 / 详情 / 更新 / 删除（5 个）</li>
+            <li><strong>用户信息</strong>：获取当前用户资料（1 个）</li>
+          </ul>
+        </div>
+
+        <div class="mcp-section">
+          <div class="mcp-label-row">
+            <div class="mcp-label">客户端配置示例</div>
+            <button class="mcp-copy-btn" type="button" @click="copyConfig">
+              {{ configCopied ? '已复制 ✓' : '复制配置' }}
+            </button>
+          </div>
+          <pre class="mcp-code-block"><code>{{ mcpConfigJson }}</code></pre>
+          <p class="mcp-note">将 <code class="mcp-code-inline">&lt;your-api-key&gt;</code> 替换为上方列表中的实际 Key。</p>
+        </div>
+
+        <p class="mcp-footer">
+          想了解协议细节？查看
+          <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener noreferrer">modelcontextprotocol.io</a>。
+        </p>
+      </div>
+    </details>
+
     <div v-if="loading" class="page-loading">加载中...</div>
 
     <div v-else-if="error" class="page-error">
@@ -28,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getApiKeys, deleteApiKey } from '@/entities/api-key/api'
 import { toApiKeyInfo } from '@/entities/api-key/mapper'
 import type { ApiKeyInfo } from '@/entities/api-key/model'
@@ -39,6 +94,28 @@ const keys = ref<ApiKeyInfo[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const showCreate = ref(false)
+
+const endpointCopied = ref(false)
+const configCopied = ref(false)
+
+const mcpEndpoint = computed(() => {
+  if (typeof window === 'undefined') return '/mcp'
+  return window.location.origin + '/mcp'
+})
+
+const mcpConfigJson = computed(() => {
+  const config = {
+    mcpServers: {
+      todo: {
+        url: mcpEndpoint.value,
+        headers: {
+          'api-key': '<your-api-key>',
+        },
+      },
+    },
+  }
+  return JSON.stringify(config, null, 2)
+})
 
 onMounted(() => {
   fetchKeys()
@@ -63,6 +140,33 @@ async function handleRevoke(id: number) {
   await deleteApiKey(id)
   await fetchKeys()
 }
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function copyEndpoint() {
+  const ok = await copyToClipboard(mcpEndpoint.value)
+  if (!ok) return
+  endpointCopied.value = true
+  setTimeout(() => {
+    endpointCopied.value = false
+  }, 2000)
+}
+
+async function copyConfig() {
+  const ok = await copyToClipboard(mcpConfigJson.value)
+  if (!ok) return
+  configCopied.value = true
+  setTimeout(() => {
+    configCopied.value = false
+  }, 2000)
+}
 </script>
 
 <style scoped>
@@ -73,5 +177,181 @@ async function handleRevoke(id: number) {
   padding: 12px;
   color: var(--color-info);
   font-size: 14px;
+}
+
+.mcp-card {
+  margin-top: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mcp-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mcp-summary::-webkit-details-marker {
+  display: none;
+}
+
+.mcp-summary:hover {
+  background: var(--color-surface-muted);
+}
+
+.mcp-summary-title::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.mcp-card[open] .mcp-summary-title::before {
+  content: '▾';
+}
+
+.mcp-summary-hint {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.mcp-card[open] .mcp-summary-hint {
+  display: none;
+}
+
+.mcp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 14px 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.mcp-intro {
+  margin: 12px 0 0;
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.mcp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mcp-label {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.mcp-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mcp-text {
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.mcp-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mcp-code-inline {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--color-surface-muted);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: monospace;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.mcp-tool-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.mcp-code-block {
+  margin: 0;
+  padding: 12px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow-x: auto;
+  color: var(--color-text);
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.mcp-code-block code {
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+}
+
+.mcp-copy-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.mcp-copy-btn:hover {
+  background: var(--color-surface-muted);
+}
+
+.mcp-note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mcp-footer {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.mcp-footer a {
+  color: var(--color-info);
+  text-decoration: none;
+}
+
+.mcp-footer a:hover {
+  text-decoration: underline;
 }
 </style>
