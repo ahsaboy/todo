@@ -155,6 +155,37 @@ todo-server [选项]
 - **认证**：请求头 `api-key: <key>`（也接受 `Authorization: Bearer <key>` 或 legacy `X-API-Key: <key>`）—— 与 REST API 共享同一份 `user_api_keys` 表，按 `user_id` 隔离
 - **会话**：`initialize` 应答头会返回 `Mcp-Session-Id`，后续请求需通过 `Mcp-Session-Id` 请求头携带
 
+### 客户端选项 Header
+
+下面两个可选请求头按需启用（**任意非空字符串都视为开启**，例如 `1` / `true` / `on`；缺失或空字符串为关闭）：
+
+| Header | 默认 | 启用后 |
+| --- | --- | --- |
+| `X-MCP-Include-Reminders` | `tools/list` 隐藏 5 个 `*_reminder_config` 工具；`tools/call` 调用它们时返回 `tool not available` 错误。任务工具与 `get_user_profile` 不受影响。 | 5 个 reminder 工具正常列出与调用。 |
+| `X-MCP-Structured-Output` | `tools/call` 的结果把完整 JSON 序列化后塞进 `content[0].text`，**不**返回 `structuredContent`，方便纯文本客户端。 | `content` 仅放简短摘要，`structuredContent` 放完整结构化对象（沿用 mcp-go 的 `NewToolResultStructured`）。 |
+
+每次请求都按当时的 header 重新判定，无需重新 `initialize`。示例：
+
+```bash
+# 让 tools/list 暴露 reminder_config 工具
+curl -X POST http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'api-key: <YOUR_API_KEY>' \
+  -H 'Mcp-Session-Id: <SESSION_ID>' \
+  -H 'X-MCP-Include-Reminders: 1' \
+  -d '{"jsonrpc":"2.0","id":99,"method":"tools/list"}'
+
+# 让 list_tasks 的结果走 structuredContent
+curl -X POST http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'api-key: <YOUR_API_KEY>' \
+  -H 'Mcp-Session-Id: <SESSION_ID>' \
+  -H 'X-MCP-Structured-Output: 1' \
+  -d '{"jsonrpc":"2.0","id":100,"method":"tools/call","params":{"name":"list_tasks","arguments":{"limit":5}}}'
+```
+
 ### 工具列表（共 12 个）
 
 任务管理（6 个，复用 `TaskService`）：

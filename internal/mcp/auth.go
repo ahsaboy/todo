@@ -30,6 +30,8 @@ func apiKeyAuthMiddleware(repo *repository.APIKeyRepo) func(http.Handler) http.H
 			}
 
 			ctx := WithUserID(r.Context(), userID)
+			ctx = WithStructuredOutput(ctx, headerEnabled(r.Header.Get("X-MCP-Structured-Output")))
+			ctx = WithRemindersEnabled(ctx, headerEnabled(r.Header.Get("X-MCP-Include-Reminders")))
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

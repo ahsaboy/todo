@@ -124,12 +124,12 @@ func hasArg(req mcpgo.CallToolRequest, key string) bool {
 }
 
 // structuredTask 用 task 对象做结构化返回,fallback 文本写成简短摘要,便于纯文本客户端显示。
-func structuredTask(t *models.Task) *mcpgo.CallToolResult {
+func structuredTask(ctx context.Context, t *models.Task) (*mcpgo.CallToolResult, error) {
 	if t == nil {
-		return mcpgo.NewToolResultError("task not found")
+		return mcpgo.NewToolResultError("task not found"), nil
 	}
 	fallback := fmt.Sprintf("task #%d %q (priority=%d, completed=%v)", t.ID, t.Title, t.Priority, t.Completed)
-	return mcpgo.NewToolResultStructured(t, fallback)
+	return buildToolResult(ctx, t, fallback)
 }
 
 // ---------- handler 实现 ----------
@@ -183,7 +183,7 @@ func createTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 			}
 			return mcpgo.NewToolResultErrorf("failed to create task: %v", err), nil
 		}
-		return structuredTask(task), nil
+		return structuredTask(ctx, task)
 	}
 }
 
@@ -238,7 +238,7 @@ func listTasksHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 		}
 
 		fallback := fmt.Sprintf("returned %d task(s), page %d/%d, total %d", len(tasks), page, totalPages, total)
-		return mcpgo.NewToolResultStructured(payload, fallback), nil
+		return buildToolResult(ctx, payload, fallback)
 	}
 }
 
@@ -257,7 +257,7 @@ func getTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 		if err != nil {
 			return mcpgo.NewToolResultErrorf("failed to get task: %v", err), nil
 		}
-		return structuredTask(task), nil
+		return structuredTask(ctx, task)
 	}
 }
 
@@ -314,7 +314,7 @@ func updateTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 			}
 			return mcpgo.NewToolResultErrorf("failed to update task: %v", err), nil
 		}
-		return structuredTask(task), nil
+		return structuredTask(ctx, task)
 	}
 }
 
@@ -339,7 +339,7 @@ func deleteTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 
 		payload := map[string]any{"deleted": true, "id": int64(id)}
 		fallback := fmt.Sprintf("task #%d deleted", id)
-		return mcpgo.NewToolResultStructured(payload, fallback), nil
+		return buildToolResult(ctx, payload, fallback)
 	}
 }
 
@@ -358,6 +358,6 @@ func toggleTaskCompleteHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc 
 		if err != nil {
 			return mcpgo.NewToolResultErrorf("failed to toggle task: %v", err), nil
 		}
-		return structuredTask(task), nil
+		return structuredTask(ctx, task)
 	}
 }

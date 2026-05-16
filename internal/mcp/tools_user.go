@@ -40,6 +40,6 @@ func getUserProfileHandler(svc *service.AuthService) mcpsrv.ToolHandlerFunc {
 		}
 		resp := user.ToResponse()
 		fallback := fmt.Sprintf("user #%d %s", resp.ID, resp.Username)
-		return mcpgo.NewToolResultStructured(resp, fallback), nil
+		return buildToolResult(ctx, resp, fallback)
 	}
 }

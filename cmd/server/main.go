@@ -342,7 +342,8 @@ func corsMiddleware(origins []string) gin.HandlerFunc {
 		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		// Mcp-Session-Id / Last-Event-ID 由 MCP Streamable HTTP transport 使用(2025-11-25 规范)。
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, api-key, X-API-Key, Mcp-Session-Id, Last-Event-ID")
+		// X-MCP-Structured-Output / X-MCP-Include-Reminders 是本服务自定义的 MCP 客户端选项 header。
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, api-key, X-API-Key, Mcp-Session-Id, Last-Event-ID, X-MCP-Structured-Output, X-MCP-Include-Reminders")
 		// 让浏览器客户端能读到 initialize 响应里的 Mcp-Session-Id。
 		c.Header("Access-Control-Expose-Headers", "Mcp-Session-Id")
 

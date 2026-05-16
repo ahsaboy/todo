@@ -42,9 +42,22 @@
           <div class="mcp-label">可用工具（共 12 个）</div>
           <ul class="mcp-tool-list">
             <li><strong>任务管理</strong>：创建 / 查询 / 更新 / 删除 / 切换完成 / 详情（6 个）</li>
-            <li><strong>提醒配置</strong>：列表 / 新建 / 详情 / 更新 / 删除（5 个）</li>
+            <li><strong>提醒配置</strong>：列表 / 新建 / 详情 / 更新 / 删除（5 个，需开启 <code class="mcp-code-inline">X-MCP-Include-Reminders</code>）</li>
             <li><strong>用户信息</strong>：获取当前用户资料（1 个）</li>
           </ul>
+        </div>
+
+        <div class="mcp-section">
+          <div class="mcp-label">高级：输出格式与工具范围</div>
+          <ul class="mcp-tool-list">
+            <li>
+              <code class="mcp-code-inline">X-MCP-Include-Reminders</code>：默认隐藏 5 个提醒配置工具；设为任意非空值（如 <code class="mcp-code-inline">1</code>）后显示并允许调用。
+            </li>
+            <li>
+              <code class="mcp-code-inline">X-MCP-Structured-Output</code>：默认 <code class="mcp-code-inline">content[0].text</code> 直接是完整 JSON 字符串；设为任意非空值后改走 <code class="mcp-code-inline">structuredContent</code>（content 仅保留摘要）。
+            </li>
+          </ul>
+          <p class="mcp-note">两个 Header 都按请求实时判定，无需重新 <code class="mcp-code-inline">initialize</code>。</p>
         </div>
 
         <div class="mcp-section">
@@ -55,7 +68,11 @@
             </button>
           </div>
           <pre class="mcp-code-block"><code>{{ mcpConfigJson }}</code></pre>
-          <p class="mcp-note">将 <code class="mcp-code-inline">&lt;your-api-key&gt;</code> 替换为上方列表中的实际 Key。</p>
+          <p class="mcp-note">
+            将 <code class="mcp-code-inline">&lt;your-api-key&gt;</code> 替换为上方列表中的实际 Key。
+            如需开启 reminder 工具或 structured 输出，在 <code class="mcp-code-inline">headers</code> 中追加
+            <code class="mcp-code-inline">X-MCP-Include-Reminders</code> / <code class="mcp-code-inline">X-MCP-Structured-Output</code>，值任意非空字符串。
+          </p>
         </div>
 
         <p class="mcp-footer">

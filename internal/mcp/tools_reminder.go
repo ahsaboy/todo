@@ -110,18 +110,30 @@ func extractWebhookHeaders(request mcpgo.CallToolRequest) map[string]string {
 }
 
 // structuredReminderConfig 把提醒渠道对象转为结构化结果,nil 时返回 not found 错误。
-func structuredReminderConfig(c *models.UserReminderConfig) *mcpgo.CallToolResult {
+func structuredReminderConfig(ctx context.Context, c *models.UserReminderConfig) (*mcpgo.CallToolResult, error) {
 	if c == nil {
-		return mcpgo.NewToolResultError("reminder config not found")
+		return mcpgo.NewToolResultError("reminder config not found"), nil
 	}
 	fallback := fmt.Sprintf("reminder config #%d %q (%s, enabled=%v)", c.ID, c.Name, c.ChannelType, c.Enabled)
-	return mcpgo.NewToolResultStructured(c, fallback)
+	return buildToolResult(ctx, c, fallback)
+}
+
+// requireRemindersEnabled 检查 ctx 中的开关;未启用时返回标准 "tool not available" 错误结果。
+// 命中开关关闭时返回非 nil 的 *CallToolResult,handler 应立即 return 它。
+func requireRemindersEnabled(ctx context.Context) *mcpgo.CallToolResult {
+	if !RemindersEnabled(ctx) {
+		return mcpgo.NewToolResultError("tool not available: enable X-MCP-Include-Reminders header to access reminder config tools")
+	}
+	return nil
 }
 
 // ---------- handler 实现 ----------
 
 func listReminderConfigsHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		if blocked := requireRemindersEnabled(ctx); blocked != nil {
+			return blocked, nil
+		}
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
 			return errResult, nil
@@ -138,12 +150,15 @@ func listReminderConfigsHandler(svc *service.ReminderConfigService) mcpsrv.ToolH
 			"total":   len(configs),
 		}
 		fallback := fmt.Sprintf("returned %d reminder config(s)", len(configs))
-		return mcpgo.NewToolResultStructured(payload, fallback), nil
+		return buildToolResult(ctx, payload, fallback)
 	}
 }
 
 func createReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		if blocked := requireRemindersEnabled(ctx); blocked != nil {
+			return blocked, nil
+		}
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
 			return errResult, nil
@@ -188,12 +203,15 @@ func createReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.Tool
 		if err != nil {
 			return mcpgo.NewToolResultErrorf("failed to create reminder config: %v", err), nil
 		}
-		return structuredReminderConfig(cfg), nil
+		return structuredReminderConfig(ctx, cfg)
 	}
 }
 
 func getReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		if blocked := requireRemindersEnabled(ctx); blocked != nil {
+			return blocked, nil
+		}
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
 			return errResult, nil
@@ -206,12 +224,15 @@ func getReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHan
 		if err != nil {
 			return mcpgo.NewToolResultErrorf("failed to get reminder config: %v", err), nil
 		}
-		return structuredReminderConfig(cfg), nil
+		return structuredReminderConfig(ctx, cfg)
 	}
 }
 
 func updateReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		if blocked := requireRemindersEnabled(ctx); blocked != nil {
+			return blocked, nil
+		}
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
 			return errResult, nil
@@ -269,12 +290,15 @@ func updateReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.Tool
 		if err != nil {
 			return mcpgo.NewToolResultErrorf("failed to update reminder config: %v", err), nil
 		}
-		return structuredReminderConfig(cfg), nil
+		return structuredReminderConfig(ctx, cfg)
 	}
 }
 
 func deleteReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		if blocked := requireRemindersEnabled(ctx); blocked != nil {
+			return blocked, nil
+		}
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
 			return errResult, nil
@@ -292,6 +316,6 @@ func deleteReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.Tool
 		}
 		payload := map[string]any{"deleted": true, "id": int64(id)}
 		fallback := fmt.Sprintf("reminder config #%d deleted", id)
-		return mcpgo.NewToolResultStructured(payload, fallback), nil
+		return buildToolResult(ctx, payload, fallback)
 	}
 }
