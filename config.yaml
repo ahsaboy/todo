@@ -7,13 +7,14 @@ server:
   host: "0.0.0.0"       # 监听地址，0.0.0.0 表示接受所有网卡连接
   port: 8080             # 监听端口，可通过 CLI --port 覆盖
   mode: "debug"          # Gin 模式：debug（开发）、release（生产）
+  timezone: "Asia/Shanghai"  # 时间出参的目标时区。支持 IANA 名(Asia/Shanghai)或固定偏移(+08:00);空 / "Local" 表示服务器本地时区
 
 # 数据库配置
 database:
   path: "./data/tasks.db"  # SQLite 数据库文件路径
 
 # Swagger 配置
-swagger: false            # 是否启用 Swagger 文档
+swagger: true            # 是否启用 Swagger 文档
 
 # 提醒服务配置
 reminder:

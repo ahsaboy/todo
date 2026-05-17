@@ -68,16 +68,16 @@ func buildGetTaskTool() mcpgo.Tool {
 
 func buildUpdateTaskTool() mcpgo.Tool {
 	return mcpgo.NewTool("update_task",
-		mcpgo.WithDescription("部分更新指定任务,只需要传入需要修改的字段。时间字段传空字符串表示清空。"),
+		mcpgo.WithDescription("部分更新指定任务,只传需要修改的字段;未传或传空字符串的字段保持原值不变(MCP 不支持清空时间字段,如需清空请使用 REST API)。"),
 		mcpgo.WithNumber("id", mcpgo.Required(), mcpgo.Description("任务 ID"), mcpgo.Min(1)),
 		mcpgo.WithString("title", mcpgo.Description("新的任务标题"), mcpgo.MinLength(1), mcpgo.MaxLength(255)),
 		mcpgo.WithString("description", mcpgo.Description("新的任务描述"), mcpgo.MaxLength(1000)),
 		mcpgo.WithNumber("priority", mcpgo.Description("优先级:1/2/3"), mcpgo.Min(1), mcpgo.Max(3)),
-		mcpgo.WithString("due_at", mcpgo.Description("新的截止时间,推荐格式 \"2026-05-10 18:30:00\";空字符串清空")),
-		mcpgo.WithString("remind_at", mcpgo.Description("新的提醒时间,推荐格式 \"2026-05-10 18:30:00\";空字符串清空")),
+		mcpgo.WithString("due_at", mcpgo.Description("新的截止时间,推荐格式 \"2026-05-10 18:30:00\";未传或留空则不修改")),
+		mcpgo.WithString("remind_at", mcpgo.Description("新的提醒时间,推荐格式 \"2026-05-10 18:30:00\";未传或留空则不修改")),
 		mcpgo.WithString("repeat_type", mcpgo.Description("新的重复类型"), mcpgo.Enum("none", "daily", "weekly", "monthly", "yearly")),
 		mcpgo.WithNumber("repeat_interval", mcpgo.Description("新的重复间隔(1-365)"), mcpgo.Min(1), mcpgo.Max(365)),
-		mcpgo.WithString("repeat_end_date", mcpgo.Description("新的重复结束时间,推荐格式 \"2026-05-10 18:30:00\";空字符串清空")),
+		mcpgo.WithString("repeat_end_date", mcpgo.Description("新的重复结束时间,推荐格式 \"2026-05-10 18:30:00\";未传或留空则不修改")),
 	)
 }
 
@@ -289,12 +289,14 @@ func updateTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 			req.Priority = &v
 		}
 		if hasArg(request, "due_at") {
-			v := request.GetString("due_at", "")
-			req.DueAt = &v
+			if v := request.GetString("due_at", ""); v != "" {
+				req.DueAt = &v
+			}
 		}
 		if hasArg(request, "remind_at") {
-			v := request.GetString("remind_at", "")
-			req.RemindAt = &v
+			if v := request.GetString("remind_at", ""); v != "" {
+				req.RemindAt = &v
+			}
 		}
 		if hasArg(request, "repeat_type") {
 			v := request.GetString("repeat_type", "")
@@ -305,8 +307,9 @@ func updateTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 			req.RepeatInterval = &v
 		}
 		if hasArg(request, "repeat_end_date") {
-			v := request.GetString("repeat_end_date", "")
-			req.RepeatEndDate = &v
+			if v := request.GetString("repeat_end_date", ""); v != "" {
+				req.RepeatEndDate = &v
+			}
 		}
 
 		task, err := svc.Update(ctx, userID, int64(id), req)
