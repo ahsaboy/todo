@@ -36,7 +36,7 @@ func (h *ReminderLogHandler) List(c *gin.Context) {
 
 	logs, total, err := h.repo.ListByUserID(c.Request.Context(), userID, page, limit)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to list reminder logs", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to list reminder logs", err)
 		return
 	}
 

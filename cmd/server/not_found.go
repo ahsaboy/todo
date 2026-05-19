@@ -1,10 +1,11 @@
 package main
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"todo/internal/utils"
 )
 
 func isAPIRoute(path string) bool {
@@ -12,9 +13,5 @@ func isAPIRoute(path string) bool {
 }
 
 func writeAPINotFound(c *gin.Context) {
-	c.JSON(http.StatusNotFound, gin.H{
-		"success": false,
-		"error":   "endpoint not found",
-		"code":    "NOT_FOUND",
-	})
+	utils.RespondError(c, 404, "endpoint not found", utils.CodeNotFound)
 }

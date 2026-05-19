@@ -47,7 +47,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			utils.RespondError(c, http.StatusConflict, "username already taken", utils.CodeInvalidInput)
 			return
 		}
-		utils.RespondError(c, http.StatusInternalServerError, "failed to register", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to register", err)
 		return
 	}
 
@@ -116,7 +116,7 @@ func (h *AuthHandler) GenerateAPIKey(c *gin.Context) {
 
 	apiKey, err := h.svc.GenerateAPIKey(c.Request.Context(), userID, req.Name)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to generate key", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to generate key", err)
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *AuthHandler) RevokeAPIKey(c *gin.Context) {
 
 	deleted, err := h.svc.RevokeAPIKey(c.Request.Context(), id, userID)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to revoke key", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to revoke key", err)
 		return
 	}
 	if !deleted {
@@ -180,7 +180,7 @@ func (h *AuthHandler) ListAPIKeys(c *gin.Context) {
 
 	keys, err := h.svc.ListAPIKeys(c.Request.Context(), userID)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to list keys", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to list keys", err)
 		return
 	}
 
@@ -253,7 +253,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	if err := h.svc.UpdateProfile(c.Request.Context(), userID, *req.Email); err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to update profile", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to update profile", err)
 		return
 	}
 
@@ -291,7 +291,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 			utils.RespondError(c, http.StatusUnauthorized, "invalid old password", utils.CodeUnauthorized)
 			return
 		}
-		utils.RespondError(c, http.StatusInternalServerError, "failed to change password", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to change password", err)
 		return
 	}
 

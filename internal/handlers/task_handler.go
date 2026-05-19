@@ -7,7 +7,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
+	"todo/internal/logging"
 	"todo/internal/middleware"
 	"todo/internal/models"
 	"todo/internal/service"
@@ -55,7 +57,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 			return
 		}
-		utils.RespondError(c, http.StatusInternalServerError, "failed to create task", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to create task", err)
 		return
 	}
 
@@ -89,7 +91,7 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 
 	task, err := h.svc.GetByID(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to get task", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to get task", err)
 		return
 	}
 	if task == nil {
@@ -149,7 +151,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 
 	tasks, total, err := h.svc.List(c.Request.Context(), userID, filters, page, limit, sortField, sortOrder)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to list tasks", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to list tasks", err)
 		return
 	}
 
@@ -198,7 +200,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 			return
 		}
-		utils.RespondError(c, http.StatusInternalServerError, "failed to update task", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to update task", err)
 		return
 	}
 	if task == nil {
@@ -236,7 +238,7 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 
 	deleted, err := h.svc.Delete(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to delete task", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to delete task", err)
 		return
 	}
 	if !deleted {
@@ -274,7 +276,7 @@ func (h *TaskHandler) ToggleComplete(c *gin.Context) {
 
 	task, err := h.svc.ToggleComplete(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to toggle task", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to toggle task", err)
 		return
 	}
 	if task == nil {
@@ -296,9 +298,12 @@ func (h *TaskHandler) ToggleComplete(c *gin.Context) {
 func HealthCheck(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := db.PingContext(c.Request.Context()); err != nil {
+			logging.SetResponseLogMeta(c, "DATABASE_UNHEALTHY", "database connection failed")
+			logging.LoggerFromContext(c).Error("health check failed", zap.Error(err))
 			c.JSON(http.StatusServiceUnavailable, gin.H{"success": false, "status": "unhealthy", "error": "database connection failed"})
 			return
 		}
+		logging.SetResponseLogMeta(c, "OK", "healthy")
 		c.JSON(http.StatusOK, gin.H{"success": true, "status": "healthy"})
 	}
 }

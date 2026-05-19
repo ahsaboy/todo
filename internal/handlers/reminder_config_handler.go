@@ -49,7 +49,7 @@ func (h *ReminderConfigHandler) Create(c *gin.Context) {
 
 	cfg, err := h.svc.Create(c.Request.Context(), userID, req)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to create config", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to create config", err)
 		return
 	}
 
@@ -74,7 +74,7 @@ func (h *ReminderConfigHandler) List(c *gin.Context) {
 
 	configs, err := h.svc.List(c.Request.Context(), userID)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to list configs", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to list configs", err)
 		return
 	}
 
@@ -105,7 +105,7 @@ func (h *ReminderConfigHandler) GetByID(c *gin.Context) {
 
 	cfg, err := h.svc.GetByID(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to get config", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to get config", err)
 		return
 	}
 	if cfg == nil {
@@ -149,7 +149,7 @@ func (h *ReminderConfigHandler) Update(c *gin.Context) {
 
 	cfg, err := h.svc.Update(c.Request.Context(), userID, id, req)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to update config", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to update config", err)
 		return
 	}
 	if cfg == nil {
@@ -184,7 +184,7 @@ func (h *ReminderConfigHandler) Delete(c *gin.Context) {
 
 	deleted, err := h.svc.Delete(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "failed to delete config", utils.CodeInternalError)
+		utils.RespondInternalError(c, "failed to delete config", err)
 		return
 	}
 	if !deleted {

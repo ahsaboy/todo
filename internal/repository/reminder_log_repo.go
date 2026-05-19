@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/zap"
+
 	"todo/internal/models"
 )
 
 type ReminderLogRepo struct {
 	db *sql.DB
 }
+
+const reminderLogRepositoryName = "reminder_log_repo"
 
 type CreateReminderLogParams struct {
 	UserID           int64
@@ -29,7 +33,16 @@ func NewReminderLogRepo(db *sql.DB) *ReminderLogRepo {
 }
 
 func (r *ReminderLogRepo) Upsert(ctx context.Context, p CreateReminderLogParams) error {
-	_, err := r.db.ExecContext(ctx, `
+	log := beginDBOperation(ctx, reminderLogRepositoryName, "upsert_reminder_log",
+		zap.Int64("user_id", p.UserID),
+		zap.Int64("task_id", p.TaskID),
+		zap.Int64("reminder_config_id", p.ReminderConfigID),
+		zap.String("channel_type", p.ChannelType),
+		zap.String("status", p.Status),
+		zap.Int("attempts", p.Attempts),
+		zap.Bool("has_error_message", p.ErrorMessage != ""),
+	)
+	result, err := r.db.ExecContext(ctx, `
 		INSERT INTO reminder_logs (
 			user_id, task_id, reminder_config_id, channel_name, channel_type,
 			status, attempts, error_message, created_at
@@ -54,27 +67,44 @@ func (r *ReminderLogRepo) Upsert(ctx context.Context, p CreateReminderLogParams)
 		time.Now().UTC().Format(time.RFC3339),
 	)
 	if err != nil {
+		log.complete(err)
 		return fmt.Errorf("upsert reminder log: %w", err)
 	}
+	log.complete(nil, zap.Int64("rows_affected", rowsAffected(result)))
 	return nil
 }
 
 func (r *ReminderLogRepo) HasResultForTaskConfig(ctx context.Context, taskID, configID int64) (bool, error) {
+	log := beginDBOperation(ctx, reminderLogRepositoryName, "has_result_for_task_config",
+		zap.Int64("task_id", taskID),
+		zap.Int64("reminder_config_id", configID),
+	)
 	var count int
 	if err := r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM reminder_logs WHERE task_id = ? AND reminder_config_id = ?`,
 		taskID, configID,
 	).Scan(&count); err != nil {
+		log.complete(err)
 		return false, fmt.Errorf("count reminder log: %w", err)
 	}
+	log.complete(nil,
+		zap.Int("count", count),
+		zap.Bool("exists", count > 0),
+	)
 	return count > 0, nil
 }
 
 func (r *ReminderLogRepo) ListByUserID(ctx context.Context, userID int64, page, limit int) ([]models.ReminderLog, int64, error) {
+	log := beginDBOperation(ctx, reminderLogRepositoryName, "list_reminder_logs",
+		zap.Int64("user_id", userID),
+		zap.Int("page", page),
+		zap.Int("limit", limit),
+	)
 	var total int64
 	if err := r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM reminder_logs WHERE user_id = ?`, userID,
 	).Scan(&total); err != nil {
+		log.complete(err)
 		return nil, 0, fmt.Errorf("count reminder logs: %w", err)
 	}
 
@@ -91,6 +121,7 @@ func (r *ReminderLogRepo) ListByUserID(ctx context.Context, userID int64, page, 
 		userID, limit, offset,
 	)
 	if err != nil {
+		log.complete(err, zap.Int64("count", total))
 		return nil, 0, fmt.Errorf("list reminder logs: %w", err)
 	}
 	defer rows.Close()
@@ -112,6 +143,7 @@ func (r *ReminderLogRepo) ListByUserID(ctx context.Context, userID int64, page, 
 			&item.ErrorMessage,
 			&item.CreatedAt,
 		); err != nil {
+			log.complete(err, zap.Int64("count", total))
 			return nil, 0, fmt.Errorf("scan reminder log: %w", err)
 		}
 		if configID.Valid {
@@ -120,14 +152,25 @@ func (r *ReminderLogRepo) ListByUserID(ctx context.Context, userID int64, page, 
 		logs = append(logs, item)
 	}
 	if err := rows.Err(); err != nil {
+		log.complete(err, zap.Int64("count", total))
 		return nil, 0, fmt.Errorf("rows iteration: %w", err)
 	}
+	log.complete(nil,
+		zap.Int64("count", total),
+		zap.Int("result_size", len(logs)),
+	)
 	return logs, total, nil
 }
 
 func (r *ReminderLogRepo) DeleteByTaskID(ctx context.Context, taskID int64) error {
-	if _, err := r.db.ExecContext(ctx, `DELETE FROM reminder_logs WHERE task_id = ?`, taskID); err != nil {
+	log := beginDBOperation(ctx, reminderLogRepositoryName, "delete_reminder_logs_by_task_id",
+		zap.Int64("task_id", taskID),
+	)
+	result, err := r.db.ExecContext(ctx, `DELETE FROM reminder_logs WHERE task_id = ?`, taskID)
+	if err != nil {
+		log.complete(err)
 		return fmt.Errorf("delete reminder logs: %w", err)
 	}
+	log.complete(nil, zap.Int64("rows_affected", rowsAffected(result)))
 	return nil
 }

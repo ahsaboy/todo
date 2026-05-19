@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"todo/internal/repository"
+	"todo/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,22 +17,16 @@ func AuthMiddleware(apiKeyRepo *repository.APIKeyRepo) gin.HandlerFunc {
 		key := extractAPIKey(c)
 
 		if key == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   "missing API key (use Authorization: Bearer <key> or api-key: <key>)",
-				"code":    "UNAUTHORIZED",
-			})
+			utils.RespondError(c, http.StatusUnauthorized, "missing API key (use Authorization: Bearer <key> or api-key: <key>)", utils.CodeUnauthorized)
+			c.Abort()
 			return
 		}
 
 		hash := HashAPIKey(key)
 		userID, err := apiKeyRepo.ValidateKey(c.Request.Context(), hash)
 		if err != nil || userID <= 0 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   "invalid API key",
-				"code":    "UNAUTHORIZED",
-			})
+			utils.RespondError(c, http.StatusUnauthorized, "invalid API key", utils.CodeUnauthorized)
+			c.Abort()
 			return
 		}
 

@@ -6,7 +6,7 @@
 server:
   host: "0.0.0.0"       # 监听地址，0.0.0.0 表示接受所有网卡连接
   port: 8080             # 监听端口，可通过 CLI --port 覆盖
-  mode: "debug"          # Gin 模式：debug（开发）、release（生产）
+  mode: "release"          # Gin 模式：debug（开发）、release（生产）
   timezone: "Asia/Shanghai"  # 时间出参的目标时区。支持 IANA 名(Asia/Shanghai)或固定偏移(+08:00);空 / "Local" 表示服务器本地时区
 
 # 数据库配置
@@ -83,14 +83,6 @@ cors:
 
 # 日志配置
 logging:
-  level: "debug"              # 日志级别：debug / info / warn / error
-  format: "json"           # 输出格式：json（生产）/ console（开发）
+  file_enabled: true          # 是否同时写入日志文件；终端输出始终开启
   path: "./logs"              # 日志存储目录
   max_days: 7                 # 日志保留天数
-  backend:                    # 后端日志输出开关
-    console_enabled: true     # 输出到控制台
-    file_enabled: true        # 输出到文件
-  frontend:                   # 前端日志输出开关与级别
-    console_enabled: true     # 输出到浏览器控制台
-    file_enabled: true        # 上报到后端写入文件
-    level: "warn"             # 前端最小日志级别，默认继承 logging.level

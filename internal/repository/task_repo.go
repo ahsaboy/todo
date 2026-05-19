@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"todo/internal/models"
 	"todo/internal/utils"
 )
@@ -15,11 +17,17 @@ type TaskRepo struct {
 	db *sql.DB
 }
 
+const taskRepositoryName = "task_repo"
+
 func NewTaskRepo(db *sql.DB) *TaskRepo {
 	return &TaskRepo{db: db}
 }
 
 func (r *TaskRepo) Create(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "create_task",
+		zap.Int64("user_id", userID),
+		zap.String("title", req.Title),
+	)
 	priority := 3
 	if req.Priority != nil {
 		priority = *req.Priority
@@ -40,14 +48,23 @@ func (r *TaskRepo) Create(ctx context.Context, userID int64, req models.CreateTa
 		userID, req.Title, req.Description, priority, req.DueAt, req.RemindAt, repeatType, repeatInterval, req.RepeatEndDate, now, now,
 	)
 	if err != nil {
+		log.complete(err)
 		return nil, fmt.Errorf("insert task: %w", err)
 	}
 
-	id, _ := result.LastInsertId()
+	id := lastInsertID(result)
+	log.complete(nil,
+		zap.Int64("task_id", id),
+		zap.Int64("rows_affected", rowsAffected(result)),
+	)
 	return r.GetByID(ctx, userID, id)
 }
 
 func (r *TaskRepo) GetByID(ctx context.Context, userID, id int64) (*models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "get_task_by_id",
+		zap.Int64("user_id", userID),
+		zap.Int64("task_id", id),
+	)
 	task := &models.Task{}
 	err := r.db.QueryRowContext(ctx, `
 		SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
@@ -60,15 +77,33 @@ func (r *TaskRepo) GetByID(ctx context.Context, userID, id int64) (*models.Task,
 		&task.CreatedAt, &task.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
+		log.complete(nil, zap.Bool("found", false))
 		return nil, nil
 	}
 	if err != nil {
+		log.complete(err)
 		return nil, fmt.Errorf("get task: %w", err)
 	}
+	log.complete(nil,
+		zap.Bool("found", true),
+		zap.Bool("completed", task.Completed),
+	)
 	return task, nil
 }
 
 func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "list_tasks",
+		zap.Int64("user_id", userID),
+		zap.Int("page", page),
+		zap.Int("limit", limit),
+		zap.String("sort_field", sortField),
+		zap.String("sort_order", sortOrder),
+		zap.String("status_filter", filters.Status),
+		zap.Int("priority_filter", filters.Priority),
+		zap.Bool("has_due_before", filters.DueBefore != ""),
+		zap.Bool("has_due_after", filters.DueAfter != ""),
+		zap.Bool("has_search", filters.Search != ""),
+	)
 	where, args := buildWhereClause(filters)
 
 	// 添加 user_id 过滤
@@ -84,6 +119,7 @@ func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFi
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM tasks" + where
 	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		log.complete(err)
 		return nil, 0, fmt.Errorf("count tasks: %w", err)
 	}
 
@@ -103,6 +139,7 @@ func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFi
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		log.complete(err, zap.Int64("count", total))
 		return nil, 0, fmt.Errorf("list tasks: %w", err)
 	}
 	defer rows.Close()
@@ -111,17 +148,35 @@ func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFi
 	for rows.Next() {
 		var t models.Task
 		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			log.complete(err, zap.Int64("count", total))
 			return nil, 0, fmt.Errorf("scan task: %w", err)
 		}
 		tasks = append(tasks, t)
 	}
 	if err := rows.Err(); err != nil {
+		log.complete(err, zap.Int64("count", total))
 		return nil, 0, fmt.Errorf("rows iteration: %w", err)
 	}
+	log.complete(nil,
+		zap.Int64("count", total),
+		zap.Int("result_size", len(tasks)),
+	)
 	return tasks, total, nil
 }
 
 func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "update_task",
+		zap.Int64("user_id", userID),
+		zap.Int64("task_id", id),
+		zap.Bool("update_title", req.Title != nil),
+		zap.Bool("update_description", req.Description != nil),
+		zap.Bool("update_priority", req.Priority != nil),
+		zap.Bool("update_due_at", req.DueAt != nil),
+		zap.Bool("update_remind_at", req.RemindAt != nil),
+		zap.Bool("update_repeat_type", req.RepeatType != nil),
+		zap.Bool("update_repeat_interval", req.RepeatInterval != nil),
+		zap.Bool("update_repeat_end_date", req.RepeatEndDate != nil),
+	)
 	setClauses := []string{}
 	args := []any{}
 
@@ -159,6 +214,7 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 	}
 
 	if len(setClauses) == 0 {
+		log.complete(nil, zap.String("result", "no_fields_to_update"))
 		return r.GetByID(ctx, userID, id)
 	}
 
@@ -168,44 +224,73 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 	query := "UPDATE tasks SET " + strings.Join(setClauses, ", ") + " WHERE id = ? AND user_id = ?"
 	result, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
+		log.complete(err)
 		return nil, fmt.Errorf("update task: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows := rowsAffected(result)
 	if rows == 0 {
+		log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("found", false))
 		return nil, nil
 	}
 	if req.RemindAt != nil {
-		if _, err := r.db.ExecContext(ctx, `DELETE FROM reminder_logs WHERE task_id = ?`, id); err != nil {
+		deleteResult, err := r.db.ExecContext(ctx, `DELETE FROM reminder_logs WHERE task_id = ?`, id)
+		if err != nil {
+			log.complete(err, zap.Int64("rows_affected", rows))
 			return nil, fmt.Errorf("clear reminder logs: %w", err)
 		}
+		log.complete(nil,
+			zap.Int64("rows_affected", rows),
+			zap.Int64("cleared_reminder_logs", rowsAffected(deleteResult)),
+		)
+		return r.GetByID(ctx, userID, id)
 	}
+	log.complete(nil, zap.Int64("rows_affected", rows))
 	return r.GetByID(ctx, userID, id)
 }
 
 func (r *TaskRepo) Delete(ctx context.Context, userID, id int64) (bool, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "delete_task",
+		zap.Int64("user_id", userID),
+		zap.Int64("task_id", id),
+	)
 	result, err := r.db.ExecContext(ctx, "DELETE FROM tasks WHERE id = ? AND user_id = ?", id, userID)
 	if err != nil {
+		log.complete(err)
 		return false, fmt.Errorf("delete task: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows := rowsAffected(result)
+	log.complete(nil,
+		zap.Int64("rows_affected", rows),
+		zap.Bool("deleted", rows > 0),
+	)
 	return rows > 0, nil
 }
 
 func (r *TaskRepo) ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "toggle_task_complete",
+		zap.Int64("user_id", userID),
+		zap.Int64("task_id", id),
+	)
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE tasks SET completed = CASE WHEN completed = 0 THEN 1 ELSE 0 END, updated_at = ? WHERE id = ? AND user_id = ?`,
 		time.Now().UTC().Format(time.RFC3339), id, userID)
 	if err != nil {
+		log.complete(err)
 		return nil, fmt.Errorf("toggle complete: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows := rowsAffected(result)
 	if rows == 0 {
+		log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("found", false))
 		return nil, nil
 	}
+	log.complete(nil, zap.Int64("rows_affected", rows))
 	return r.GetByID(ctx, userID, id)
 }
 
 func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "get_pending_reminders",
+		zap.Time("due_before", now.UTC()),
+	)
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
 		       repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at,
@@ -216,6 +301,7 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]mo
 		  AND reminder_sent = 0
 		  AND completed = 0`)
 	if err != nil {
+		log.complete(err)
 		return nil, fmt.Errorf("query pending reminders: %w", err)
 	}
 	defer rows.Close()
@@ -225,6 +311,7 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]mo
 	for rows.Next() {
 		var t models.Task
 		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			log.complete(err)
 			return nil, fmt.Errorf("scan reminder task: %w", err)
 		}
 		// 运行时兼容：解析 remind_at（支持 RFC3339 和旧格式），在 Go 侧比较
@@ -240,30 +327,52 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]mo
 		tasks = append(tasks, t)
 	}
 	if err := rows.Err(); err != nil {
+		log.complete(err)
 		return nil, fmt.Errorf("rows iteration: %w", err)
 	}
+	log.complete(nil, zap.Int("result_size", len(tasks)))
 	return tasks, nil
 }
 
 func (r *TaskRepo) MarkReminderSent(ctx context.Context, id int64) (bool, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "mark_reminder_sent",
+		zap.Int64("task_id", id),
+	)
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE tasks SET reminder_sent = 1, reminder_sent_at = ? WHERE id = ? AND reminder_sent = 0`,
 		time.Now().UTC().Format(time.RFC3339), id)
 	if err != nil {
+		log.complete(err)
 		return false, fmt.Errorf("mark reminder sent: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows := rowsAffected(result)
+	log.complete(nil,
+		zap.Int64("rows_affected", rows),
+		zap.Bool("updated", rows > 0),
+	)
 	return rows > 0, nil
 }
 
 func (r *TaskRepo) CreateRepeatTask(ctx context.Context, t *models.Task) error {
+	log := beginDBOperation(ctx, taskRepositoryName, "create_repeat_task",
+		zap.Int64("user_id", t.UserID),
+		zap.Int64("source_task_id", t.ID),
+	)
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := r.db.ExecContext(ctx, `
+	result, err := r.db.ExecContext(ctx, `
 		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
 		t.UserID, t.Title, t.Description, t.Priority, t.DueAt, t.RemindAt, t.RepeatType, t.RepeatInterval, t.RepeatEndDate, now, now,
 	)
-	return err
+	if err != nil {
+		log.complete(err)
+		return err
+	}
+	log.complete(nil,
+		zap.Int64("task_id", lastInsertID(result)),
+		zap.Int64("rows_affected", rowsAffected(result)),
+	)
+	return nil
 }
 
 func buildWhereClause(f models.TaskFilters) (string, []any) {

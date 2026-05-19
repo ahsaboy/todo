@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	_ "time/tzdata"
 )
 
 // FormatOutputTime 把 DB 字符串以目标时区重新格式化为 RFC3339(带偏移)。

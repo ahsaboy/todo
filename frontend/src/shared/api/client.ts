@@ -1,7 +1,6 @@
 import { API_BASE_URL } from '@/shared/config/api'
 import { ApiError } from '@/shared/api/errors'
 import type { ApiResponse, PaginatedResponse } from '@/shared/api/types'
-import { logger } from '@/shared/logger/logger'
 
 let unauthorizedHandler: (() => void) | null = null
 let isHandlingUnauthorized = false
@@ -61,12 +60,6 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     if (response.status === 401) {
       const isSessionExpired = !endpoint.startsWith('/auth/')
       handleUnauthorized(endpoint)
-      logger.warn('API request failed', {
-        method,
-        endpoint,
-        status: response.status,
-        code: 'UNAUTHORIZED',
-      })
       throw new ApiError({
         message: isSessionExpired
           ? 'Session expired, please login again'
@@ -77,12 +70,6 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     }
 
     if (!response.ok || data.success === false) {
-      logger.warn('API request failed', {
-        method,
-        endpoint,
-        status: response.status,
-        code: data.code || 'INTERNAL_ERROR',
-      })
       throw new ApiError({
         message: data.error || 'Request failed',
         code: data.code || 'INTERNAL_ERROR',
@@ -96,12 +83,6 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
       throw error
     }
 
-    logger.error('API request failed', {
-      method,
-      endpoint,
-      status: 0,
-      code: 'NETWORK_ERROR',
-    })
     throw new ApiError({
       message: 'Request failed',
       code: 'NETWORK_ERROR',

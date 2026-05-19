@@ -4,6 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
+	"todo/internal/logging"
 )
 
 const (
@@ -50,7 +53,15 @@ func RespondCreated(c *gin.Context, data any) {
 }
 
 func RespondError(c *gin.Context, code int, message string, errCode string) {
+	logging.SetResponseLogMeta(c, errCode, message)
 	c.JSON(code, gin.H{"success": false, "error": message, "code": errCode})
+}
+
+func RespondInternalError(c *gin.Context, message string, err error) {
+	if err != nil {
+		logging.LoggerFromContext(c).Error(message, zap.Error(err))
+	}
+	RespondError(c, http.StatusInternalServerError, message, CodeInternalError)
 }
 
 func RespondPaginated(c *gin.Context, data any, page, limit int, total int64) {

@@ -132,9 +132,8 @@ todo-server [选项]
   --mode <mode>        覆盖运行模式 (debug/release)
   --log-path <path>    覆盖日志存储路径
   --log-max-days <n>   覆盖日志保留天数
-  --backend-log <mode> 覆盖后端日志输出模式 (console/file/both/off)
-  --frontend-log <mode> 覆盖前端日志输出模式 (console/file/both/off)
-  --frontend-log-level <level>  覆盖前端日志级别
+  --log-file-enabled   启用日志文件输出
+  --log-file-disabled  禁用日志文件输出
   -v, --version        显示版本号
   -h, --help           显示帮助信息
 ```
@@ -143,9 +142,6 @@ todo-server [选项]
 
 > 服务启动后访问 Swagger 文档：`http://localhost:8080/docs/index.html`
 >
-> `GET /api/v1/runtime-config` 和 `POST /api/v1/logs/frontend` 属于内部运行时接口，供前端日志初始化和上报使用，不作为公开业务 API。
-
-
 ## MCP 服务器
 
 除 REST API 外，本服务同时暴露一个基于 [Model Context Protocol](https://modelcontextprotocol.io/) 的端点，可被 LLM 客户端直接调用。
@@ -293,17 +289,9 @@ cors:
   allowed_origins: ["*"]
 
 logging:
-  level: "info"
-  format: "json"
+  file_enabled: true
   path: "./logs"
   max_days: 7
-  backend:
-    console_enabled: true
-    file_enabled: false
-  frontend:
-    console_enabled: false
-    file_enabled: false
-    level: "warn"
 ```
 
 说明：
@@ -313,11 +301,13 @@ logging:
 
 ### 日志配置
 
-- 后端日志按天写入 `backend-YYYY-MM-DD.log`，文件位置由 `logging.path` 决定。
-- 前端日志先通过 `POST /api/v1/logs/frontend` 上报，再按天写入 `frontend-YYYY-MM-DD.log`。
-- `logging.max_days` 控制日志保留天数，启动时会清理早于保留窗口的历史日志文件。
-- `GET /api/v1/runtime-config` 只下发前端所需的日志开关和级别，属于内部运行时接口。
-- 前端日志只记录必要字段，不包含认证头、密码、请求体或完整响应体。
+- 服务端日志始终输出到终端。
+- `logging.file_enabled=true` 时，服务端日志还会按天写入 `backend-YYYY-MM-DD.log`，文件位置由 `logging.path` 决定。
+- `logging.max_days` 控制日志保留天数；仅在 `logging.file_enabled=true` 时，启动时会清理早于保留窗口的历史日志文件。
+- 所有 HTTP 请求都会进入统一访问日志，包括 API、静态资源、404、401 和健康检查。
+- 日志输出不再包含全局 `logger` 字段，也不再生成或透传 `request_id`；`caller` 是主要定位字段。
+- 普通 API 的 access log 会记录状态码、耗时、响应字节数以及请求上下文等详细字段；静态资源 access log 使用精简字段集，只保留 `method`、`path`、`status`、`latency`、`response_bytes` 等必要信息。
+- repository 层会记录数据库操作日志，包含 `repository`、`operation`、`duration` 和结果摘要；错误路径会附带 `error`，但不会记录完整 API Key、密码哈希或错误消息原文等敏感内容。
 
 ### Webhook 模板变量
 
@@ -356,6 +346,7 @@ server:
   timezone: "Asia/Shanghai"   # IANA 名;或固定偏移 "+08:00";空 / "Local" 表示服务器本地时区;"UTC" 显式 UTC
 ```
 
+- 可执行文件内置了 `tzdata`，因此 `Asia/Shanghai` 等 IANA 时区名不依赖宿主机是否安装系统时区数据库。
 非法值(例如 `"Mars/Olympus"`)启动期记 warn 日志后回退到 `Local`,服务可正常启动。
 
 ### MCP `X-MCP-Timezone` 请求头
@@ -405,6 +396,7 @@ TODO/
 │   │   ├── task_handler.go         # 任务 HTTP 处理
 │   │   └── reminder_config_handler.go  # 提醒配置 CRUD
 │   ├── repository/
+│   │   ├── logging.go              # repository 数据库操作日志辅助
 │   │   ├── user_repo.go            # 用户数据库操作
 │   │   ├── api_key_repo.go         # API Key 数据库操作
 │   │   ├── task_repo.go            # 任务数据库操作
@@ -422,7 +414,7 @@ TODO/
 ├── frontend/                       # Vue 前端源码
 │   ├── Dockerfile                  # 分离部署前端 nginx 镜像
 │   ├── nginx.conf                  # 前端 SPA fallback 配置
-│   └── src/shared/logger/          # 前端日志封装和上报
+│   └── src/shared/                 # 前端共享模块
 ├── web/                            # Go embed 前端构建产物入口
 │   ├── embed.go                    # 使用 //go:embed all:dist
 │   └── dist/                       # make build 生成并复制的静态文件

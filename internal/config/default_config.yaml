@@ -61,14 +61,6 @@ cors:
     - "*"
 
 logging:
-  level: "debug"
-  format: "json"
+  file_enabled: true
   path: "./logs"
   max_days: 7
-  backend:
-    console_enabled: true
-    file_enabled: true
-  frontend:
-    console_enabled: true
-    file_enabled: true
-    level: "warn"

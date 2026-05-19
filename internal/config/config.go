@@ -3,7 +3,6 @@ package config
 import (
 	_ "embed"
 	"os"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -55,23 +54,9 @@ type CORSConfig struct {
 }
 
 type LoggingConfig struct {
-	Level    string                `yaml:"level"`
-	Format   string                `yaml:"format"`
-	Path     string                `yaml:"path"`
-	MaxDays  int                   `yaml:"max_days"`
-	Backend  LoggingOutputConfig   `yaml:"backend"`
-	Frontend FrontendLoggingConfig `yaml:"frontend"`
-}
-
-type LoggingOutputConfig struct {
-	ConsoleEnabled bool `yaml:"console_enabled"`
-	FileEnabled    bool `yaml:"file_enabled"`
-}
-
-type FrontendLoggingConfig struct {
-	ConsoleEnabled bool   `yaml:"console_enabled"`
-	FileEnabled    bool   `yaml:"file_enabled"`
-	Level          string `yaml:"level"`
+	FileEnabled bool   `yaml:"file_enabled"`
+	Path        string `yaml:"path"`
+	MaxDays     int    `yaml:"max_days"`
 }
 
 func Load(path string) (*Config, error) {
@@ -101,19 +86,9 @@ func Load(path string) (*Config, error) {
 			RetryDelaySeconds:     5,
 		},
 		Logging: LoggingConfig{
-			Level:   "info",
-			Format:  "json",
-			Path:    "./logs",
-			MaxDays: 7,
-			Backend: LoggingOutputConfig{
-				ConsoleEnabled: true,
-				FileEnabled:    false,
-			},
-			Frontend: FrontendLoggingConfig{
-				ConsoleEnabled: false,
-				FileEnabled:    false,
-				Level:          "warn",
-			},
+			FileEnabled: true,
+			Path:        "./logs",
+			MaxDays:     7,
 		},
 	}
 
@@ -134,30 +109,4 @@ func normalizeLoggingConfig(cfg *LoggingConfig) {
 	if cfg.MaxDays < 1 {
 		cfg.MaxDays = 7
 	}
-
-	cfg.Level = normalizeLogLevel(cfg.Level)
-	cfg.Format = normalizeLogFormat(cfg.Format)
-
-	if cfg.Frontend.Level == "" {
-		cfg.Frontend.Level = cfg.Level
-	} else {
-		cfg.Frontend.Level = normalizeLogLevel(cfg.Frontend.Level)
-	}
-}
-
-func normalizeLogLevel(level string) string {
-	switch strings.ToLower(strings.TrimSpace(level)) {
-	case "debug", "info", "warn", "error":
-		return strings.ToLower(strings.TrimSpace(level))
-	default:
-		return "info"
-	}
-}
-
-func normalizeLogFormat(format string) string {
-	if strings.EqualFold(strings.TrimSpace(format), "json") {
-		return "json"
-	}
-
-	return "console"
 }

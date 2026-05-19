@@ -49,9 +49,8 @@ func main() {
 	mode := flag.String("mode", "", "覆盖运行模式 (debug/release)")
 	logPath := flag.String("log-path", "", "覆盖日志存储路径")
 	logMaxDays := flag.Int("log-max-days", 0, "覆盖日志保留天数")
-	backendLog := flag.String("backend-log", "", "覆盖后端日志输出模式 (console/file/both/off)")
-	frontendLog := flag.String("frontend-log", "", "覆盖前端日志输出模式 (console/file/both/off)")
-	frontendLogLevel := flag.String("frontend-log-level", "", "覆盖前端日志级别")
+	logFileEnabled := flag.Bool("log-file-enabled", false, "启用日志文件输出")
+	logFileDisabled := flag.Bool("log-file-disabled", false, "禁用日志文件输出")
 	showVersion := flag.Bool("version", false, "显示版本号")
 	showHelp := flag.Bool("help", false, "显示帮助信息")
 
@@ -66,9 +65,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  --mode <mode>        覆盖运行模式 (debug/release)\n")
 		fmt.Fprintf(os.Stderr, "  --log-path <path>    覆盖日志存储路径\n")
 		fmt.Fprintf(os.Stderr, "  --log-max-days <n>   覆盖日志保留天数\n")
-		fmt.Fprintf(os.Stderr, "  --backend-log <mode> 覆盖后端日志输出模式 (console/file/both/off)\n")
-		fmt.Fprintf(os.Stderr, "  --frontend-log <mode> 覆盖前端日志输出模式 (console/file/both/off)\n")
-		fmt.Fprintf(os.Stderr, "  --frontend-log-level <level>  覆盖前端日志级别\n")
+		fmt.Fprintf(os.Stderr, "  --log-file-enabled   启用日志文件输出\n")
+		fmt.Fprintf(os.Stderr, "  --log-file-disabled  禁用日志文件输出\n")
 		fmt.Fprintf(os.Stderr, "  -v, --version        显示版本号\n")
 		fmt.Fprintf(os.Stderr, "  -h, --help           显示此帮助信息\n")
 	}
@@ -106,23 +104,25 @@ func main() {
 	if *mode == "debug" || *mode == "release" {
 		cfg.Server.Mode = *mode
 	}
-	if err := applyLoggingOverrides(cfg, *logPath, *logMaxDays, *backendLog, *frontendLog, *frontendLogLevel); err != nil {
+	if err := applyLoggingOverrides(cfg, *logPath, *logMaxDays, *logFileEnabled, *logFileDisabled); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
-	if err := logging.CleanupOldLogs(cfg.Logging.Path, cfg.Logging.MaxDays, time.Now()); err != nil {
-		fmt.Fprintf(os.Stderr, "清理旧日志失败: %v\n", err)
-		os.Exit(1)
+	if cfg.Logging.FileEnabled {
+		if err := logging.CleanupOldLogs(cfg.Logging.Path, cfg.Logging.MaxDays, time.Now()); err != nil {
+			fmt.Fprintf(os.Stderr, "清理旧日志失败: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	// 初始化日志
-	logger, err := logging.NewLogger(cfg.Logging)
+	logger, logSyncer, err := logging.NewManagedLogger(cfg.Logging)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "初始化日志失败: %v\n", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
+	defer logSyncer.Sync()
 
 	logger.Info("配置加载完成",
 		zap.String("config", *cfgPath),
@@ -163,7 +163,6 @@ func main() {
 	taskSvc := service.NewTaskService(taskRepo, reminderConfigRepo)
 
 	authHandler := handlers.NewAuthHandler(authSvc)
-	logHandler := handlers.NewLogHandler(cfg.Logging, logger)
 	reminderConfigHandler := handlers.NewReminderConfigHandler(reminderConfigSvc)
 	reminderLogHandler := handlers.NewReminderLogHandler(reminderLogRepo)
 	taskHandler := handlers.NewTaskHandler(taskSvc)
@@ -188,7 +187,8 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.New()
-	r.Use(gin.Recovery())
+	r.Use(logging.AccessLogger(logger))
+	r.Use(logging.Recovery(logger))
 
 	// CORS
 	if cfg.CORS.Enabled {
@@ -197,8 +197,6 @@ func main() {
 
 	// 公开端点
 	r.GET("/api/v1/health", handlers.HealthCheck(db))
-	r.GET("/api/v1/runtime-config", logHandler.RuntimeConfig)
-	r.POST("/api/v1/logs/frontend", logHandler.FrontendLogs)
 	r.GET("/api/v1/templates", reminderTemplatesHandler(cfg))
 
 	// Swagger 文档（仅在启用时）
@@ -304,48 +302,23 @@ func reminderTemplatesHandler(cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
-func applyLoggingOverrides(cfg *config.Config, logPath string, logMaxDays int, backendLog string, frontendLog string, frontendLogLevel string) error {
+func applyLoggingOverrides(cfg *config.Config, logPath string, logMaxDays int, logFileEnabled bool, logFileDisabled bool) error {
 	if logPath != "" {
 		cfg.Logging.Path = logPath
 	}
 	if logMaxDays > 0 {
 		cfg.Logging.MaxDays = logMaxDays
 	}
-	if backendLog != "" {
-		consoleEnabled, fileEnabled, err := applyLogOutputMode(backendLog)
-		if err != nil {
-			return fmt.Errorf("无效的 --backend-log 值: %w", err)
-		}
-		cfg.Logging.Backend.ConsoleEnabled = consoleEnabled
-		cfg.Logging.Backend.FileEnabled = fileEnabled
+	if logFileEnabled && logFileDisabled {
+		return fmt.Errorf("--log-file-enabled 与 --log-file-disabled 不能同时使用")
 	}
-	if frontendLog != "" {
-		consoleEnabled, fileEnabled, err := applyLogOutputMode(frontendLog)
-		if err != nil {
-			return fmt.Errorf("无效的 --frontend-log 值: %w", err)
-		}
-		cfg.Logging.Frontend.ConsoleEnabled = consoleEnabled
-		cfg.Logging.Frontend.FileEnabled = fileEnabled
+	if logFileEnabled {
+		cfg.Logging.FileEnabled = true
 	}
-	if frontendLogLevel != "" {
-		cfg.Logging.Frontend.Level = frontendLogLevel
+	if logFileDisabled {
+		cfg.Logging.FileEnabled = false
 	}
 	return nil
-}
-
-func applyLogOutputMode(mode string) (bool, bool, error) {
-	switch mode {
-	case "console":
-		return true, false, nil
-	case "file":
-		return false, true, nil
-	case "both":
-		return true, true, nil
-	case "off":
-		return false, false, nil
-	default:
-		return false, false, fmt.Errorf("可选值: console, file, both, off")
-	}
 }
 
 func corsMiddleware(origins []string) gin.HandlerFunc {
