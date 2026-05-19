@@ -4,12 +4,12 @@ services:
     container_name: todo-app
     environment:
       - TZ=Asia/Shanghai
-      - HOST=${HOST:-}
-      - PORT=${PORT:-}
+      - HOST=0.0.0.0
+      - PORT=${PORT:-8080}
       - STATIC_FILES=${STATIC_FILES:-}
       - CORS=${CORS:-}
     ports:
-      - "${PORT:-8080}:${PORT:-8080}"
+      - "${HOST:-0.0.0.0}:${PORT:-8080}:${PORT:-8080}"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
