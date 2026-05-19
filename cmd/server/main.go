@@ -55,7 +55,7 @@ func main() {
 	showHelp := flag.Bool("help", false, "显示帮助信息")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "TODO 任务管理系统 v%s\n\n", version)
+		fmt.Fprintf(os.Stderr, "TODO 任务管理系统 %s\n\n", version)
 		fmt.Fprintf(os.Stderr, "用法:\n")
 		fmt.Fprintf(os.Stderr, "  todo-server [选项]\n\n")
 		fmt.Fprintf(os.Stderr, "选项:\n")
@@ -79,7 +79,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("todo-server v%s\n", version)
+		fmt.Printf("todo-server %s\n", version)
 		os.Exit(0)
 	}
 
