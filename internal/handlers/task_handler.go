@@ -109,7 +109,7 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 // @Produce      json
 // @Param        page      query int    false "页码"       default(1)
 // @Param        limit     query int    false "每页数量"    default(20)
-// @Param        sort      query string false "排序字段"    default(created_at)  Enums(created_at, updated_at, due_at, priority)
+// @Param        sort      query string false "排序字段"    default(created_at)  Enums(created_at, updated_at, due_at, priority, task_center)
 // @Param        order     query string false "排序方向"    default(desc)        Enums(asc, desc)
 // @Param        status    query string false "任务状态"                         Enums(pending, completed, all)
 // @Param        priority  query int    false "优先级筛选"                       Enums(1, 2, 3)

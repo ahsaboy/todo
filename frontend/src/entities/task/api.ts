@@ -5,7 +5,7 @@ import type { TaskDto, CreateTaskPayload, UpdateTaskPayload } from './model'
 export interface TaskListParams {
   page?: number
   limit?: number
-  sort?: string
+  sort?: 'created_at' | 'updated_at' | 'due_at' | 'priority' | 'title' | 'task_center'
   order?: 'asc' | 'desc'
   status?: 'all' | 'completed' | 'pending'
   priority?: 1 | 2 | 3

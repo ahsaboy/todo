@@ -11,7 +11,7 @@ export interface TaskFilters {
 }
 
 export interface TaskSort {
-  field: string
+  field: 'created_at' | 'updated_at' | 'due_at' | 'priority' | 'title' | 'task_center'
   order: 'asc' | 'desc'
 }
 

@@ -12,7 +12,6 @@
 
     <div class="page-toolbar">
       <TaskFilters :filters="filters" @change="setFilters" />
-      <TaskSortMenu :sort="sort" @change="setSort" />
     </div>
 
     <div v-if="loading" class="page-loading">加载中...</div>
@@ -76,7 +75,6 @@ import { useTasks } from '@/features/tasks/useTasks'
 import TaskTable from '@/features/tasks/TaskTable.vue'
 import TaskCardList from '@/features/tasks/TaskCardList.vue'
 import TaskFilters from '@/features/tasks/TaskFilters.vue'
-import TaskSortMenu from '@/features/tasks/TaskSortMenu.vue'
 import MobileFilters from '@/features/tasks/MobileFilters.vue'
 import TaskDetailDrawer from '@/features/tasks/TaskDetailDrawer.vue'
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@/entities/task/model'
@@ -87,7 +85,6 @@ const {
   error,
   meta,
   filters,
-  sort,
   fetchTasks,
   createTask,
   updateTask,
@@ -111,6 +108,7 @@ function handleResize() {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  setSort('task_center', 'asc')
   fetchTasks()
 })
 

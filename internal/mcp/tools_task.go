@@ -54,7 +54,7 @@ func buildListTasksTool() mcpgo.Tool {
 		mcpgo.WithString("search", mcpgo.Description("搜索关键字(匹配标题/描述)")),
 		mcpgo.WithNumber("page", mcpgo.Description("页码,默认 1"), mcpgo.Min(1), mcpgo.DefaultNumber(1)),
 		mcpgo.WithNumber("limit", mcpgo.Description("每页数量,默认 20,最大 100"), mcpgo.Min(1), mcpgo.Max(100), mcpgo.DefaultNumber(20)),
-		mcpgo.WithString("sort", mcpgo.Description("排序字段,默认 created_at"), mcpgo.Enum("created_at", "updated_at", "due_at", "priority"), mcpgo.DefaultString("created_at")),
+		mcpgo.WithString("sort", mcpgo.Description("排序字段,默认 created_at"), mcpgo.Enum("created_at", "updated_at", "due_at", "priority", "task_center"), mcpgo.DefaultString("created_at")),
 		mcpgo.WithString("order", mcpgo.Description("排序方向,默认 desc"), mcpgo.Enum("asc", "desc"), mcpgo.DefaultString("desc")),
 	)
 }

@@ -123,18 +123,10 @@ func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFi
 		return nil, 0, fmt.Errorf("count tasks: %w", err)
 	}
 
-	allowedSortFields := map[string]bool{
-		"created_at": true, "updated_at": true, "due_at": true, "priority": true, "id": true,
-	}
-	if !allowedSortFields[sortField] {
-		sortField = "created_at"
-	}
-	if sortOrder != "asc" && sortOrder != "desc" {
-		sortOrder = "desc"
-	}
+	orderBy := buildTaskListOrderBy(sortField, sortOrder)
 
 	offset := (page - 1) * limit
-	query := fmt.Sprintf("SELECT id, user_id, title, description, completed, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, created_at, updated_at FROM tasks%s ORDER BY %s %s LIMIT ? OFFSET ?", where, sortField, sortOrder)
+	query := fmt.Sprintf("SELECT id, user_id, title, description, completed, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, created_at, updated_at FROM tasks%s ORDER BY %s LIMIT ? OFFSET ?", where, orderBy)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -162,6 +154,21 @@ func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFi
 		zap.Int("result_size", len(tasks)),
 	)
 	return tasks, total, nil
+}
+
+func buildTaskListOrderBy(sortField, sortOrder string) string {
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	switch sortField {
+	case "task_center":
+		return "completed ASC, CASE WHEN due_at IS NULL OR due_at = '' THEN 1 ELSE 0 END ASC, due_at ASC, id DESC"
+	case "created_at", "updated_at", "due_at", "priority", "id":
+		return fmt.Sprintf("%s %s", sortField, sortOrder)
+	default:
+		return "created_at desc"
+	}
 }
 
 func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error) {
