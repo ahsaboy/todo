@@ -107,7 +107,7 @@ func Init(dbPath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("create db directory: %w", err)
 	}
 
-	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000&_foreign_keys=on&_journal_size_limit=67108864")
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(on)&_pragma=journal_size_limit(67108864)")
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}

@@ -163,7 +163,11 @@ func buildTaskListOrderBy(sortField, sortOrder string) string {
 
 	switch sortField {
 	case "task_center":
-		return "completed ASC, CASE WHEN due_at IS NULL OR due_at = '' THEN 1 ELSE 0 END ASC, due_at ASC, id DESC"
+		return "completed ASC, " +
+			"CASE WHEN due_at IS NULL OR due_at = '' THEN 1 ELSE 0 END ASC, " +
+			"CASE WHEN completed = 0 THEN due_at END ASC, " +
+			"CASE WHEN completed = 1 THEN due_at END DESC, " +
+			"id DESC"
 	case "created_at", "updated_at", "due_at", "priority", "id":
 		return fmt.Sprintf("%s %s", sortField, sortOrder)
 	default:

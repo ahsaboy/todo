@@ -110,14 +110,18 @@ func (r *APIKeyRepo) ValidateKey(ctx context.Context, keyHash string) (int64, er
 		return 0, fmt.Errorf("validate api key: %w", err)
 	}
 
-	// 更新 last_used_at
+	// 更新 last_used_at(非关键统计字段,失败时降级记录但不阻断验证)
 	updateResult, updateErr := r.db.ExecContext(ctx,
 		`UPDATE user_api_keys SET last_used_at = ? WHERE key_hash = ?`,
 		time.Now().UTC().Format(time.RFC3339), keyHash,
 	)
 	if updateErr != nil {
-		log.complete(updateErr, zap.Int64("user_id", userID), zap.Bool("valid", true))
-		return 0, fmt.Errorf("update api key last used: %w", updateErr)
+		log.complete(nil,
+			zap.Int64("user_id", userID),
+			zap.Bool("valid", true),
+			zap.NamedError("last_used_update_error", updateErr),
+		)
+		return userID, nil
 	}
 
 	log.complete(nil,
