@@ -11,12 +11,12 @@ import (
 var defaultConfigYAML []byte
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	Reminder ReminderConfig `yaml:"reminder"`
-	CORS     CORSConfig     `yaml:"cors"`
-	Logging  LoggingConfig  `yaml:"logging"`
-	Swagger  bool           `yaml:"swagger"`
+	Server      ServerConfig   `yaml:"server"`
+	Database    DatabaseConfig `yaml:"database"`
+	Reminder    ReminderConfig `yaml:"reminder"`
+	CORS        CORSConfig     `yaml:"cors"`
+	Logging     LoggingConfig  `yaml:"logging"`
+	StaticFiles bool           `yaml:"static_files"`
 }
 
 type ServerConfig struct {
@@ -90,10 +90,21 @@ func Load(path string) (*Config, error) {
 			Path:        "./logs",
 			MaxDays:     7,
 		},
+		StaticFiles: true,
 	}
 
+	var raw struct {
+		StaticFiles *bool `yaml:"static_files"`
+		Swagger     *bool `yaml:"swagger"`
+	}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, err
+	}
+	if raw.StaticFiles == nil && raw.Swagger != nil {
+		cfg.StaticFiles = *raw.Swagger
 	}
 
 	normalizeLoggingConfig(&cfg.Logging)

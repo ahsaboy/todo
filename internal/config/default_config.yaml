@@ -11,7 +11,7 @@ server:
 database:
   path: "./data/tasks.db"
 
-swagger: false
+static_files: true
 
 reminder:
   enabled: true

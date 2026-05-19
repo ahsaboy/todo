@@ -1,5 +1,3 @@
-//go:build !separate_frontend
-
 package main
 
 import (

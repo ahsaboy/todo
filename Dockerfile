@@ -5,6 +5,7 @@ FROM node:20-alpine AS frontend-builder
 
 ARG APP_VERSION
 ENV VITE_APP_VERSION=${APP_VERSION}
+ENV VITE_API_BASE_URL=/api/v1
 
 WORKDIR /app
 
@@ -42,6 +43,8 @@ FROM alpine:3.19
 RUN apk add --no-cache ca-certificates tzdata curl
 
 WORKDIR /app
+
+LABEL org.opencontainers.image.source="https://github.com/ahsaboy/todo"
 
 RUN mkdir -p /app/data
 

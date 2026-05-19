@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -51,6 +52,8 @@ func main() {
 	logMaxDays := flag.Int("log-max-days", 0, "覆盖日志保留天数")
 	logFileEnabled := flag.Bool("log-file-enabled", false, "启用日志文件输出")
 	logFileDisabled := flag.Bool("log-file-disabled", false, "禁用日志文件输出")
+	staticFilesEnabled := flag.Bool("static-files-enabled", false, "启用前端静态文件与 Swagger 路由")
+	staticFilesDisabled := flag.Bool("static-files-disabled", false, "禁用前端静态文件与 Swagger 路由")
 	showVersion := flag.Bool("version", false, "显示版本号")
 	showHelp := flag.Bool("help", false, "显示帮助信息")
 
@@ -67,6 +70,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  --log-max-days <n>   覆盖日志保留天数\n")
 		fmt.Fprintf(os.Stderr, "  --log-file-enabled   启用日志文件输出\n")
 		fmt.Fprintf(os.Stderr, "  --log-file-disabled  禁用日志文件输出\n")
+		fmt.Fprintf(os.Stderr, "  --static-files-enabled   启用前端静态文件与 Swagger 路由\n")
+		fmt.Fprintf(os.Stderr, "  --static-files-disabled  禁用前端静态文件与 Swagger 路由\n")
 		fmt.Fprintf(os.Stderr, "  -v, --version        显示版本号\n")
 		fmt.Fprintf(os.Stderr, "  -h, --help           显示此帮助信息\n")
 	}
@@ -94,6 +99,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "加载配置失败: %v\n", err)
 		os.Exit(1)
 	}
+	if err := applyEnvOverrides(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
 
 	if *port > 0 {
 		cfg.Server.Port = *port
@@ -105,6 +114,10 @@ func main() {
 		cfg.Server.Mode = *mode
 	}
 	if err := applyLoggingOverrides(cfg, *logPath, *logMaxDays, *logFileEnabled, *logFileDisabled); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	if err := applyStaticFilesOverrides(cfg, *staticFilesEnabled, *staticFilesDisabled); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
@@ -199,13 +212,6 @@ func main() {
 	r.GET("/api/v1/health", handlers.HealthCheck(db))
 	r.GET("/api/v1/templates", reminderTemplatesHandler(cfg))
 
-	// Swagger 文档（仅在启用时）
-	if cfg.Swagger {
-		r.GET("/docs/*any", func(c *gin.Context) {
-			httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
-		})
-	}
-
 	// 公开路由（无需认证）
 	auth := r.Group("/api/v1/auth")
 	{
@@ -255,7 +261,7 @@ func main() {
 	})
 	r.Any("/mcp", gin.WrapH(mcpHandler))
 
-	registerStaticRoutes(r, logger)
+	registerOptionalRoutes(r, logger, cfg.StaticFiles)
 
 	// 启动 HTTP 服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -319,6 +325,102 @@ func applyLoggingOverrides(cfg *config.Config, logPath string, logMaxDays int, l
 		cfg.Logging.FileEnabled = false
 	}
 	return nil
+}
+
+func applyEnvOverrides(cfg *config.Config) error {
+	if value, ok := lookupEnvAny("HOST", "host"); ok {
+		cfg.Server.Host = value
+	}
+
+	if value, ok := lookupEnvAny("PORT", "port"); ok {
+		port, err := strconv.Atoi(value)
+		if err != nil || port < 1 {
+			return fmt.Errorf("PORT 必须是有效的正整数, 当前值: %q", value)
+		}
+		cfg.Server.Port = port
+	}
+
+	if value, ok := lookupEnvAny("STATIC_FILES", "static_files"); ok {
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			return fmt.Errorf("STATIC_FILES 必须是布尔值, 当前值: %q", value)
+		}
+		cfg.StaticFiles = enabled
+	}
+
+	if value, ok := lookupEnvAny("CORS", "cors"); ok {
+		if enabled, err := strconv.ParseBool(value); err == nil {
+			cfg.CORS.Enabled = enabled
+			if !enabled {
+				cfg.CORS.AllowedOrigins = nil
+			}
+		} else {
+			origins := splitCommaSeparated(value)
+			if len(origins) == 0 {
+				return fmt.Errorf("CORS 必须是布尔值或逗号分隔的来源列表, 当前值: %q", value)
+			}
+			cfg.CORS.Enabled = true
+			cfg.CORS.AllowedOrigins = origins
+		}
+	}
+
+	return nil
+}
+
+func applyStaticFilesOverrides(cfg *config.Config, staticFilesEnabled bool, staticFilesDisabled bool) error {
+	if staticFilesEnabled && staticFilesDisabled {
+		return fmt.Errorf("--static-files-enabled 与 --static-files-disabled 不能同时使用")
+	}
+	if staticFilesEnabled {
+		cfg.StaticFiles = true
+	}
+	if staticFilesDisabled {
+		cfg.StaticFiles = false
+	}
+	return nil
+}
+
+func lookupEnvAny(keys ...string) (string, bool) {
+	for _, key := range keys {
+		value, ok := os.LookupEnv(key)
+		if !ok {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		return value, true
+	}
+	return "", false
+}
+
+func splitCommaSeparated(value string) []string {
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		out = append(out, part)
+	}
+	return out
+}
+
+func registerOptionalRoutes(r *gin.Engine, logger *zap.Logger, staticFilesEnabled bool) {
+	if staticFilesEnabled {
+		r.GET("/docs/*any", func(c *gin.Context) {
+			httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
+		})
+		registerStaticRoutes(r, logger)
+		return
+	}
+
+	logger.Info("静态资源开关已关闭，跳过前端静态资源与 Swagger 路由注册")
+	r.NoRoute(func(c *gin.Context) {
+		writeAPINotFound(c)
+	})
 }
 
 func corsMiddleware(origins []string) gin.HandlerFunc {

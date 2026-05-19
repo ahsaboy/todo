@@ -67,32 +67,45 @@ make build-darwin    # 交叉编译 macOS (arm64)
 
 ### Docker 部署
 
-单体部署仍使用当前 `Dockerfile`：Docker 会先构建 Vue 前端，复制到 `web/dist`，再由 Go 后端 embed 到同一个镜像中。
+默认只保留单体部署：`Dockerfile` 会先构建 Vue 前端，再由 Go 后端把静态资源 embed 到同一个镜像和二进制里。
 
 ```bash
 # 本地二进制单体构建
 make build
 
-# 单体 Docker 镜像
-docker build -t todo-app:latest .
+# 本地构建单体 Docker 镜像
+make docker-build
 
-# 单体 Compose 启动
-docker compose up --build -d
+# 直接使用已发布的 GHCR 镜像启动
+docker compose up -d
 ```
 
-### 前后端分离部署
+发布镜像地址：
 
-后端纯 API 模式使用 `separate_frontend` 构建标签，不再注册前端静态资源路由：
+```text
+ghcr.io/ahsaboy/todo:latest
+ghcr.io/ahsaboy/todo:vX.Y.Z
+```
+
+如需临时切换 compose 使用的镜像 tag，可覆盖环境变量：
 
 ```bash
-# 本地构建纯 API 后端二进制
-make build-backend
-
-# 构建后端 Docker 镜像
-docker build -f Dockerfile.backend -t todo-backend:latest .
+TODO_IMAGE=ghcr.io/ahsaboy/todo:v1.2.3 docker compose up -d
 ```
 
-前端独立构建时通过 `API_BASE_URL` 指定浏览器访问后端 API 的地址。该值会在 Vite 构建阶段写入前端产物，对应环境变量为 `VITE_API_BASE_URL`。
+`docker-compose.yml` 还支持用环境变量覆盖配置文件中的部分运行参数，且优先级高于 `config.yaml`：
+
+```bash
+PORT=9090 \
+HOST=0.0.0.0 \
+STATIC_FILES=false \
+CORS=https://todo.example.com,https://admin.example.com \
+docker compose up -d
+```
+
+### 独立前端构建
+
+如果需要把前端单独部署到其他静态站点或 CDN，保留一个独立构建命令。它通过 `API_BASE_URL` 指定浏览器访问后端 API 的地址；该值会在 Vite 构建阶段写入前端产物，对应环境变量为 `VITE_API_BASE_URL`。
 
 ```bash
 # 本地构建前端 dist，不复制到 web/dist
@@ -105,13 +118,7 @@ docker build -f frontend/Dockerfile \
   ./frontend
 ```
 
-也可以直接使用分离部署 Compose 示例：
-
-```bash
-docker compose -f docker-compose.separated.yml up --build -d
-```
-
-默认示例中后端监听 `http://localhost:8080`，前端监听 `http://localhost:3000`。如果生产环境前端域名不是同源地址，需要在后端 `config.yaml` 中允许前端来源：
+如果生产环境把独立前端部署到非同源域名，需要在后端 `config.yaml` 中允许前端来源：
 
 ```yaml
 cors:
@@ -134,6 +141,8 @@ todo-server [选项]
   --log-max-days <n>   覆盖日志保留天数
   --log-file-enabled   启用日志文件输出
   --log-file-disabled  禁用日志文件输出
+  --static-files-enabled   启用前端静态文件与 Swagger 路由
+  --static-files-disabled  禁用前端静态文件与 Swagger 路由
   -v, --version        显示版本号
   -h, --help           显示帮助信息
 ```
@@ -267,6 +276,8 @@ server:
 database:
   path: "./data/tasks.db"
 
+static_files: true
+
 reminder:
   enabled: true
   scan_interval_seconds: 30
@@ -296,6 +307,9 @@ logging:
 
 说明：
 
+- `static_files=true` 时，后端会返回 embed 的前端静态文件，并暴露 `/docs/index.html` Swagger 文档。
+- `static_files=false` 时，后端只保留 API / MCP 路由，不再返回前端页面，也不暴露 Swagger。
+- 环境变量 `HOST` / `PORT` / `STATIC_FILES` / `CORS` 的优先级高于 `config.yaml`；CLI 参数仍高于环境变量。
 - 用户必须通过 `/api/v1/user/reminder-configs` 创建并启用自己的通知渠道。
 - `default_templates` 只提供模板参考，不会直接作为发送目标。
 
@@ -420,9 +434,7 @@ TODO/
 │   └── dist/                       # make build 生成并复制的静态文件
 ├── config.yaml                     # 配置文件
 ├── Dockerfile                      # 单体镜像多阶段构建
-├── Dockerfile.backend              # 分离部署纯 API 后端镜像
-├── docker-compose.yml              # 单体容器编排
-├── docker-compose.separated.yml    # 前后端分离容器编排示例
+├── docker-compose.yml              # 默认容器编排（直接使用 ghcr.io 单体镜像）
 └── Makefile                        # 构建命令
 ```
 
@@ -433,14 +445,13 @@ make build          # 编译当前平台（自动生成 Swagger 文档，支持 
 make build-linux    # 交叉编译 Linux amd64
 make build-windows  # 交叉编译 Windows amd64
 make build-darwin   # 交叉编译 macOS arm64
-make build-backend  # 编译当前平台纯 API 后端（-tags separate_frontend）
-make build-separated API_BASE_URL=http://localhost:8080/api/v1  # 纯 API 后端 + 独立前端 dist
+make frontend-build-standalone API_BASE_URL=http://localhost:8080/api/v1  # 仅构建独立前端 dist
 make run            # 编译并运行
 make test           # 运行测试
 make dev            # 本地开发（go run，自动生成 Swagger 文档）
 make swag           # 仅重新生成 Swagger 文档
 make clean          # 清理构建产物和数据库文件
-make docker-build   # 构建 Docker 镜像
+make docker-build   # 构建 Docker 镜像（默认标签 ghcr.io/ahsaboy/todo:latest）
 make docker-up      # Docker Compose 启动
 make docker-down    # Docker Compose 停止
 make docker-logs    # 查看 Docker 日志

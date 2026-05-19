@@ -87,4 +87,50 @@ func TestLoadUsesEmbeddedDefaultWhenConfigFileIsMissing(t *testing.T) {
 	if !cfg.Logging.FileEnabled {
 		t.Fatalf("file enabled = false, want true from embedded default")
 	}
+	if !cfg.StaticFiles {
+		t.Fatalf("static files = false, want true from embedded default")
+	}
+}
+
+func TestLoadPrefersStaticFilesField(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	err := os.WriteFile(path, []byte(`
+static_files: false
+swagger: true
+`), 0o600)
+	if err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	if cfg.StaticFiles {
+		t.Fatalf("static files = true, want false")
+	}
+}
+
+func TestLoadFallsBackToLegacySwaggerField(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	err := os.WriteFile(path, []byte(`
+swagger: false
+`), 0o600)
+	if err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	if cfg.StaticFiles {
+		t.Fatalf("static files = true, want false from legacy swagger field")
+	}
 }
