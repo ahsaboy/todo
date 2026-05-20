@@ -2,15 +2,21 @@
   <div class="profile-page">
     <h2>个人资料</h2>
 
-    <div class="form-section">
-      <h3>基本信息</h3>
-      <ProfileForm :user="user" @submit="handleProfileSubmit" />
-    </div>
+    <Transition name="sk-fade" mode="out-in">
+      <ProfileSkeleton v-if="loading" key="skeleton" />
 
-    <div class="form-section">
-      <h3>修改密码</h3>
-      <PasswordForm @submit="handlePasswordSubmit" />
-    </div>
+      <template v-else key="content">
+        <div class="form-section">
+          <h3>基本信息</h3>
+          <ProfileForm :user="user" @submit="handleProfileSubmit" />
+        </div>
+
+        <div class="form-section">
+          <h3>修改密码</h3>
+          <PasswordForm @submit="handlePasswordSubmit" />
+        </div>
+      </template>
+    </Transition>
 
     <div v-if="message" class="message" :class="messageType">
       {{ message }}
@@ -25,8 +31,10 @@ import { toUser } from '@/entities/user/mapper'
 import type { User, ChangePasswordPayload } from '@/entities/user/model'
 import ProfileForm from '@/features/user/ProfileForm.vue'
 import PasswordForm from '@/features/user/PasswordForm.vue'
+import ProfileSkeleton from '@/shared/ui/ProfileSkeleton.vue'
 
 const user = ref<User | null>(null)
+const loading = ref(true)
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
 
@@ -36,6 +44,8 @@ onMounted(async () => {
     user.value = toUser(response.data)
   } catch {
     showMessage('加载用户信息失败', 'error')
+  } finally {
+    loading.value = false
   }
 })
 

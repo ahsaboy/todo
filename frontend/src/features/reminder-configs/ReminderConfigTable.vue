@@ -1,5 +1,5 @@
 <template>
-  <div class="config-list motion-stagger">
+  <MotionStagger class="config-list">
     <article v-for="config in configs" :key="config.id" class="config-card">
       <div class="config-card-header">
         <div class="config-card-heading">
@@ -38,7 +38,7 @@
         <button class="action-btn action-btn-danger" type="button" @click="$emit('delete', config.id)"><Trash2 :size="14" /> 删除</button>
       </div>
     </article>
-  </div>
+  </MotionStagger>
 
   <div class="config-table-wrap">
     <table class="config-table">
@@ -53,7 +53,7 @@
           <th>操作</th>
         </tr>
       </thead>
-      <tbody class="motion-stagger">
+      <MotionStagger tag="tbody">
         <tr v-for="config in configs" :key="config.id">
           <td class="name-cell">{{ config.name }}</td>
           <td>{{ formatChannelType(config.channelType) }}</td>
@@ -72,7 +72,7 @@
             </div>
           </td>
         </tr>
-      </tbody>
+      </MotionStagger>
     </table>
   </div>
 </template>
@@ -80,6 +80,7 @@
 <script setup lang="ts">
 import type { ReminderConfig } from '@/entities/reminder-config/model'
 import { Pencil, Trash2 } from 'lucide-vue-next'
+import MotionStagger from '@/shared/ui/MotionStagger.vue'
 
 defineProps<{
   configs: ReminderConfig[]
@@ -140,7 +141,7 @@ function formatRetry(maxRetries: number, retryDelaySeconds: number): string {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   min-width: 0;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .config-card:hover {

@@ -37,9 +37,9 @@ function formatDate(dateStr: string): string {
   border-radius: 6px;
   cursor: pointer;
   transition:
-    box-shadow 200ms,
-    border-color 200ms,
-    transform 200ms;
+    box-shadow var(--motion-duration-base),
+    border-color var(--motion-duration-base),
+    transform var(--motion-duration-base);
 }
 
 .board-card:hover {

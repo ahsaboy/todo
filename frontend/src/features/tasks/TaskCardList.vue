@@ -1,5 +1,5 @@
 <template>
-  <div class="task-card-list motion-stagger">
+  <TransitionGroup tag="div" name="list-move" class="task-card-list">
     <div
       v-for="task in tasks"
       :key="task.id"
@@ -29,7 +29,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </TransitionGroup>
 </template>
 
 <script setup lang="ts">
@@ -73,6 +73,7 @@ function formatDue(dateStr: string): string {
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  position: relative;
 }
 
 .task-card {
@@ -85,7 +86,7 @@ function formatDue(dateStr: string): string {
   border-radius: 8px;
   min-width: 0;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard), border-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .task-card:hover {

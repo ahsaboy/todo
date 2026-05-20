@@ -472,7 +472,7 @@ async function handleSubmit() {
   font-size: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
   cursor: pointer;
-  transition: background-color 150ms, border-color 150ms, color 150ms, transform 150ms;
+  transition: background-color var(--motion-duration-fast), border-color var(--motion-duration-fast), color var(--motion-duration-fast), transform var(--motion-duration-fast);
 }
 
 .template-var-clickable:hover {

@@ -1,5 +1,5 @@
 <template>
-  <div class="task-grouped-list motion-stagger">
+  <MotionStagger class="task-grouped-list">
     <div v-for="group in groups" :key="group.label" class="task-group">
       <div class="group-header" @click="toggleGroup(group.label)">
         <span class="group-arrow" :class="{ collapsed: collapsedGroups.has(group.label) }">▼</span>
@@ -37,13 +37,14 @@
         </div>
       </div>
     </div>
-  </div>
+  </MotionStagger>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
+import MotionStagger from '@/shared/ui/MotionStagger.vue'
 
 interface TaskGroup {
   label: string
@@ -109,7 +110,8 @@ function formatDate(dateStr: string): string {
 
 .group-arrow {
   font-size: 12px;
-  transition: transform 200ms;
+  transition: transform var(--motion-duration-base);
+  transform-origin: center center;
 }
 
 .group-arrow.collapsed {

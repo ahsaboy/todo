@@ -99,7 +99,7 @@ select {
   border-radius: 50%;
   background: transparent;
   cursor: pointer;
-  transition: all 200ms ease;
+  transition: all var(--motion-duration-base) var(--motion-ease-standard);
 }
 
 .checkbox-circle:hover {
@@ -123,7 +123,7 @@ select {
   border-top: none;
   border-left: none;
   transform: rotate(45deg);
-  animation: checkmark 150ms ease-in-out;
+  animation: checkmark var(--motion-duration-fast) ease-in-out;
 }
 
 @keyframes checkmark {

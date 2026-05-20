@@ -5,19 +5,23 @@
       <button class="btn-primary" type="button" @click="openCreate">新增配置</button>
     </div>
 
-    <div v-if="loading" class="page-loading">加载中...</div>
+    <Transition name="sk-fade" mode="out-in">
+      <TableSkeleton v-if="loading" key="skeleton" :columns="7" :col-widths="['120px', '90px', '60px', '80px', '100px', '200px', '100px']" />
 
-    <div v-else-if="error" class="page-error">
-      <p>{{ error }}</p>
-      <button type="button" @click="fetchConfigs">重试</button>
-    </div>
+      <template v-else key="content">
+        <div v-if="error" class="page-error">
+          <p>{{ error }}</p>
+          <button type="button" @click="fetchConfigs">重试</button>
+        </div>
 
-    <div v-else-if="configs.length === 0" class="page-empty">
-      <p>暂无提醒配置</p>
-      <button class="btn-primary" type="button" @click="openCreate">创建第一个配置</button>
-    </div>
+        <div v-else-if="configs.length === 0" class="page-empty">
+          <p>暂无提醒配置</p>
+          <button class="btn-primary" type="button" @click="openCreate">创建第一个配置</button>
+        </div>
 
-    <ReminderConfigTable v-else :configs="configs" @edit="editConfig" @delete="handleDelete" />
+        <ReminderConfigTable v-else :configs="configs" @edit="editConfig" @delete="handleDelete" />
+      </template>
+    </Transition>
 
     <!-- 抽屉 -->
     <TaskDetailDrawer
@@ -49,6 +53,7 @@ import type {
 } from '@/entities/reminder-config/model'
 import ReminderConfigTable from '@/features/reminder-configs/ReminderConfigTable.vue'
 import ReminderConfigForm from '@/features/reminder-configs/ReminderConfigForm.vue'
+import TableSkeleton from '@/shared/ui/TableSkeleton.vue'
 import TaskDetailDrawer from '@/features/tasks/TaskDetailDrawer.vue'
 
 const configs = ref<ReminderConfig[]>([])

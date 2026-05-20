@@ -82,18 +82,22 @@
       </div>
     </details>
 
-    <div v-if="loading" class="page-loading">加载中...</div>
+    <Transition name="sk-fade" mode="out-in">
+      <TableSkeleton v-if="loading" key="skeleton" :columns="4" :col-widths="['140px', '120px', '140px', '100px']" />
 
-    <div v-else-if="error" class="page-error">
-      <p>{{ error }}</p>
-      <button type="button" @click="fetchKeys">重试</button>
-    </div>
+      <template v-else key="content">
+        <div v-if="error" class="page-error">
+          <p>{{ error }}</p>
+          <button type="button" @click="fetchKeys">重试</button>
+        </div>
 
-    <div v-else-if="keys.length === 0" class="page-empty">
-      <p>暂无 API Key</p>
-    </div>
+        <div v-else-if="keys.length === 0" class="page-empty">
+          <p>暂无 API Key</p>
+        </div>
 
-    <ApiKeyTable v-else :keys="keys" @revoke="handleRevoke" />
+        <ApiKeyTable v-else :keys="keys" @revoke="handleRevoke" />
+      </template>
+    </Transition>
 
     <ApiKeyCreateDialog v-model:visible="showCreate" @created="fetchKeys" />
   </div>
@@ -106,6 +110,7 @@ import { toApiKeyInfo } from '@/entities/api-key/mapper'
 import type { ApiKeyInfo } from '@/entities/api-key/model'
 import ApiKeyTable from '@/features/api-keys/ApiKeyTable.vue'
 import ApiKeyCreateDialog from '@/features/api-keys/ApiKeyCreateDialog.vue'
+import TableSkeleton from '@/shared/ui/TableSkeleton.vue'
 
 const keys = ref<ApiKeyInfo[]>([])
 const loading = ref(false)
@@ -231,7 +236,7 @@ async function copyConfig() {
   display: inline-block;
   margin-right: 8px;
   color: var(--color-text-muted);
-  transition: transform 0.15s ease;
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .mcp-card[open] .mcp-summary-title::before {
@@ -343,7 +348,7 @@ async function copyConfig() {
   color: var(--color-text);
   font-size: 12px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .mcp-copy-btn:hover {

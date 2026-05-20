@@ -14,48 +14,52 @@
       <TaskFilters :filters="filters" @change="setFilters" />
     </div>
 
-    <div v-if="loading" class="page-loading">加载中...</div>
+    <Transition name="sk-fade" mode="out-in">
+      <TaskListSkeleton v-if="loading" key="skeleton" />
 
-    <div v-else-if="error" class="page-error">
-      <p>{{ error }}</p>
-      <button @click="fetchTasks">重试</button>
-    </div>
+      <template v-else key="content">
+        <div v-if="error" class="page-error">
+          <p>{{ error }}</p>
+          <button @click="fetchTasks">重试</button>
+        </div>
 
-    <div v-else-if="tasks.length === 0 && filters.search" class="page-empty search-empty">
-      <p>未找到匹配的任务</p>
-      <button @click="setFilters({ search: '' })">清除搜索</button>
-    </div>
+        <div v-else-if="tasks.length === 0 && filters.search" class="page-empty search-empty">
+          <p>未找到匹配的任务</p>
+          <button @click="setFilters({ search: '' })">清除搜索</button>
+        </div>
 
-    <div v-else-if="tasks.length === 0" class="page-empty">
-      <p>暂无任务</p>
-      <button class="btn-primary" @click="openCreate">创建第一个任务</button>
-    </div>
+        <div v-else-if="tasks.length === 0" class="page-empty">
+          <p>暂无任务</p>
+          <button class="btn-primary" @click="openCreate">创建第一个任务</button>
+        </div>
 
-    <template v-else>
-      <!-- 移动端卡片列表 -->
-      <TaskCardList
-        v-if="isMobile"
-        :tasks="tasks"
-        @toggle="toggleComplete"
-        @open="openTask"
-      />
+        <template v-else>
+          <!-- 移动端卡片列表 -->
+          <TaskCardList
+            v-if="isMobile"
+            :tasks="tasks"
+            @toggle="toggleComplete"
+            @open="openTask"
+          />
 
-      <!-- 桌面端表格 -->
-      <TaskTable
-        v-else
-        :tasks="tasks"
-        @toggle="toggleComplete"
-        @open="openTask"
-      />
+          <!-- 桌面端表格 -->
+          <TaskTable
+            v-else
+            :tasks="tasks"
+            @toggle="toggleComplete"
+            @open="openTask"
+          />
 
-      <div class="pagination">
-        <button :disabled="meta.page <= 1" @click="setPage(meta.page - 1)">上一页</button>
-        <span>{{ meta.page }} / {{ meta.total_pages }}</span>
-        <button :disabled="meta.page >= meta.total_pages" @click="setPage(meta.page + 1)">
-          下一页
-        </button>
-      </div>
-    </template>
+          <div class="pagination">
+            <button :disabled="meta.page <= 1" @click="setPage(meta.page - 1)">上一页</button>
+            <span>{{ meta.page }} / {{ meta.total_pages }}</span>
+            <button :disabled="meta.page >= meta.total_pages" @click="setPage(meta.page + 1)">
+              下一页
+            </button>
+          </div>
+        </template>
+      </template>
+    </Transition>
 
     <!-- 移动端浮动按钮 -->
     <button v-if="isMobile" class="fab" type="button" aria-label="新建任务" @click="openCreate"><Plus :size="24" /></button>
@@ -77,6 +81,7 @@ import TaskCardList from '@/features/tasks/TaskCardList.vue'
 import TaskFilters from '@/features/tasks/TaskFilters.vue'
 import MobileFilters from '@/features/tasks/MobileFilters.vue'
 import TaskDetailDrawer from '@/features/tasks/TaskDetailDrawer.vue'
+import TaskListSkeleton from '@/shared/ui/TaskListSkeleton.vue'
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@/entities/task/model'
 
 const {

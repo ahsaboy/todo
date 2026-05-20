@@ -122,30 +122,32 @@ async function handleLogout() {
         >
           {{ userInitial }}
         </button>
-        <div
-          v-show="isUserMenuOpen"
-          class="user-dropdown"
-          role="menu"
-        >
-          <router-link
-            class="user-menu-item"
-            to="/profile"
-            role="menuitem"
-            @click="closeUserMenu"
+        <Transition name="dropdown">
+          <div
+            v-if="isUserMenuOpen"
+            class="user-dropdown"
+            role="menu"
           >
-            <UserCircle :size="16" />
-            <span>个人资料</span>
-          </router-link>
-          <button
-            class="user-menu-item danger"
-            type="button"
-            role="menuitem"
-            @click="handleLogout"
-          >
-            <LogOut :size="16" />
-            <span>退出登录</span>
-          </button>
-        </div>
+            <router-link
+              class="user-menu-item"
+              to="/profile"
+              role="menuitem"
+              @click="closeUserMenu"
+            >
+              <UserCircle :size="16" />
+              <span>个人资料</span>
+            </router-link>
+            <button
+              class="user-menu-item danger"
+              type="button"
+              role="menuitem"
+              @click="handleLogout"
+            >
+              <LogOut :size="16" />
+              <span>退出登录</span>
+            </button>
+          </div>
+        </Transition>
       </div>
     </div>
   </header>
@@ -161,10 +163,10 @@ async function handleLogout() {
   background: var(--color-surface-muted);
   color: var(--color-text-muted);
   transition:
-    border-color 150ms,
-    background-color 150ms,
-    box-shadow 150ms,
-    color 150ms;
+    border-color var(--motion-duration-fast),
+    background-color var(--motion-duration-fast),
+    box-shadow var(--motion-duration-fast),
+    color var(--motion-duration-fast);
 }
 
 .theme-toggle-btn:hover,
@@ -185,9 +187,9 @@ async function handleLogout() {
 
 .user-btn {
   transition:
-    border-color 150ms,
-    background-color 150ms,
-    box-shadow 150ms;
+    border-color var(--motion-duration-fast),
+    background-color var(--motion-duration-fast),
+    box-shadow var(--motion-duration-fast);
 }
 
 .user-btn:hover,
@@ -210,6 +212,7 @@ async function handleLogout() {
   background: var(--color-surface);
   box-shadow: var(--shadow-panel);
   z-index: 120;
+  transform-origin: top right;
 }
 
 .user-dropdown::before {
@@ -258,5 +261,19 @@ async function handleLogout() {
   .user-dropdown {
     right: -4px;
   }
+}
+
+/* 下拉菜单动画 */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 </style>

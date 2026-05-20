@@ -2,18 +2,22 @@
   <div class="page">
     <h2>看板</h2>
 
-    <div v-if="loading" class="page-loading">加载中...</div>
+    <Transition name="sk-fade" mode="out-in">
+      <TaskBoardSkeleton v-if="loading" key="skeleton" />
 
-    <div v-else-if="error" class="page-error">
-      <p>{{ error }}</p>
-      <button @click="fetchTasks">重试</button>
-    </div>
+      <template v-else key="content">
+        <div v-if="error" class="page-error">
+          <p>{{ error }}</p>
+          <button @click="fetchTasks">重试</button>
+        </div>
 
-    <div v-else-if="tasks.length === 0" class="page-empty">
-      <p>暂无任务</p>
-    </div>
+        <div v-else-if="tasks.length === 0" class="page-empty">
+          <p>暂无任务</p>
+        </div>
 
-    <TaskBoard v-else :tasks="tasks" @cardClick="openTask" />
+        <TaskBoard v-else :tasks="tasks" @cardClick="openTask" />
+      </template>
+    </Transition>
   </div>
 </template>
 
@@ -21,6 +25,7 @@
 import { onMounted } from 'vue'
 import { useTasks } from '@/features/tasks/useTasks'
 import TaskBoard from '@/features/tasks/TaskBoard.vue'
+import TaskBoardSkeleton from '@/shared/ui/TaskBoardSkeleton.vue'
 
 const { tasks, loading, error, fetchTasks } = useTasks()
 

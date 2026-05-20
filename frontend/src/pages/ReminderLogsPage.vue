@@ -5,81 +5,85 @@
       <button class="btn-secondary" type="button" @click="fetchLogs"><RefreshCw :size="14" /> 刷新</button>
     </div>
 
-    <div v-if="loading" class="page-loading">加载中...</div>
+    <Transition name="sk-fade" mode="out-in">
+      <TableSkeleton v-if="loading" key="skeleton" :columns="6" :col-widths="['140px', '120px', '100px', '60px', '60px', '200px']" />
 
-    <div v-else-if="error" class="page-error">
-      <p>{{ error }}</p>
-      <button type="button" @click="fetchLogs">重试</button>
-    </div>
+      <template v-else key="content">
+        <div v-if="error" class="page-error">
+          <p>{{ error }}</p>
+          <button type="button" @click="fetchLogs">重试</button>
+        </div>
 
-    <div v-else-if="logs.length === 0" class="page-empty">
-      <p>暂无提醒日志</p>
-    </div>
+        <div v-else-if="logs.length === 0" class="page-empty">
+          <p>暂无提醒日志</p>
+        </div>
 
-    <template v-else>
-      <div class="log-card-list motion-stagger">
-        <article v-for="item in logs" :key="item.id" class="log-card">
-          <div class="log-card-header">
-            <div class="log-card-heading">
-              <span class="status-tag" :class="item.status">
-                {{ item.status === 'success' ? '成功' : '失败' }}
-              </span>
-              <div class="log-card-title">{{ item.taskTitle || `任务 #${item.taskId}` }}</div>
-            </div>
-            <time class="log-card-time">{{ formatDate(item.createdAt) }}</time>
+        <template v-else>
+          <MotionStagger class="log-card-list">
+            <article v-for="item in logs" :key="item.id" class="log-card">
+              <div class="log-card-header">
+                <div class="log-card-heading">
+                  <span class="status-tag" :class="item.status">
+                    {{ item.status === 'success' ? '成功' : '失败' }}
+                  </span>
+                  <div class="log-card-title">{{ item.taskTitle || `任务 #${item.taskId}` }}</div>
+                </div>
+                <time class="log-card-time">{{ formatDate(item.createdAt) }}</time>
+              </div>
+
+              <dl class="log-meta-list">
+                <div class="log-meta-row">
+                  <dt>渠道</dt>
+                  <dd>{{ item.channelName }}</dd>
+                </div>
+                <div class="log-meta-row">
+                  <dt>类型</dt>
+                  <dd>{{ item.channelType }}</dd>
+                </div>
+                <div class="log-meta-row">
+                  <dt>尝试</dt>
+                  <dd>{{ item.attempts }}</dd>
+                </div>
+              </dl>
+
+              <div v-if="item.errorMessage" class="log-card-error">
+                <div class="log-card-error-label">错误信息</div>
+                <p>{{ item.errorMessage }}</p>
+              </div>
+            </article>
+          </MotionStagger>
+
+          <div class="log-table-wrap">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>任务</th>
+                  <th>渠道</th>
+                  <th>状态</th>
+                  <th>尝试</th>
+                  <th>错误</th>
+                </tr>
+              </thead>
+              <MotionStagger tag="tbody">
+                <tr v-for="item in logs" :key="item.id">
+                  <td>{{ formatDate(item.createdAt) }}</td>
+                  <td class="task-cell">{{ item.taskTitle || `任务 #${item.taskId}` }}</td>
+                  <td>{{ item.channelName }}</td>
+                  <td>
+                    <span class="status-tag" :class="item.status">
+                      {{ item.status === 'success' ? '成功' : '失败' }}
+                    </span>
+                  </td>
+                  <td>{{ item.attempts }}</td>
+                  <td class="error-cell">{{ item.errorMessage || '-' }}</td>
+                </tr>
+              </MotionStagger>
+            </table>
           </div>
-
-          <dl class="log-meta-list">
-            <div class="log-meta-row">
-              <dt>渠道</dt>
-              <dd>{{ item.channelName }}</dd>
-            </div>
-            <div class="log-meta-row">
-              <dt>类型</dt>
-              <dd>{{ item.channelType }}</dd>
-            </div>
-            <div class="log-meta-row">
-              <dt>尝试</dt>
-              <dd>{{ item.attempts }}</dd>
-            </div>
-          </dl>
-
-          <div v-if="item.errorMessage" class="log-card-error">
-            <div class="log-card-error-label">错误信息</div>
-            <p>{{ item.errorMessage }}</p>
-          </div>
-        </article>
-      </div>
-
-      <div class="log-table-wrap">
-        <table class="log-table">
-          <thead>
-            <tr>
-              <th>时间</th>
-              <th>任务</th>
-              <th>渠道</th>
-              <th>状态</th>
-              <th>尝试</th>
-              <th>错误</th>
-            </tr>
-          </thead>
-          <tbody class="motion-stagger">
-            <tr v-for="item in logs" :key="item.id">
-              <td>{{ formatDate(item.createdAt) }}</td>
-              <td class="task-cell">{{ item.taskTitle || `任务 #${item.taskId}` }}</td>
-              <td>{{ item.channelName }}</td>
-              <td>
-                <span class="status-tag" :class="item.status">
-                  {{ item.status === 'success' ? '成功' : '失败' }}
-                </span>
-              </td>
-              <td>{{ item.attempts }}</td>
-              <td class="error-cell">{{ item.errorMessage || '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </template>
+        </template>
+      </template>
+    </Transition>
 
     <div v-if="meta.total_pages > 1" class="pager">
       <button type="button" :disabled="page <= 1" @click="changePage(page - 1)">上一页</button>
@@ -94,6 +98,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RefreshCw } from 'lucide-vue-next'
+import TableSkeleton from '@/shared/ui/TableSkeleton.vue'
+import MotionStagger from '@/shared/ui/MotionStagger.vue'
 import { getReminderLogs } from '@/entities/reminder-config/api'
 import { toReminderLog } from '@/entities/reminder-config/mapper'
 import type { ReminderLog } from '@/entities/reminder-config/model'
@@ -179,7 +185,7 @@ function formatDate(value: string) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .log-card:hover {

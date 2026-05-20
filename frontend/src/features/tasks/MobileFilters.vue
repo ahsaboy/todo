@@ -24,9 +24,9 @@
           name="mobile_task_filter_priority"
         >
           <option :value="undefined">全部</option>
-          <option :value="3">高</option>
+          <option :value="1">高</option>
           <option :value="2">中</option>
-          <option :value="1">低</option>
+          <option :value="3">低</option>
         </select>
       </div>
 

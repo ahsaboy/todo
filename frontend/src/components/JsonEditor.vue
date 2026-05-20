@@ -402,7 +402,7 @@ defineExpose({ textareaRef, format })
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
-  transition: background-color 150ms, border-color 150ms, color 150ms;
+  transition: background-color var(--motion-duration-fast), border-color var(--motion-duration-fast), color var(--motion-duration-fast);
 }
 
 .btn-format:hover {
@@ -429,7 +429,7 @@ defineExpose({ textareaRef, format })
   font-family: var(--json-editor-font-family);
   font-size: var(--json-editor-font-size);
   line-height: var(--json-editor-line-height);
-  transition: border-color 150ms, box-shadow 150ms, background-color 150ms;
+  transition: border-color var(--motion-duration-fast), box-shadow var(--motion-duration-fast), background-color var(--motion-duration-fast);
 }
 
 .json-editor:focus-within .json-editor-container {
@@ -466,7 +466,7 @@ defineExpose({ textareaRef, format })
   background: transparent;
   color: transparent;
   opacity: 1;
-  transition: opacity 120ms ease;
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .json-highlight-content {

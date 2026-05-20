@@ -96,7 +96,7 @@ function formatDate(dateStr: string): string {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   min-width: 0;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .key-card:hover {

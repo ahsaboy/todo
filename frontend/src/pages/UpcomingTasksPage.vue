@@ -2,18 +2,22 @@
   <div class="page">
     <h2>即将到期</h2>
 
-    <div v-if="loading" class="page-loading">加载中...</div>
+    <Transition name="sk-fade" mode="out-in">
+      <TaskGroupedSkeleton v-if="loading" key="skeleton" />
 
-    <div v-else-if="error" class="page-error">
-      <p>{{ error }}</p>
-      <button @click="fetchTasks">重试</button>
-    </div>
+      <template v-else key="content">
+        <div v-if="error" class="page-error">
+          <p>{{ error }}</p>
+          <button @click="fetchTasks">重试</button>
+        </div>
 
-    <div v-else-if="tasks.length === 0" class="page-empty">
-      <p>暂无即将到期的任务</p>
-    </div>
+        <div v-else-if="tasks.length === 0" class="page-empty">
+          <p>暂无即将到期的任务</p>
+        </div>
 
-    <TaskGroupedList v-else :groups="upcomingGroups" @toggle="toggleComplete" />
+        <TaskGroupedList v-else :groups="upcomingGroups" @toggle="toggleComplete" />
+      </template>
+    </Transition>
   </div>
 </template>
 
@@ -21,6 +25,7 @@
 import { computed, onMounted } from 'vue'
 import { useTasks } from '@/features/tasks/useTasks'
 import TaskGroupedList from '@/features/tasks/TaskGroupedList.vue'
+import TaskGroupedSkeleton from '@/shared/ui/TaskGroupedSkeleton.vue'
 import type { Task } from '@/entities/task/model'
 
 const { tasks, loading, error, fetchTasks, toggleComplete } = useTasks()

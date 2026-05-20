@@ -6,7 +6,7 @@
       <span class="column-count">{{ tasks.length }}</span>
     </div>
 
-    <div v-if="!collapsed" class="column-cards motion-stagger">
+    <TransitionGroup v-if="!collapsed" tag="div" name="list-move" class="column-cards">
       <TaskBoardCard
         v-for="task in tasks"
         :key="task.id"
@@ -15,7 +15,7 @@
       />
 
       <div v-if="tasks.length === 0" class="column-empty">暂无任务</div>
-    </div>
+    </TransitionGroup>
   </div>
 </template>
 
@@ -56,7 +56,8 @@ const collapsed = ref(false)
 
 .column-arrow {
   font-size: 12px;
-  transition: transform 200ms;
+  transition: transform var(--motion-duration-base);
+  transform-origin: center center;
 }
 
 .column-arrow.collapsed {
@@ -81,6 +82,7 @@ const collapsed = ref(false)
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+  position: relative;
 }
 
 .column-empty {

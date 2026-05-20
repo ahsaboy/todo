@@ -11,8 +11,8 @@
   min-width: 0;
 }
 
-.route-page-stage {
-  min-height: 100%;
+.route-shell-enter-active {
+  will-change: opacity, transform;
 }
 
 .route-shell-enter-active,
@@ -21,7 +21,6 @@
   transition:
     opacity var(--motion-duration-base) var(--motion-ease-standard),
     transform var(--motion-duration-base) var(--motion-ease-emphasized);
-  will-change: opacity, transform;
 }
 
 .route-shell-enter-from,
@@ -45,253 +44,14 @@
   transform: translateY(var(--motion-distance-xl)) scale(0.978);
 }
 
-.route-page-enter-active,
-.route-page-leave-active,
-.route-page-appear-active,
-.route-page-board-enter-active,
-.route-page-board-leave-active,
-.route-page-board-appear-active {
-  width: 100%;
-  overflow: clip;
-  transition:
-    opacity var(--motion-duration-base) var(--motion-ease-standard),
-    transform var(--motion-duration-base) var(--motion-ease-emphasized);
-  will-change: opacity, transform;
-}
-
-.route-page-leave-active,
-.route-page-board-leave-active {
-  position: absolute;
-  inset: 0;
-}
-
-.route-page-enter-from,
-.route-page-appear-from {
-  opacity: 0;
-  transform: translateY(var(--motion-distance-lg)) scale(0.988);
-}
-
-.route-page-board-enter-from,
-.route-page-board-appear-from {
-  opacity: 0;
-  transform: translateX(18px) translateY(var(--motion-distance-sm)) scale(0.992);
-}
-
-.route-page-leave-to {
-  opacity: 0;
-  transform: translateY(calc(var(--motion-distance-sm) * -1)) scale(0.995);
-}
-
-.route-page-board-leave-to {
-  opacity: 0;
-  transform: translateX(-14px) scale(0.995);
-}
-
-.route-page-enter-active .motion-stagger > *,
-.route-page-appear-active .motion-stagger > *,
-.route-page-board-enter-active .motion-stagger > *,
-.route-page-board-appear-active .motion-stagger > * {
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    opacity var(--motion-duration-base) var(--motion-ease-emphasized),
-    transform var(--motion-duration-base) var(--motion-ease-emphasized);
-  transition-delay: calc(120ms + (var(--motion-stagger-step) * var(--motion-index, 0)));
-  will-change: opacity, transform;
-}
-
-.route-page-enter-from .motion-stagger > *,
-.route-page-appear-from .motion-stagger > *,
-.route-page-board-enter-from .motion-stagger > *,
-.route-page-board-appear-from .motion-stagger > * {
-  opacity: 0;
-  transform: translateY(var(--motion-distance-sm));
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(1) {
-  --motion-index: 0;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(2) {
-  --motion-index: 1;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(3) {
-  --motion-index: 2;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(4) {
-  --motion-index: 3;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(5) {
-  --motion-index: 4;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(6) {
-  --motion-index: 5;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(7) {
-  --motion-index: 6;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(8) {
-  --motion-index: 7;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(9) {
-  --motion-index: 8;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(10) {
-  --motion-index: 9;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(11) {
-  --motion-index: 10;
-}
-
-:where(
-    .route-page-enter-active,
-    .route-page-enter-from,
-    .route-page-appear-active,
-    .route-page-appear-from,
-    .route-page-board-enter-active,
-    .route-page-board-enter-from,
-    .route-page-board-appear-active,
-    .route-page-board-appear-from,
-    .motion-stagger
-  )
-  > :nth-child(12) {
-  --motion-index: 11;
-}
-
 .overlay-motion-enter-active,
 .overlay-motion-leave-active,
 .overlay-motion-appear-active {
   transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.overlay-motion-enter-active .motion-panel {
+  will-change: opacity, transform;
 }
 
 .overlay-motion-enter-active .motion-panel,
@@ -300,7 +60,6 @@
   transition:
     opacity var(--motion-duration-base) var(--motion-ease-standard),
     transform var(--motion-duration-base) var(--motion-ease-emphasized);
-  will-change: opacity, transform;
 }
 
 .overlay-motion-enter-from,
@@ -332,6 +91,40 @@
 
 .motion-panel--sidebar {
   --motion-panel-enter-from: translateX(calc(var(--motion-distance-xl) * -1));
+}
+
+/* 骨架屏过渡 */
+.sk-fade-enter-active,
+.sk-fade-leave-active {
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.sk-fade-enter-from,
+.sk-fade-leave-to {
+  opacity: 0;
+}
+
+/* 列表条目动画 */
+.list-move-enter-active,
+.list-move-leave-active {
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-standard),
+    transform var(--motion-duration-base) var(--motion-ease-emphasized);
+}
+
+.list-move-enter-from {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-sm));
+}
+
+.list-move-leave-to {
+  opacity: 0;
+  transform: translateX(var(--motion-distance-sm));
+}
+
+.list-move-leave-active {
+  position: absolute;
+  width: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {

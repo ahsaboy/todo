@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { resolvePageTransitionName } from '@/shared/motion/routes'
 import DesktopSidebar from './DesktopSidebar.vue'
 import AppTopbar from './AppTopbar.vue'
 import AppFooter from './AppFooter.vue'
@@ -124,19 +123,8 @@ onBeforeUnmount(() => {
       />
       <div class="page-content">
         <div class="route-page-stage">
-          <router-view v-slot="{ Component, route: currentRoute }">
-            <Transition
-              :name="resolvePageTransitionName(currentRoute)"
-              mode="out-in"
-              appear
-            >
-              <div
-                :key="currentRoute.fullPath"
-                class="route-page-view"
-              >
-                <component :is="Component" />
-              </div>
-            </Transition>
+          <router-view v-slot="{ Component }">
+            <component :is="Component" />
           </router-view>
         </div>
       </div>
