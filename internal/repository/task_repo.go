@@ -334,6 +334,10 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]mo
 			if remindTime.After(nowUTC) {
 				continue
 			}
+			// 提醒时间已过超过 10 分钟，视为过期，跳过
+			if nowUTC.Sub(remindTime) > 10*time.Minute {
+				continue
+			}
 		}
 		tasks = append(tasks, t)
 	}

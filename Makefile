@@ -1,4 +1,4 @@
-.PHONY: help frontend-install frontend-build frontend-build-standalone frontend-clean check-swag fix-swagger-docs swag build build-linux build-windows build-darwin run test dev clean docker-build docker-up docker-down docker-logs
+.PHONY: help frontend-install frontend-build frontend-build-standalone frontend-clean check-swag swag build build-linux build-windows build-darwin run test dev clean docker-build docker-up docker-down docker-logs
 
 GOOS   ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
@@ -114,12 +114,8 @@ else
 	swag --version
 endif
 
-fix-swagger-docs:
-	go run ./scripts/fix_swagger_docs.go
-
 swag: check-swag
 	swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
-	$(MAKE) fix-swagger-docs
 
 # 编译当前平台
 build: frontend-build swag
