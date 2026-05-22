@@ -169,7 +169,7 @@ func main() {
 	apiKeyRepo := repository.NewAPIKeyRepo(db)
 	reminderConfigRepo := repository.NewReminderConfigRepo(db)
 	reminderLogRepo := repository.NewReminderLogRepo(db)
-	taskRepo := repository.NewTaskRepo(db)
+	taskRepo := repository.NewTaskRepo(db, time.Duration(cfg.Reminder.GracePeriodMinutes)*time.Minute)
 
 	authSvc := service.NewAuthService(userRepo, apiKeyRepo)
 	reminderConfigSvc := service.NewReminderConfigService(reminderConfigRepo)
@@ -177,7 +177,8 @@ func main() {
 
 	authHandler := handlers.NewAuthHandler(authSvc)
 	reminderConfigHandler := handlers.NewReminderConfigHandler(reminderConfigSvc)
-	reminderLogHandler := handlers.NewReminderLogHandler(reminderLogRepo)
+	reminderLogSvc := service.NewReminderLogService(reminderLogRepo)
+	reminderLogHandler := handlers.NewReminderLogHandler(reminderLogSvc)
 	taskHandler := handlers.NewTaskHandler(taskSvc)
 
 	// 初始化提醒服务
@@ -200,6 +201,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.New()
+	r.Use(middleware.RequestID())
 	r.Use(logging.AccessLogger(logger))
 	r.Use(logging.Recovery(logger))
 
@@ -214,6 +216,9 @@ func main() {
 
 	// 公开路由（无需认证）
 	auth := r.Group("/api/v1/auth")
+	if cfg.RateLimit.Enabled {
+		auth.Use(middleware.IPRateLimit(cfg.RateLimit.AuthReqsPerSecond, cfg.RateLimit.AuthBurst))
+	}
 	{
 		auth.POST("/register", authHandler.Register)
 		auth.POST("/login", authHandler.Login)
@@ -221,6 +226,9 @@ func main() {
 
 	// 需认证路由
 	api := r.Group("/api/v1", middleware.AuthMiddleware(apiKeyRepo))
+	if cfg.RateLimit.Enabled {
+		api.Use(middleware.IPRateLimit(cfg.RateLimit.ReqsPerSecond, cfg.RateLimit.Burst))
+	}
 	{
 		// 任务管理
 		api.POST("/tasks", taskHandler.Create)

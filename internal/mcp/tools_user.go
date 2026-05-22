@@ -13,7 +13,7 @@ import (
 
 // registerUserTools 把用户信息工具注册到 MCP server。
 // 当前仅暴露 get_user_profile;其他写操作(改密码等)留在 REST API,不通过 MCP 工具开放。
-func registerUserTools(s *mcpsrv.MCPServer, svc *service.AuthService) {
+func registerUserTools(s *mcpsrv.MCPServer, svc service.AuthServiceInterface) {
 	if s == nil || svc == nil {
 		return
 	}
@@ -26,7 +26,7 @@ func buildGetUserProfileTool() mcpgo.Tool {
 	)
 }
 
-func getUserProfileHandler(svc *service.AuthService) mcpsrv.ToolHandlerFunc {
+func getUserProfileHandler(svc service.AuthServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {

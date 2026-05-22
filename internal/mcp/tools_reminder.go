@@ -14,7 +14,7 @@ import (
 
 // registerReminderTools 把 5 个提醒配置工具注册到 MCP server。
 // 所有 handler 都通过 service 层访问数据,按 ctx 中的 user_id 隔离。
-func registerReminderTools(s *mcpsrv.MCPServer, svc *service.ReminderConfigService) {
+func registerReminderTools(s *mcpsrv.MCPServer, svc service.ReminderConfigServiceInterface) {
 	if s == nil || svc == nil {
 		return
 	}
@@ -131,7 +131,7 @@ func requireRemindersEnabled(ctx context.Context) *mcpgo.CallToolResult {
 
 // ---------- handler 实现 ----------
 
-func listReminderConfigsHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
+func listReminderConfigsHandler(svc service.ReminderConfigServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		if blocked := requireRemindersEnabled(ctx); blocked != nil {
 			return blocked, nil
@@ -156,7 +156,7 @@ func listReminderConfigsHandler(svc *service.ReminderConfigService) mcpsrv.ToolH
 	}
 }
 
-func createReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
+func createReminderConfigHandler(svc service.ReminderConfigServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		if blocked := requireRemindersEnabled(ctx); blocked != nil {
 			return blocked, nil
@@ -209,7 +209,7 @@ func createReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.Tool
 	}
 }
 
-func getReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
+func getReminderConfigHandler(svc service.ReminderConfigServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		if blocked := requireRemindersEnabled(ctx); blocked != nil {
 			return blocked, nil
@@ -230,7 +230,7 @@ func getReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHan
 	}
 }
 
-func updateReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
+func updateReminderConfigHandler(svc service.ReminderConfigServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		if blocked := requireRemindersEnabled(ctx); blocked != nil {
 			return blocked, nil
@@ -296,7 +296,7 @@ func updateReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.Tool
 	}
 }
 
-func deleteReminderConfigHandler(svc *service.ReminderConfigService) mcpsrv.ToolHandlerFunc {
+func deleteReminderConfigHandler(svc service.ReminderConfigServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		if blocked := requireRemindersEnabled(ctx); blocked != nil {
 			return blocked, nil

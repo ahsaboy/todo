@@ -36,10 +36,10 @@ var reminderToolNames = map[string]struct{}{
 
 // Dependencies 收集 MCP 工具需要的 service / repo,由 main.go 在初始化阶段构造后传入。
 type Dependencies struct {
-	TaskSvc     *service.TaskService
-	ReminderSvc *service.ReminderConfigService
-	AuthSvc     *service.AuthService
-	APIKeyRepo  *repository.APIKeyRepo
+	TaskSvc     service.TaskServiceInterface
+	ReminderSvc service.ReminderConfigServiceInterface
+	AuthSvc     service.AuthServiceInterface
+	APIKeyRepo  repository.APIKeyRepository
 }
 
 // NewMCPServer 构造一个挂载好工具与认证的 MCP HTTP handler。

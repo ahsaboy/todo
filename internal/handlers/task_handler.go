@@ -19,10 +19,10 @@ import (
 )
 
 type TaskHandler struct {
-	svc *service.TaskService
+	svc service.TaskServiceInterface
 }
 
-func NewTaskHandler(svc *service.TaskService) *TaskHandler {
+func NewTaskHandler(svc service.TaskServiceInterface) *TaskHandler {
 	return &TaskHandler{svc: svc}
 }
 

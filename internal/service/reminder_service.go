@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"text/template"
 	"time"
 
@@ -17,20 +18,21 @@ import (
 )
 
 type ReminderService struct {
-	taskRepo     *repository.TaskRepo
-	configRepo   *repository.ReminderConfigRepo
-	logRepo      *repository.ReminderLogRepo
+	taskRepo     repository.TaskRepository
+	configRepo   repository.ReminderConfigRepository
+	logRepo      repository.ReminderLogRepository
 	logger       *zap.Logger
 	client       *http.Client
 	enabled      bool
 	scanInterval time.Duration
 	defaultTmpl  *template.Template
+	workerCount  int
 }
 
 func NewReminderService(
-	taskRepo *repository.TaskRepo,
-	configRepo *repository.ReminderConfigRepo,
-	logRepo *repository.ReminderLogRepo,
+	taskRepo repository.TaskRepository,
+	configRepo repository.ReminderConfigRepository,
+	logRepo repository.ReminderLogRepository,
 	cfg config.ReminderConfig,
 	logger *zap.Logger,
 ) (*ReminderService, error) {
@@ -49,6 +51,11 @@ func NewReminderService(
 		timeout = 10 * time.Second
 	}
 
+	workerCount := cfg.WorkerCount
+	if workerCount <= 0 {
+		workerCount = 5
+	}
+
 	return &ReminderService{
 		taskRepo:     taskRepo,
 		configRepo:   configRepo,
@@ -58,6 +65,7 @@ func NewReminderService(
 		enabled:      cfg.Enabled,
 		scanInterval: scanInterval,
 		defaultTmpl:  tmpl,
+		workerCount:  workerCount,
 	}, nil
 }
 
@@ -90,9 +98,24 @@ func (s *ReminderService) processReminders(ctx context.Context) {
 		return
 	}
 
-	for _, task := range tasks {
-		s.processTaskReminder(ctx, &task)
+	sem := make(chan struct{}, s.workerCount)
+	var wg sync.WaitGroup
+
+	for i := range tasks {
+		task := &tasks[i]
+		select {
+		case <-ctx.Done():
+			break
+		case sem <- struct{}{}:
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			s.processTaskReminder(ctx, task)
+		}()
 	}
+	wg.Wait()
 }
 
 func (s *ReminderService) processTaskReminder(ctx context.Context, task *models.Task) {
@@ -240,7 +263,11 @@ func (s *ReminderService) sendToChannel(ctx context.Context, task *models.Task, 
 		if attempt == maxRetries {
 			break
 		}
-		time.Sleep(time.Duration(retryDelay*attempt) * time.Second)
+		select {
+		case <-ctx.Done():
+			return attempt, ctx.Err()
+		case <-time.After(time.Duration(retryDelay*attempt) * time.Second):
+		}
 	}
 
 	return maxRetries, fmt.Errorf("failed after %d retries: %w", maxRetries, lastErr)

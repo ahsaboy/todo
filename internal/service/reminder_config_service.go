@@ -8,10 +8,10 @@ import (
 )
 
 type ReminderConfigService struct {
-	repo *repository.ReminderConfigRepo
+	repo repository.ReminderConfigRepository
 }
 
-func NewReminderConfigService(repo *repository.ReminderConfigRepo) *ReminderConfigService {
+func NewReminderConfigService(repo repository.ReminderConfigRepository) *ReminderConfigService {
 	return &ReminderConfigService{repo: repo}
 }
 

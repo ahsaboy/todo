@@ -7,18 +7,18 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"todo/internal/middleware"
-	"todo/internal/repository"
+	"todo/internal/service"
 	"todo/internal/timezone"
 	"todo/internal/utils"
 	"todo/internal/views"
 )
 
 type ReminderLogHandler struct {
-	repo *repository.ReminderLogRepo
+	svc service.ReminderLogServiceInterface
 }
 
-func NewReminderLogHandler(repo *repository.ReminderLogRepo) *ReminderLogHandler {
-	return &ReminderLogHandler{repo: repo}
+func NewReminderLogHandler(svc service.ReminderLogServiceInterface) *ReminderLogHandler {
+	return &ReminderLogHandler{svc: svc}
 }
 
 func (h *ReminderLogHandler) List(c *gin.Context) {
@@ -34,7 +34,7 @@ func (h *ReminderLogHandler) List(c *gin.Context) {
 		limit = 100
 	}
 
-	logs, total, err := h.repo.ListByUserID(c.Request.Context(), userID, page, limit)
+	logs, total, err := h.svc.List(c.Request.Context(), userID, page, limit)
 	if err != nil {
 		utils.RespondInternalError(c, "failed to list reminder logs", err)
 		return
@@ -50,3 +50,4 @@ func parsePositiveInt(raw string, fallback int) int {
 	}
 	return value
 }
+

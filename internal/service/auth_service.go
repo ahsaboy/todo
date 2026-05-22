@@ -16,11 +16,11 @@ import (
 )
 
 type AuthService struct {
-	userRepo   *repository.UserRepo
-	apiKeyRepo *repository.APIKeyRepo
+	userRepo   repository.UserRepository
+	apiKeyRepo repository.APIKeyRepository
 }
 
-func NewAuthService(userRepo *repository.UserRepo, apiKeyRepo *repository.APIKeyRepo) *AuthService {
+func NewAuthService(userRepo repository.UserRepository, apiKeyRepo repository.APIKeyRepository) *AuthService {
 	return &AuthService{
 		userRepo:   userRepo,
 		apiKeyRepo: apiKeyRepo,
@@ -34,7 +34,7 @@ func (s *AuthService) Register(ctx context.Context, req models.RegisterRequest) 
 		return nil, "", fmt.Errorf("check username: %w", err)
 	}
 	if existing != nil {
-		return nil, "", fmt.Errorf("username already taken")
+		return nil, "", ErrUsernameTaken
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 14)
@@ -73,11 +73,11 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest) (*mode
 		}
 	}
 	if user == nil {
-		return nil, "", fmt.Errorf("invalid username or password")
+		return nil, "", ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, "", fmt.Errorf("invalid username or password")
+		return nil, "", ErrInvalidCredentials
 	}
 
 	// 清理过期的 login API Key（last_used_at 超过 24 小时）
@@ -132,11 +132,11 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID int64, oldPassw
 		return fmt.Errorf("get user: %w", err)
 	}
 	if user == nil {
-		return fmt.Errorf("user not found")
+		return ErrUserNotFound
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
-		return fmt.Errorf("invalid old password")
+		return ErrInvalidOldPassword
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 14)

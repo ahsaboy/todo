@@ -16,7 +16,7 @@ import (
 
 // registerTaskTools 把 6 个任务管理工具注册到 MCP server。
 // 所有 handler 都从 ctx 取 user_id,经 service 层调用,避免直接访问 repository。
-func registerTaskTools(s *mcpsrv.MCPServer, svc *service.TaskService) {
+func registerTaskTools(s *mcpsrv.MCPServer, svc service.TaskServiceInterface) {
 	if s == nil || svc == nil {
 		return
 	}
@@ -137,7 +137,7 @@ func structuredTask(ctx context.Context, t *models.Task) (*mcpgo.CallToolResult,
 
 // ---------- handler 实现 ----------
 
-func createTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
+func createTaskHandler(svc service.TaskServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
@@ -190,7 +190,7 @@ func createTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 	}
 }
 
-func listTasksHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
+func listTasksHandler(svc service.TaskServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
@@ -262,7 +262,7 @@ func listTasksHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 	}
 }
 
-func getTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
+func getTaskHandler(svc service.TaskServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
@@ -281,7 +281,7 @@ func getTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 	}
 }
 
-func updateTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
+func updateTaskHandler(svc service.TaskServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
@@ -341,7 +341,7 @@ func updateTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 	}
 }
 
-func deleteTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
+func deleteTaskHandler(svc service.TaskServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {
@@ -366,7 +366,7 @@ func deleteTaskHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 	}
 }
 
-func toggleTaskCompleteHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
+func toggleTaskCompleteHandler(svc service.TaskServiceInterface) mcpsrv.ToolHandlerFunc {
 	return func(ctx context.Context, request mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		userID, errResult := requireUserID(ctx)
 		if errResult != nil {

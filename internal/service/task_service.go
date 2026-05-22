@@ -12,11 +12,11 @@ import (
 )
 
 type TaskService struct {
-	repo               *repository.TaskRepo
-	reminderConfigRepo *repository.ReminderConfigRepo
+	repo               repository.TaskRepository
+	reminderConfigRepo repository.ReminderConfigRepository
 }
 
-func NewTaskService(repo *repository.TaskRepo, reminderConfigRepo *repository.ReminderConfigRepo) *TaskService {
+func NewTaskService(repo repository.TaskRepository, reminderConfigRepo repository.ReminderConfigRepository) *TaskService {
 	return &TaskService{
 		repo:               repo,
 		reminderConfigRepo: reminderConfigRepo,
@@ -82,45 +82,44 @@ func (s *TaskService) ToggleComplete(ctx context.Context, userID, id int64) (*mo
 		return nil, nil
 	}
 
-	updated, err := s.repo.ToggleComplete(ctx, userID, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if updated.Completed && task.RepeatType != "none" {
-		if err := s.createNextOccurrence(ctx, task); err != nil {
-			return updated, fmt.Errorf("create next occurrence: %w", err)
+	var next *models.Task
+	// 任务完成且有重复规则时，预计算下一次实例（但还不知道 completed 的新值）
+	// 先判断当前状态：若当前未完成，切换后会变完成，此时需要生成下一次
+	if !task.Completed && task.RepeatType != "none" {
+		next, err = s.buildNextOccurrence(task)
+		if err != nil {
+			return nil, fmt.Errorf("build next occurrence: %w", err)
 		}
 	}
 
-	return updated, nil
+	return s.repo.ToggleCompleteAndCreateRepeat(ctx, userID, id, next)
 }
 
-func (s *TaskService) createNextOccurrence(ctx context.Context, t *models.Task) error {
+func (s *TaskService) buildNextOccurrence(t *models.Task) (*models.Task, error) {
 	var nextDue, nextRemind *string
 
 	if t.DueAt != nil {
 		next, err := models.CalculateNextDueDate(*t.DueAt, t.RepeatType, t.RepeatInterval)
 		if err != nil {
-			return fmt.Errorf("calculate next due_at: %w", err)
+			return nil, fmt.Errorf("calculate next due_at: %w", err)
 		}
 		nextDue = &next
 	}
 	if t.RemindAt != nil {
 		next, err := models.CalculateNextDueDate(*t.RemindAt, t.RepeatType, t.RepeatInterval)
 		if err != nil {
-			return fmt.Errorf("calculate next remind_at: %w", err)
+			return nil, fmt.Errorf("calculate next remind_at: %w", err)
 		}
 		nextRemind = &next
 	}
 
 	if t.RepeatEndDate != nil && nextDue != nil {
 		if *nextDue > *t.RepeatEndDate {
-			return nil
+			return nil, nil
 		}
 	}
 
-	newTask := &models.Task{
+	return &models.Task{
 		UserID:         t.UserID,
 		Title:          t.Title,
 		Description:    t.Description,
@@ -130,8 +129,7 @@ func (s *TaskService) createNextOccurrence(ctx context.Context, t *models.Task) 
 		RepeatType:     t.RepeatType,
 		RepeatInterval: t.RepeatInterval,
 		RepeatEndDate:  t.RepeatEndDate,
-	}
-	return s.repo.CreateRepeatTask(ctx, newTask)
+	}, nil
 }
 
 // normalizeCreateTaskTimes 标准化创建任务请求中的时间字段。

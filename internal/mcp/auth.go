@@ -14,7 +14,7 @@ import (
 // apiKeyAuthMiddleware 从请求头(Authorization: Bearer / api-key / X-API-Key)取出 API Key,
 // SHA-256 哈希后用 APIKeyRepo.ValidateKey 校验。
 // 失败时写入 401 JSON(格式对齐 internal/utils/response.go);成功时把 user_id 注入 ctx。
-func apiKeyAuthMiddleware(repo *repository.APIKeyRepo) func(http.Handler) http.Handler {
+func apiKeyAuthMiddleware(repo repository.APIKeyRepository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := extractAPIKey(r)

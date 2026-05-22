@@ -54,7 +54,7 @@ func TestTaskRepoCreateLogsOperationSummary(t *testing.T) {
 
 	seedRepositoryTestData(t, db)
 
-	repo := NewTaskRepo(db)
+	repo := NewTaskRepo(db, 0)
 	task, err := repo.Create(ctx, 1, models.CreateTaskRequest{
 		Title:       "ship logs",
 		Description: "ensure repository logs exist",

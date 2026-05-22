@@ -285,6 +285,9 @@ func AccessLogger(base *zap.Logger) gin.HandlerFunc {
 		if userID, ok := c.Get("user_id"); ok {
 			fields = append(fields, zap.Any("user_id", userID))
 		}
+		if reqID, ok := c.Get("request_id"); ok {
+			fields = append(fields, zap.Any("request_id", reqID))
+		}
 		if code, ok := c.Get(logCodeContextKey); ok {
 			fields = append(fields, zap.Any("code", code))
 		}

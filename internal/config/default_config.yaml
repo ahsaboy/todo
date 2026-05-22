@@ -19,6 +19,8 @@ reminder:
   webhook_timeout_seconds: 10
   max_retries: 3
   retry_delay_seconds: 5
+  worker_count: 5
+  grace_period_minutes: 10
   webhook_body_template: |
     {"msg_type":"text","content":{"text":"[TODO] {{.Title}}\n优先级: {{.PriorityText}}\n截止: {{.DueAt}}"}}
   default_templates:
@@ -64,3 +66,10 @@ logging:
   file_enabled: true
   path: "./logs"
   max_days: 7
+
+rate_limit:
+  enabled: false
+  reqs_per_second: 10
+  burst: 20
+  auth_reqs_per_second: 2
+  auth_burst: 5

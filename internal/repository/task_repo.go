@@ -14,13 +14,17 @@ import (
 )
 
 type TaskRepo struct {
-	db *sql.DB
+	db          *sql.DB
+	gracePeriod time.Duration
 }
 
 const taskRepositoryName = "task_repo"
 
-func NewTaskRepo(db *sql.DB) *TaskRepo {
-	return &TaskRepo{db: db}
+func NewTaskRepo(db *sql.DB, gracePeriod time.Duration) *TaskRepo {
+	if gracePeriod <= 0 {
+		gracePeriod = 10 * time.Minute
+	}
+	return &TaskRepo{db: db, gracePeriod: gracePeriod}
 }
 
 func (r *TaskRepo) Create(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error) {
@@ -233,6 +237,45 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 	args = append(args, time.Now().UTC().Format(time.RFC3339), id, userID)
 
 	query := "UPDATE tasks SET " + strings.Join(setClauses, ", ") + " WHERE id = ? AND user_id = ?"
+
+	if req.RemindAt != nil {
+		// 更新 remind_at 时需同步删除 reminder_logs，用事务保证原子性
+		tx, err := r.db.BeginTx(ctx, nil)
+		if err != nil {
+			log.complete(err)
+			return nil, fmt.Errorf("begin update task tx: %w", err)
+		}
+		defer tx.Rollback()
+
+		result, err := tx.ExecContext(ctx, query, args...)
+		if err != nil {
+			log.complete(err)
+			return nil, fmt.Errorf("update task: %w", err)
+		}
+		rows := rowsAffected(result)
+		if rows == 0 {
+			log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("found", false))
+			return nil, nil
+		}
+
+		deleteResult, err := tx.ExecContext(ctx, `DELETE FROM reminder_logs WHERE task_id = ?`, id)
+		if err != nil {
+			log.complete(err, zap.Int64("rows_affected", rows))
+			return nil, fmt.Errorf("clear reminder logs: %w", err)
+		}
+
+		if err := tx.Commit(); err != nil {
+			log.complete(err)
+			return nil, fmt.Errorf("commit update task: %w", err)
+		}
+
+		log.complete(nil,
+			zap.Int64("rows_affected", rows),
+			zap.Int64("cleared_reminder_logs", rowsAffected(deleteResult)),
+		)
+		return r.GetByID(ctx, userID, id)
+	}
+
 	result, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		log.complete(err)
@@ -242,18 +285,6 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 	if rows == 0 {
 		log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("found", false))
 		return nil, nil
-	}
-	if req.RemindAt != nil {
-		deleteResult, err := r.db.ExecContext(ctx, `DELETE FROM reminder_logs WHERE task_id = ?`, id)
-		if err != nil {
-			log.complete(err, zap.Int64("rows_affected", rows))
-			return nil, fmt.Errorf("clear reminder logs: %w", err)
-		}
-		log.complete(nil,
-			zap.Int64("rows_affected", rows),
-			zap.Int64("cleared_reminder_logs", rowsAffected(deleteResult)),
-		)
-		return r.GetByID(ctx, userID, id)
 	}
 	log.complete(nil, zap.Int64("rows_affected", rows))
 	return r.GetByID(ctx, userID, id)
@@ -334,8 +365,8 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]mo
 			if remindTime.After(nowUTC) {
 				continue
 			}
-			// 提醒时间已过超过 10 分钟，视为过期，跳过
-			if nowUTC.Sub(remindTime) > 10*time.Minute {
+			// 提醒时间已过超过宽限期，视为过期，跳过
+			if nowUTC.Sub(remindTime) > r.gracePeriod {
 				continue
 			}
 		}
@@ -388,6 +419,58 @@ func (r *TaskRepo) CreateRepeatTask(ctx context.Context, t *models.Task) error {
 		zap.Int64("rows_affected", rowsAffected(result)),
 	)
 	return nil
+}
+
+// ToggleCompleteAndCreateRepeat 在单个事务中切换完成状态并可选地创建下一次重复任务。
+// next 为 nil 时仅切换完成状态。
+func (r *TaskRepo) ToggleCompleteAndCreateRepeat(ctx context.Context, userID, id int64, next *models.Task) (*models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "toggle_complete_and_create_repeat",
+		zap.Int64("user_id", userID),
+		zap.Int64("task_id", id),
+		zap.Bool("has_next", next != nil),
+	)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.complete(err)
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE tasks SET completed = CASE WHEN completed = 0 THEN 1 ELSE 0 END, updated_at = ? WHERE id = ? AND user_id = ?`,
+		time.Now().UTC().Format(time.RFC3339), id, userID)
+	if err != nil {
+		log.complete(err)
+		return nil, fmt.Errorf("toggle complete: %w", err)
+	}
+	rows := rowsAffected(result)
+	if rows == 0 {
+		log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("found", false))
+		return nil, nil
+	}
+
+	if next != nil {
+		now := time.Now().UTC().Format(time.RFC3339)
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+			next.UserID, next.Title, next.Description, next.Priority, next.DueAt, next.RemindAt,
+			next.RepeatType, next.RepeatInterval, next.RepeatEndDate, now, now,
+		)
+		if err != nil {
+			log.complete(err)
+			return nil, fmt.Errorf("create repeat task: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.complete(err)
+		return nil, fmt.Errorf("commit tx: %w", err)
+	}
+
+	log.complete(nil, zap.Int64("rows_affected", rows))
+	return r.GetByID(ctx, userID, id)
 }
 
 func buildWhereClause(f models.TaskFilters) (string, []any) {

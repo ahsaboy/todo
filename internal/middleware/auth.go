@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AuthMiddleware(apiKeyRepo *repository.APIKeyRepo) gin.HandlerFunc {
+func AuthMiddleware(apiKeyRepo repository.APIKeyRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		key := extractAPIKey(c)
 

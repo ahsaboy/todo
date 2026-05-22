@@ -15,10 +15,10 @@ import (
 )
 
 type ReminderConfigHandler struct {
-	svc *service.ReminderConfigService
+	svc service.ReminderConfigServiceInterface
 }
 
-func NewReminderConfigHandler(svc *service.ReminderConfigService) *ReminderConfigHandler {
+func NewReminderConfigHandler(svc service.ReminderConfigServiceInterface) *ReminderConfigHandler {
 	return &ReminderConfigHandler{svc: svc}
 }
 

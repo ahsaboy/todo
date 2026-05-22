@@ -11,12 +11,13 @@ import (
 var defaultConfigYAML []byte
 
 type Config struct {
-	Server      ServerConfig   `yaml:"server"`
-	Database    DatabaseConfig `yaml:"database"`
-	Reminder    ReminderConfig `yaml:"reminder"`
-	CORS        CORSConfig     `yaml:"cors"`
-	Logging     LoggingConfig  `yaml:"logging"`
-	StaticFiles bool           `yaml:"static_files"`
+	Server      ServerConfig    `yaml:"server"`
+	Database    DatabaseConfig  `yaml:"database"`
+	Reminder    ReminderConfig  `yaml:"reminder"`
+	CORS        CORSConfig      `yaml:"cors"`
+	Logging     LoggingConfig   `yaml:"logging"`
+	RateLimit   RateLimitConfig `yaml:"rate_limit"`
+	StaticFiles bool            `yaml:"static_files"`
 }
 
 type ServerConfig struct {
@@ -37,6 +38,8 @@ type ReminderConfig struct {
 	WebhookTimeoutSeconds int                        `yaml:"webhook_timeout_seconds"`
 	MaxRetries            int                        `yaml:"max_retries"`
 	RetryDelaySeconds     int                        `yaml:"retry_delay_seconds"`
+	WorkerCount           int                        `yaml:"worker_count"`
+	GracePeriodMinutes    int                        `yaml:"grace_period_minutes"`
 	DefaultTemplates      map[string]DefaultTemplate `yaml:"default_templates"`
 }
 
@@ -51,6 +54,14 @@ type DefaultTemplate struct {
 type CORSConfig struct {
 	Enabled        bool     `yaml:"enabled"`
 	AllowedOrigins []string `yaml:"allowed_origins"`
+}
+
+type RateLimitConfig struct {
+	Enabled           bool    `yaml:"enabled"`
+	ReqsPerSecond     float64 `yaml:"reqs_per_second"`
+	Burst             int     `yaml:"burst"`
+	AuthReqsPerSecond float64 `yaml:"auth_reqs_per_second"` // 认证端点单独限制（更严格）
+	AuthBurst         int     `yaml:"auth_burst"`
 }
 
 type LoggingConfig struct {
@@ -84,6 +95,8 @@ func Load(path string) (*Config, error) {
 			WebhookTimeoutSeconds: 10,
 			MaxRetries:            3,
 			RetryDelaySeconds:     5,
+			WorkerCount:           5,
+			GracePeriodMinutes:    10,
 		},
 		Logging: LoggingConfig{
 			FileEnabled: true,

@@ -16,10 +16,10 @@ import (
 )
 
 type AuthHandler struct {
-	svc *service.AuthService
+	svc service.AuthServiceInterface
 }
 
-func NewAuthHandler(svc *service.AuthService) *AuthHandler {
+func NewAuthHandler(svc service.AuthServiceInterface) *AuthHandler {
 	return &AuthHandler{svc: svc}
 }
 
@@ -287,7 +287,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	if err := h.svc.ChangePassword(c.Request.Context(), userID, req.OldPassword, req.NewPassword); err != nil {
-		if err.Error() == "invalid old password" {
+		if errors.Is(err, service.ErrInvalidOldPassword) {
 			utils.RespondError(c, http.StatusUnauthorized, "invalid old password", utils.CodeUnauthorized)
 			return
 		}
