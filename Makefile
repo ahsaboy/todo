@@ -73,7 +73,7 @@ help:
 # 前端依赖安装
 frontend-install:
 ifeq ($(OS),Windows_NT)
-	cd /d frontend && npm ci
+	cd /d frontend && npm install
 else
 	cd frontend && npm ci
 endif

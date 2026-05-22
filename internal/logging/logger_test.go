@@ -183,11 +183,15 @@ func TestIsStaticAssetPath(t *testing.T) {
 		want bool
 	}{
 		{path: "/assets/app.js", want: true},
+		{path: "/admin/assets/app.js", want: true},
 		{path: "/favicon.svg", want: true},
+		{path: "/admin/favicon.svg", want: true},
 		{path: "/icons.svg", want: true},
+		{path: "/admin/icons.svg", want: true},
 		{path: "/styles/site.css", want: true},
 		{path: "/api/v1/tasks", want: false},
 		{path: "/mcp", want: false},
+		{path: "/admin/login", want: false},
 	}
 
 	for _, tt := range tests {

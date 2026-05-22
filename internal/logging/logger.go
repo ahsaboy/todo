@@ -316,6 +316,10 @@ func isStaticAssetPath(path string) bool {
 	if normalized == "" {
 		return false
 	}
+	// Strip /admin prefix for relative-path (base: './') SPA builds
+	if strings.HasPrefix(normalized, "/admin") {
+		normalized = normalized[len("/admin"):]
+	}
 	if strings.HasPrefix(normalized, "/assets/") {
 		return true
 	}

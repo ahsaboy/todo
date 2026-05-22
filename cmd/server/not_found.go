@@ -9,7 +9,7 @@ import (
 )
 
 func isAPIRoute(path string) bool {
-	return strings.HasPrefix(path, "/api")
+	return strings.HasPrefix(path, "/api") || strings.HasPrefix(path, "/admin/api")
 }
 
 func writeAPINotFound(c *gin.Context) {

@@ -14,6 +14,7 @@ const (
 	CodeUnauthorized  = "UNAUTHORIZED"
 	CodeInvalidInput  = "INVALID_INPUT"
 	CodeInternalError = "INTERNAL_ERROR"
+	CodeRateLimited   = "RATE_LIMITED"
 )
 
 // SuccessResponse 通用成功响应

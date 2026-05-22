@@ -20,6 +20,12 @@ web/dist/
 .env.local
 *.local
 
+# Config (contains secrets)
+config.yaml
+
+# Coverage
+coverage.out
+
 # IDE
 .idea/
 .vscode/
