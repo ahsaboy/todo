@@ -254,6 +254,7 @@ func AccessLogger(base *zap.Logger) gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 		isStaticAsset := isStaticAssetPath(path)
+		isHealthCheck := path == "/api/v1/health"
 		requestLogger := base.With(
 			zap.String("method", c.Request.Method),
 			zap.String("path", path),
@@ -262,6 +263,11 @@ func AccessLogger(base *zap.Logger) gin.HandlerFunc {
 		c.Request = c.Request.WithContext(WithContext(c.Request.Context(), requestLogger))
 
 		c.Next()
+
+		// Skip access log for health check endpoints to reduce log noise
+		if isHealthCheck {
+			return
+		}
 
 		fields := []zap.Field{
 			zap.Int("status", c.Writer.Status()),
