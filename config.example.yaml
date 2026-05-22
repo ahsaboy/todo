@@ -16,7 +16,7 @@ database:
   path: "./data/tasks.db"  # SQLite 数据库文件路径
 
 # 静态资源配置
-static_files: true       # 是否启用前端静态文件与 Swagger 文档；为 false 时两者都会关闭
+static_files: false       # 是否启用前端静态文件与 Swagger 文档；为 false 时两者都会关闭
 
 # 提醒服务配置
 reminder:
