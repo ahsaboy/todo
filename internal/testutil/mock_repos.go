@@ -13,16 +13,18 @@ import (
 // ---- TaskRepository mock ----
 
 type MockTaskRepository struct {
-	CreateFn                       func(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error)
-	GetByIDFn                      func(ctx context.Context, userID, id int64) (*models.Task, error)
-	ListFn                         func(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error)
-	UpdateFn                       func(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error)
-	DeleteFn                       func(ctx context.Context, userID, id int64) (bool, error)
-	ToggleCompleteFn               func(ctx context.Context, userID, id int64) (*models.Task, error)
+	CreateFn                        func(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error)
+	GetByIDFn                       func(ctx context.Context, userID, id int64) (*models.Task, error)
+	ListFn                          func(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error)
+	UpdateFn                        func(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error)
+	DeleteFn                        func(ctx context.Context, userID, id int64) (bool, error)
+	ToggleCompleteFn                func(ctx context.Context, userID, id int64) (*models.Task, error)
 	ToggleCompleteAndCreateRepeatFn func(ctx context.Context, userID, id int64, next *models.Task) (*models.Task, error)
-	GetPendingRemindersFn          func(ctx context.Context, now time.Time) ([]models.Task, error)
-	MarkReminderSentFn             func(ctx context.Context, id int64) (bool, error)
-	CreateRepeatTaskFn             func(ctx context.Context, t *models.Task) error
+	GetPendingRemindersFn           func(ctx context.Context, now time.Time) ([]models.Task, error)
+	MarkReminderSentFn              func(ctx context.Context, id int64) (bool, error)
+	CreateRepeatTaskFn              func(ctx context.Context, t *models.Task) error
+	ListAllFn                       func(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int) ([]models.Task, int64, error)
+	AdminDeleteFn                   func(ctx context.Context, id int64) (bool, error)
 }
 
 func (m *MockTaskRepository) Create(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error) {
@@ -55,16 +57,31 @@ func (m *MockTaskRepository) MarkReminderSent(ctx context.Context, id int64) (bo
 func (m *MockTaskRepository) CreateRepeatTask(ctx context.Context, t *models.Task) error {
 	return m.CreateRepeatTaskFn(ctx, t)
 }
+func (m *MockTaskRepository) ListAll(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int) ([]models.Task, int64, error) {
+	if m.ListAllFn != nil {
+		return m.ListAllFn(ctx, userID, filters, page, limit)
+	}
+	return nil, 0, nil
+}
+func (m *MockTaskRepository) AdminDelete(ctx context.Context, id int64) (bool, error) {
+	if m.AdminDeleteFn != nil {
+		return m.AdminDeleteFn(ctx, id)
+	}
+	return false, nil
+}
 
 // ---- UserRepository mock ----
 
 type MockUserRepository struct {
-	CreateFn         func(ctx context.Context, username, email, passwordHash string) (*models.User, error)
-	GetByIDFn        func(ctx context.Context, id int64) (*models.User, error)
-	GetByUsernameFn  func(ctx context.Context, username string) (*models.User, error)
-	GetByEmailFn     func(ctx context.Context, email string) (*models.User, error)
-	UpdateProfileFn  func(ctx context.Context, id int64, email string) error
-	UpdatePasswordFn func(ctx context.Context, id int64, passwordHash string) error
+	CreateFn             func(ctx context.Context, username, email, passwordHash string) (*models.User, error)
+	GetByIDFn            func(ctx context.Context, id int64) (*models.User, error)
+	GetByUsernameFn      func(ctx context.Context, username string) (*models.User, error)
+	GetByEmailFn         func(ctx context.Context, email string) (*models.User, error)
+	UpdateProfileFn      func(ctx context.Context, id int64, email string) error
+	UpdatePasswordFn     func(ctx context.Context, id int64, passwordHash string) error
+	ListAllFn            func(ctx context.Context, page, limit int, search string) ([]models.User, int64, error)
+	DeleteFn             func(ctx context.Context, id int64) error
+	ForceResetPasswordFn func(ctx context.Context, id int64, passwordHash string) error
 }
 
 func (m *MockUserRepository) Create(ctx context.Context, username, email, passwordHash string) (*models.User, error) {
@@ -84,6 +101,24 @@ func (m *MockUserRepository) UpdateProfile(ctx context.Context, id int64, email 
 }
 func (m *MockUserRepository) UpdatePassword(ctx context.Context, id int64, passwordHash string) error {
 	return m.UpdatePasswordFn(ctx, id, passwordHash)
+}
+func (m *MockUserRepository) ListAll(ctx context.Context, page, limit int, search string) ([]models.User, int64, error) {
+	if m.ListAllFn != nil {
+		return m.ListAllFn(ctx, page, limit, search)
+	}
+	return nil, 0, nil
+}
+func (m *MockUserRepository) Delete(ctx context.Context, id int64) error {
+	if m.DeleteFn != nil {
+		return m.DeleteFn(ctx, id)
+	}
+	return nil
+}
+func (m *MockUserRepository) ForceResetPassword(ctx context.Context, id int64, passwordHash string) error {
+	if m.ForceResetPasswordFn != nil {
+		return m.ForceResetPasswordFn(ctx, id, passwordHash)
+	}
+	return nil
 }
 
 // ---- APIKeyRepository mock ----
@@ -115,12 +150,13 @@ func (m *MockAPIKeyRepository) CleanupExpiredLoginKeys(ctx context.Context, user
 // ---- ReminderConfigRepository mock ----
 
 type MockReminderConfigRepository struct {
-	CreateFn              func(ctx context.Context, cfg *models.UserReminderConfig) (*models.UserReminderConfig, error)
-	GetByIDFn             func(ctx context.Context, id, userID int64) (*models.UserReminderConfig, error)
-	GetByUserIDFn         func(ctx context.Context, userID int64) ([]models.UserReminderConfig, error)
-	UpdateFn              func(ctx context.Context, id, userID int64, req models.UpdateReminderConfigRequest) (*models.UserReminderConfig, error)
-	DeleteFn              func(ctx context.Context, id, userID int64) (bool, error)
-	HasEnabledByUserIDFn  func(ctx context.Context, userID int64) (bool, error)
+	CreateFn             func(ctx context.Context, cfg *models.UserReminderConfig) (*models.UserReminderConfig, error)
+	GetByIDFn            func(ctx context.Context, id, userID int64) (*models.UserReminderConfig, error)
+	GetByUserIDFn        func(ctx context.Context, userID int64) ([]models.UserReminderConfig, error)
+	UpdateFn             func(ctx context.Context, id, userID int64, req models.UpdateReminderConfigRequest) (*models.UserReminderConfig, error)
+	DeleteFn             func(ctx context.Context, id, userID int64) (bool, error)
+	HasEnabledByUserIDFn func(ctx context.Context, userID int64) (bool, error)
+	ListAllFn            func(ctx context.Context, page, limit int) ([]models.UserReminderConfig, int64, error)
 }
 
 func (m *MockReminderConfigRepository) Create(ctx context.Context, cfg *models.UserReminderConfig) (*models.UserReminderConfig, error) {
@@ -141,14 +177,21 @@ func (m *MockReminderConfigRepository) Delete(ctx context.Context, id, userID in
 func (m *MockReminderConfigRepository) HasEnabledByUserID(ctx context.Context, userID int64) (bool, error) {
 	return m.HasEnabledByUserIDFn(ctx, userID)
 }
+func (m *MockReminderConfigRepository) ListAll(ctx context.Context, page, limit int) ([]models.UserReminderConfig, int64, error) {
+	if m.ListAllFn != nil {
+		return m.ListAllFn(ctx, page, limit)
+	}
+	return nil, 0, nil
+}
 
 // ---- ReminderLogRepository mock ----
 
 type MockReminderLogRepository struct {
-	UpsertFn                  func(ctx context.Context, p repository.CreateReminderLogParams) error
-	HasResultForTaskConfigFn  func(ctx context.Context, taskID, configID int64) (bool, error)
-	ListByUserIDFn            func(ctx context.Context, userID int64, page, limit int) ([]models.ReminderLog, int64, error)
-	DeleteByTaskIDFn          func(ctx context.Context, taskID int64) error
+	UpsertFn                 func(ctx context.Context, p repository.CreateReminderLogParams) error
+	HasResultForTaskConfigFn func(ctx context.Context, taskID, configID int64) (bool, error)
+	ListByUserIDFn           func(ctx context.Context, userID int64, page, limit int) ([]models.ReminderLog, int64, error)
+	DeleteByTaskIDFn         func(ctx context.Context, taskID int64) error
+	ListAllFn                func(ctx context.Context, page, limit int) ([]models.ReminderLog, int64, error)
 }
 
 func (m *MockReminderLogRepository) Upsert(ctx context.Context, p repository.CreateReminderLogParams) error {
@@ -162,4 +205,10 @@ func (m *MockReminderLogRepository) ListByUserID(ctx context.Context, userID int
 }
 func (m *MockReminderLogRepository) DeleteByTaskID(ctx context.Context, taskID int64) error {
 	return m.DeleteByTaskIDFn(ctx, taskID)
+}
+func (m *MockReminderLogRepository) ListAll(ctx context.Context, page, limit int) ([]models.ReminderLog, int64, error) {
+	if m.ListAllFn != nil {
+		return m.ListAllFn(ctx, page, limit)
+	}
+	return nil, 0, nil
 }

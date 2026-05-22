@@ -174,3 +174,56 @@ func (r *ReminderLogRepo) DeleteByTaskID(ctx context.Context, taskID int64) erro
 	log.complete(nil, zap.Int64("rows_affected", rowsAffected(result)))
 	return nil
 }
+
+func (r *ReminderLogRepo) ListAll(ctx context.Context, page, limit int) ([]models.ReminderLog, int64, error) {
+	log := beginDBOperation(ctx, reminderLogRepositoryName, "admin_list_all_reminder_logs",
+		zap.Int("page", page),
+		zap.Int("limit", limit),
+	)
+	var total int64
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM reminder_logs`).Scan(&total); err != nil {
+		log.complete(err)
+		return nil, 0, fmt.Errorf("count reminder logs: %w", err)
+	}
+
+	offset := (page - 1) * limit
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT l.id, l.user_id, l.task_id, COALESCE(t.title, ''),
+		       l.reminder_config_id, l.channel_name, l.channel_type, l.status,
+		       l.attempts, l.error_message, l.created_at
+		FROM reminder_logs l
+		LEFT JOIN tasks t ON t.id = l.task_id
+		ORDER BY l.created_at DESC, l.id DESC
+		LIMIT ? OFFSET ?`,
+		limit, offset,
+	)
+	if err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("list all reminder logs: %w", err)
+	}
+	defer rows.Close()
+
+	logs := make([]models.ReminderLog, 0)
+	for rows.Next() {
+		var item models.ReminderLog
+		var configID sql.NullInt64
+		if err := rows.Scan(
+			&item.ID, &item.UserID, &item.TaskID, &item.TaskTitle,
+			&configID, &item.ChannelName, &item.ChannelType,
+			&item.Status, &item.Attempts, &item.ErrorMessage, &item.CreatedAt,
+		); err != nil {
+			log.complete(err, zap.Int64("count", total))
+			return nil, 0, fmt.Errorf("scan reminder log: %w", err)
+		}
+		if configID.Valid {
+			item.ReminderConfigID = &configID.Int64
+		}
+		logs = append(logs, item)
+	}
+	if err := rows.Err(); err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("rows iteration: %w", err)
+	}
+	log.complete(nil, zap.Int64("count", total), zap.Int("result_size", len(logs)))
+	return logs, total, nil
+}

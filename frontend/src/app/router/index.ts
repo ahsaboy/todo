@@ -75,6 +75,26 @@ const router = createRouter({
         },
       ],
     },
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: () => import('@/pages/admin/AdminLoginPage.vue'),
+      meta: { requiresAdminGuest: true },
+    },
+    {
+      path: '/admin',
+      component: () => import('@/widgets/AdminLayout.vue'),
+      meta: { requiresAdmin: true },
+      children: [
+        { path: '', redirect: '/admin/dashboard' },
+        { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/pages/admin/AdminDashboardPage.vue') },
+        { path: 'users', name: 'admin-users', component: () => import('@/pages/admin/AdminUsersPage.vue') },
+        { path: 'tasks', name: 'admin-tasks', component: () => import('@/pages/admin/AdminTasksPage.vue') },
+        { path: 'reminder-configs', name: 'admin-reminder-configs', component: () => import('@/pages/admin/AdminReminderConfigsPage.vue') },
+        { path: 'reminder-logs', name: 'admin-reminder-logs', component: () => import('@/pages/admin/AdminReminderLogsPage.vue') },
+        { path: 'config', name: 'admin-config', component: () => import('@/pages/admin/AdminConfigPage.vue') },
+      ],
+    },
   ],
 })
 

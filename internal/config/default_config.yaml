@@ -73,3 +73,7 @@ rate_limit:
   burst: 20
   auth_reqs_per_second: 2
   auth_burst: 5
+
+admin:
+  enabled: false
+  token_hash: ""

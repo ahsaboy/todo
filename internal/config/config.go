@@ -17,7 +17,13 @@ type Config struct {
 	CORS        CORSConfig      `yaml:"cors"`
 	Logging     LoggingConfig   `yaml:"logging"`
 	RateLimit   RateLimitConfig `yaml:"rate_limit"`
+	Admin       AdminConfig     `yaml:"admin"`
 	StaticFiles bool            `yaml:"static_files"`
+}
+
+type AdminConfig struct {
+	Enabled   bool   `yaml:"enabled"`
+	TokenHash string `yaml:"token_hash"`
 }
 
 type ServerConfig struct {
@@ -102,6 +108,9 @@ func Load(path string) (*Config, error) {
 			FileEnabled: true,
 			Path:        "./logs",
 			MaxDays:     7,
+		},
+		Admin: AdminConfig{
+			Enabled: false,
 		},
 		StaticFiles: true,
 	}

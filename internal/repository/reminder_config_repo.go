@@ -227,6 +227,50 @@ func (r *ReminderConfigRepo) HasEnabledByUserID(ctx context.Context, userID int6
 	return count > 0, nil
 }
 
+func (r *ReminderConfigRepo) ListAll(ctx context.Context, page, limit int) ([]models.UserReminderConfig, int64, error) {
+	log := beginDBOperation(ctx, reminderConfigRepositoryName, "admin_list_all_reminder_configs",
+		zap.Int("page", page),
+		zap.Int("limit", limit),
+	)
+	var total int64
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM user_reminder_configs`).Scan(&total); err != nil {
+		log.complete(err)
+		return nil, 0, fmt.Errorf("count reminder configs: %w", err)
+	}
+
+	offset := (page - 1) * limit
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, user_id, name, channel_type, webhook_url, webhook_method, webhook_headers,
+		       webhook_body_template, max_retries, retry_delay_seconds, enabled, created_at, updated_at
+		FROM user_reminder_configs ORDER BY user_id ASC, id ASC LIMIT ? OFFSET ?`,
+		limit, offset,
+	)
+	if err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("list all reminder configs: %w", err)
+	}
+	defer rows.Close()
+
+	configs := make([]models.UserReminderConfig, 0)
+	for rows.Next() {
+		var c models.UserReminderConfig
+		var headersRaw string
+		if err := rows.Scan(&c.ID, &c.UserID, &c.Name, &c.ChannelType, &c.WebhookURL, &c.WebhookMethod,
+			&headersRaw, &c.WebhookBodyTemplate, &c.MaxRetries, &c.RetryDelaySeconds, &c.Enabled, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			log.complete(err, zap.Int64("count", total))
+			return nil, 0, fmt.Errorf("scan reminder config: %w", err)
+		}
+		c.WebhookHeaders = models.ParseWebhookHeaders(headersRaw)
+		configs = append(configs, c)
+	}
+	if err := rows.Err(); err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("rows iteration: %w", err)
+	}
+	log.complete(nil, zap.Int64("count", total), zap.Int("result_size", len(configs)))
+	return configs, total, nil
+}
+
 func joinClauses(clauses []string) string {
 	s := ""
 	for i, c := range clauses {

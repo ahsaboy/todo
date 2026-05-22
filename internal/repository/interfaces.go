@@ -18,6 +18,9 @@ type TaskRepository interface {
 	GetPendingReminders(ctx context.Context, now time.Time) ([]models.Task, error)
 	MarkReminderSent(ctx context.Context, id int64) (bool, error)
 	CreateRepeatTask(ctx context.Context, t *models.Task) error
+	// Admin methods: userID=0 queries all users, >0 queries that user only
+	ListAll(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int) ([]models.Task, int64, error)
+	AdminDelete(ctx context.Context, id int64) (bool, error)
 }
 
 type UserRepository interface {
@@ -27,6 +30,10 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	UpdateProfile(ctx context.Context, id int64, email string) error
 	UpdatePassword(ctx context.Context, id int64, passwordHash string) error
+	// Admin methods
+	ListAll(ctx context.Context, page, limit int, search string) ([]models.User, int64, error)
+	Delete(ctx context.Context, id int64) error
+	ForceResetPassword(ctx context.Context, id int64, passwordHash string) error
 }
 
 type APIKeyRepository interface {
@@ -44,6 +51,8 @@ type ReminderConfigRepository interface {
 	Update(ctx context.Context, id, userID int64, req models.UpdateReminderConfigRequest) (*models.UserReminderConfig, error)
 	Delete(ctx context.Context, id, userID int64) (bool, error)
 	HasEnabledByUserID(ctx context.Context, userID int64) (bool, error)
+	// Admin methods
+	ListAll(ctx context.Context, page, limit int) ([]models.UserReminderConfig, int64, error)
 }
 
 type ReminderLogRepository interface {
@@ -51,4 +60,6 @@ type ReminderLogRepository interface {
 	HasResultForTaskConfig(ctx context.Context, taskID, configID int64) (bool, error)
 	ListByUserID(ctx context.Context, userID int64, page, limit int) ([]models.ReminderLog, int64, error)
 	DeleteByTaskID(ctx context.Context, taskID int64) error
+	// Admin methods
+	ListAll(ctx context.Context, page, limit int) ([]models.ReminderLog, int64, error)
 }

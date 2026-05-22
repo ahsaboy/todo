@@ -162,3 +162,89 @@ func (r *UserRepo) UpdatePassword(ctx context.Context, id int64, passwordHash st
 	log.complete(nil, zap.Int64("rows_affected", rowsAffected(result)))
 	return nil
 }
+
+func (r *UserRepo) ListAll(ctx context.Context, page, limit int, search string) ([]models.User, int64, error) {
+	log := beginDBOperation(ctx, userRepositoryName, "admin_list_all_users",
+		zap.Int("page", page),
+		zap.Int("limit", limit),
+		zap.Bool("has_search", search != ""),
+	)
+
+	var total int64
+	countQuery := `SELECT COUNT(*) FROM users`
+	args := []any{}
+	if search != "" {
+		countQuery += ` WHERE username LIKE ? OR email LIKE ?`
+		args = append(args, "%"+search+"%", "%"+search+"%")
+	}
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		log.complete(err)
+		return nil, 0, fmt.Errorf("count users: %w", err)
+	}
+
+	offset := (page - 1) * limit
+	query := `SELECT id, username, email, password_hash, created_at, updated_at FROM users`
+	if search != "" {
+		query += ` WHERE username LIKE ? OR email LIKE ?`
+	}
+	query += ` ORDER BY id DESC LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]models.User, 0)
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			log.complete(err, zap.Int64("count", total))
+			return nil, 0, fmt.Errorf("scan user: %w", err)
+		}
+		users = append(users, u)
+	}
+	if err := rows.Err(); err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("rows iteration: %w", err)
+	}
+	log.complete(nil, zap.Int64("count", total), zap.Int("result_size", len(users)))
+	return users, total, nil
+}
+
+func (r *UserRepo) Delete(ctx context.Context, id int64) error {
+	log := beginDBOperation(ctx, userRepositoryName, "admin_delete_user", zap.Int64("user_id", id))
+	result, err := r.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id)
+	if err != nil {
+		log.complete(err)
+		return fmt.Errorf("delete user: %w", err)
+	}
+	ra := rowsAffected(result)
+	if ra == 0 {
+		log.complete(nil, zap.Int64("rows_affected", 0))
+		return ErrNotFound
+	}
+	log.complete(nil, zap.Int64("rows_affected", ra))
+	return nil
+}
+
+func (r *UserRepo) ForceResetPassword(ctx context.Context, id int64, passwordHash string) error {
+	log := beginDBOperation(ctx, userRepositoryName, "admin_force_reset_password", zap.Int64("user_id", id))
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`,
+		passwordHash, time.Now().UTC().Format(time.RFC3339), id,
+	)
+	if err != nil {
+		log.complete(err)
+		return fmt.Errorf("force reset password: %w", err)
+	}
+	ra := rowsAffected(result)
+	if ra == 0 {
+		log.complete(nil, zap.Int64("rows_affected", 0))
+		return ErrNotFound
+	}
+	log.complete(nil, zap.Int64("rows_affected", ra))
+	return nil
+}

@@ -504,3 +504,70 @@ func buildWhereClause(f models.TaskFilters) (string, []any) {
 	}
 	return " WHERE " + strings.Join(clauses, " AND "), args
 }
+
+func (r *TaskRepo) ListAll(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int) ([]models.Task, int64, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "admin_list_all_tasks",
+		zap.Int64("user_id", userID),
+		zap.Int("page", page),
+		zap.Int("limit", limit),
+	)
+	where, args := buildWhereClause(filters)
+	if userID > 0 {
+		if where == "" {
+			where = " WHERE user_id = ?"
+			args = append(args, userID)
+		} else {
+			where = " WHERE user_id = ? AND " + where[7:]
+			args = append([]any{userID}, args...)
+		}
+	}
+
+	var total int64
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tasks"+where, args...).Scan(&total); err != nil {
+		log.complete(err)
+		return nil, 0, fmt.Errorf("count tasks: %w", err)
+	}
+
+	offset := (page - 1) * limit
+	query := fmt.Sprintf(`SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
+		repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, created_at, updated_at
+		FROM tasks%s ORDER BY created_at DESC LIMIT ? OFFSET ?`, where)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("list tasks: %w", err)
+	}
+	defer rows.Close()
+
+	tasks := make([]models.Task, 0)
+	for rows.Next() {
+		var t models.Task
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority,
+			&t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate,
+			&t.ReminderSent, &t.ReminderSentAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			log.complete(err, zap.Int64("count", total))
+			return nil, 0, fmt.Errorf("scan task: %w", err)
+		}
+		tasks = append(tasks, t)
+	}
+	if err := rows.Err(); err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("rows iteration: %w", err)
+	}
+	log.complete(nil, zap.Int64("count", total), zap.Int("result_size", len(tasks)))
+	return tasks, total, nil
+}
+
+func (r *TaskRepo) AdminDelete(ctx context.Context, id int64) (bool, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "admin_delete_task", zap.Int64("task_id", id))
+	result, err := r.db.ExecContext(ctx, "DELETE FROM tasks WHERE id = ?", id)
+	if err != nil {
+		log.complete(err)
+		return false, fmt.Errorf("admin delete task: %w", err)
+	}
+	rows := rowsAffected(result)
+	log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("deleted", rows > 0))
+	return rows > 0, nil
+}

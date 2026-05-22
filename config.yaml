@@ -86,3 +86,12 @@ logging:
   file_enabled: true          # 是否同时写入日志文件；终端输出始终开启
   path: "./logs"              # 日志存储目录
   max_days: 7                 # 日志保留天数
+
+# ==============================
+# 后台管理配置（仅限 localhost 访问）
+# ==============================
+admin:
+  enabled: true
+  # 生成 token_hash：echo -n "your_token" | sha256sum | cut -d' ' -f1
+  # 或 PowerShell：[System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("your_token"))).Replace("-","").ToLower()
+  token_hash: "b05d06a5a99b2b3b0b84ac9f62dd02619bf45a5b8568c2957358102bcbf231bc"

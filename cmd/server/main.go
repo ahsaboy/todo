@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"net/http"
@@ -270,6 +271,7 @@ func main() {
 	r.Any("/mcp", gin.WrapH(mcpHandler))
 
 	registerOptionalRoutes(r, logger, cfg.StaticFiles)
+	registerAdminRoutes(r, db, cfg, userRepo, taskRepo, reminderConfigRepo, reminderLogRepo, logger)
 
 	// 启动 HTTP 服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -469,4 +471,38 @@ func allowedCORSOrigin(requestOrigin string, allowedOrigins []string) (string, b
 		}
 	}
 	return "", false
+}
+
+func registerAdminRoutes(
+	r *gin.Engine,
+	db *sql.DB,
+	cfg *config.Config,
+	userRepo repository.UserRepository,
+	taskRepo repository.TaskRepository,
+	reminderConfigRepo repository.ReminderConfigRepository,
+	reminderLogRepo repository.ReminderLogRepository,
+	logger *zap.Logger,
+) {
+	if !cfg.Admin.Enabled || cfg.Admin.TokenHash == "" {
+		logger.Warn("管理后台已禁用，请在 config.yaml 中配置 admin.enabled=true 和 admin.token_hash")
+		return
+	}
+	adminH := handlers.NewAdminHandler(db, userRepo, taskRepo, reminderConfigRepo, reminderLogRepo, cfg)
+	adm := r.Group("/admin/api")
+	adm.Use(middleware.LocalhostOnly())
+	adm.POST("/auth/verify", middleware.AdminLoginRateLimit(10, time.Minute), adminH.VerifyToken)
+	authed := adm.Group("", middleware.AdminAuthMiddleware(cfg.Admin))
+	{
+		authed.GET("/stats", adminH.GetStats)
+		authed.GET("/users", adminH.ListUsers)
+		authed.GET("/users/:id", adminH.GetUser)
+		authed.DELETE("/users/:id", adminH.DeleteUser)
+		authed.POST("/users/:id/reset-password", adminH.ForceResetPassword)
+		authed.GET("/tasks", adminH.ListAllTasks)
+		authed.DELETE("/tasks/:id", adminH.AdminDeleteTask)
+		authed.GET("/reminder-configs", adminH.ListAllReminderConfigs)
+		authed.GET("/reminder-logs", adminH.ListAllReminderLogs)
+		authed.GET("/config", adminH.GetConfig)
+	}
+	logger.Info("管理后台已启动", zap.String("prefix", "/admin/api"))
 }
