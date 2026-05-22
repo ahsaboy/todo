@@ -138,11 +138,29 @@ func (h *TaskHandler) List(c *gin.Context) {
 
 	priority, _ := strconv.Atoi(c.Query("priority"))
 
+	dueBefore, dueAfter := c.Query("due_before"), c.Query("due_after")
+	if dueBefore != "" {
+		normalized, err := utils.NormalizeAPITime(dueBefore, timezone.Get())
+		if err != nil {
+			utils.RespondError(c, http.StatusBadRequest, "due_before: "+err.Error(), utils.CodeInvalidInput)
+			return
+		}
+		dueBefore = normalized
+	}
+	if dueAfter != "" {
+		normalized, err := utils.NormalizeAPITime(dueAfter, timezone.Get())
+		if err != nil {
+			utils.RespondError(c, http.StatusBadRequest, "due_after: "+err.Error(), utils.CodeInvalidInput)
+			return
+		}
+		dueAfter = normalized
+	}
+
 	filters := models.TaskFilters{
 		Status:    c.Query("status"),
 		Priority:  priority,
-		DueBefore: c.Query("due_before"),
-		DueAfter:  c.Query("due_after"),
+		DueBefore: dueBefore,
+		DueAfter:  dueAfter,
 		Search:    c.Query("search"),
 	}
 

@@ -7,6 +7,7 @@ import (
 
 	"todo/internal/models"
 	"todo/internal/service"
+	"todo/internal/utils"
 	"todo/internal/views"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
@@ -205,11 +206,28 @@ func listTasksHandler(svc *service.TaskService) mcpsrv.ToolHandlerFunc {
 			limit = 20
 		}
 
+		dueBefore := request.GetString("due_before", "")
+		if dueBefore != "" {
+			normalized, err := utils.NormalizeAPITime(dueBefore, resolveLoc(ctx))
+			if err != nil {
+				return mcpgo.NewToolResultErrorf("due_before: %v", err), nil
+			}
+			dueBefore = normalized
+		}
+		dueAfter := request.GetString("due_after", "")
+		if dueAfter != "" {
+			normalized, err := utils.NormalizeAPITime(dueAfter, resolveLoc(ctx))
+			if err != nil {
+				return mcpgo.NewToolResultErrorf("due_after: %v", err), nil
+			}
+			dueAfter = normalized
+		}
+
 		filters := models.TaskFilters{
 			Status:    request.GetString("status", ""),
 			Priority:  request.GetInt("priority", 0),
-			DueBefore: request.GetString("due_before", ""),
-			DueAfter:  request.GetString("due_after", ""),
+			DueBefore: dueBefore,
+			DueAfter:  dueAfter,
 			Search:    request.GetString("search", ""),
 		}
 
