@@ -23,8 +23,25 @@
 - Swagger API 文档
 - 优雅退出
 - Docker Compose 部署
+- **管理后台**（localhost-only）：仪表盘、用户/任务/提醒管理、系统配置查看
 
 ## 快速开始
+
+### 配置文件
+
+项目提供配置示例文件 `config.example.yaml`。首次运行前需要复制并配置：
+
+```bash
+# 复制配置文件
+cp config.example.yaml config.yaml
+
+# 生成 admin token hash（用于管理后台）
+echo -n "your_secure_token" | sha256sum | cut -d' ' -f1
+
+# 编辑 config.yaml，填入 token_hash
+```
+
+**重要**：`config.yaml` 包含敏感信息（如 admin token hash），已被添加到 `.gitignore`，不会被 Git 跟踪。
 
 ### 本地运行
 
@@ -101,6 +118,27 @@ HOST=0.0.0.0 \
 STATIC_FILES=false \
 CORS=https://todo.example.com,https://admin.example.com \
 docker compose up -d
+```
+
+**Docker 部署配置文件说明**：
+
+Docker 镜像默认使用 `config.example.yaml` 作为配置模板。生产环境需要通过 volume 挂载实际的 `config.yaml`：
+
+```bash
+# 方式1：通过 docker run 挂载
+docker run -d \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  -p 8080:8080 \
+  ghcr.io/ahsaboy/todo:latest
+
+# 方式2：在 docker-compose.yml 中配置
+services:
+  todo:
+    image: ghcr.io/ahsaboy/todo:latest
+    volumes:
+      - ./config.yaml:/app/config.yaml
+    ports:
+      - "8080:8080"
 ```
 
 ### 独立前端构建
@@ -265,13 +303,20 @@ curl -X POST http://localhost:8080/mcp \
 
 ## 配置文件
 
-`config.yaml` 包含所有可配置项：
+`config.yaml` 包含所有可配置项。首先复制示例配置：
 
+```bash
+cp config.example.yaml config.yaml
 ```
+
+然后根据需要修改。核心配置项：
+
+```yaml
 server:
   host: "0.0.0.0"
   port: 8080
   mode: "debug"
+  timezone: "Asia/Shanghai"
 
 database:
   path: "./data/tasks.db"
@@ -281,7 +326,7 @@ static_files: true
 reminder:
   enabled: true
   scan_interval_seconds: 30
-  webhook_body_template: | # 用户渠道未自定义模板时使用的默认消息模板
+  webhook_body_template: |
     {"msg_type":"text","content":{"text":"[TODO] {{.Title}}"}}
   webhook_timeout_seconds: 10
   max_retries: 3
@@ -303,6 +348,11 @@ logging:
   file_enabled: true
   path: "./logs"
   max_days: 7
+
+# 管理后台配置（仅限 localhost 访问）
+admin:
+  enabled: true
+  token_hash: ""  # 必填，生成方式：echo -n "your_token" | sha256sum | cut -d' ' -f1
 ```
 
 说明：
@@ -391,6 +441,90 @@ curl -X POST http://localhost:8080/mcp \
 - 提醒只有在该任务的所有已启用渠道都发送成功后，才会标记为已发送。
 - 注册接口在并发下如果用户名冲突，会稳定返回 `409 Conflict`。
 
+<details>
+<summary>管理后台</summary>
+## 管理后台
+
+系统提供 localhost-only 的管理后台界面，用于系统管理和监控。
+
+### 启用管理后台
+
+1. **配置 admin 段**（在 `config.yaml` 中）：
+
+```yaml
+admin:
+  enabled: true
+  token_hash: "<your-sha256-hash>"
+```
+
+2. **生成 token hash**：
+
+```bash
+# Linux/macOS
+echo -n "your_secure_token" | sha256sum | cut -d' ' -f1
+
+# Windows PowerShell
+[System.BitConverter]::ToString(
+  [System.Security.Cryptography.SHA256]::Create().ComputeHash(
+    [System.Text.Encoding]::UTF8.GetBytes("your_secure_token")
+  )
+).Replace("-","").ToLower()
+```
+
+3. **访问管理后台**：
+
+```
+http://localhost:8080/admin/login
+```
+
+### 安全特性
+
+- **仅限 localhost 访问**：所有 `/admin/api/*` 端点只能从服务器本机访问
+- **令牌认证**：使用 SHA-256 哈希存储，constant-time 比较防止时序攻击
+- **会话管理**：令牌存储在浏览器 sessionStorage（非 localStorage）
+- **敏感信息隐藏**：系统配置接口自动隐藏 token_hash
+
+### 功能模块
+
+| 模块 | 说明 |
+|------|------|
+| 仪表盘 | 系统统计信息（用户数、任务数、完成率、提醒配置/日志数） |
+| 用户管理 | 用户列表、搜索、删除、强制重置密码 |
+| 任务管理 | 所有用户任务列表、多条件筛选、删除 |
+| 提醒配置 | 所有用户的提醒渠道列表 |
+| 提醒日志 | 提醒发送记录、状态、错误信息 |
+| 系统配置 | 当前系统配置查看（只读，隐藏敏感信息） |
+
+### API 端点
+
+管理 API 遵循 RESTful 规范，所有端点需要 `X-Admin-Token` 请求头：
+
+```bash
+# 认证
+POST /admin/api/auth/verify
+Body: {"token": "your_token"}
+
+# 获取系统统计
+GET /admin/api/stats
+
+# 用户管理
+GET /admin/api/users?page=1&limit=20&search=<keyword>
+GET /admin/api/users/:id
+DELETE /admin/api/users/:id
+POST /admin/api/users/:id/reset-password
+Body: {"new_password": "new_password"}
+
+# 任务管理
+GET /admin/api/tasks?page=1&limit=20&user_id=<id>&status=<pending|completed>
+
+# 提醒管理
+GET /admin/api/reminder-configs?page=1&limit=20
+GET /admin/api/reminder-logs?page=1&limit=20
+
+# 系统配置
+GET /admin/api/config
+```
+</details>
 ## 项目结构
 
 ```
@@ -408,19 +542,26 @@ TODO/
 │   ├── handlers/
 │   │   ├── auth_handler.go         # 认证 HTTP 处理（注册/登录/Key管理）
 │   │   ├── task_handler.go         # 任务 HTTP 处理
-│   │   └── reminder_config_handler.go  # 提醒配置 CRUD
+│   │   ├── reminder_config_handler.go  # 提醒配置 CRUD
+│   │   └── admin_handler.go        # 管理后台接口
 │   ├── repository/
 │   │   ├── logging.go              # repository 数据库操作日志辅助
 │   │   ├── user_repo.go            # 用户数据库操作
 │   │   ├── api_key_repo.go         # API Key 数据库操作
 │   │   ├── task_repo.go            # 任务数据库操作
-│   │   └── reminder_config_repo.go # 提醒配置数据库操作
+│   │   ├── reminder_config_repo.go # 提醒配置数据库操作
+│   │   └── reminder_log_repo.go    # 提醒日志数据库操作
 │   ├── service/
 │   │   ├── auth_service.go         # 认证逻辑
 │   │   ├── task_service.go         # 业务逻辑
 │   │   ├── reminder_service.go     # 后台提醒（按用户多渠道）
-│   │   └── reminder_config_service.go  # 提醒配置管理
-│   ├── middleware/auth.go          # 认证中间件（Bearer/api-key/X-API-Key）
+│   │   ├── reminder_config_service.go  # 提醒配置管理
+│   │   └── reminder_log_service.go # 提醒日志管理
+│   ├── middleware/
+│   │   ├── auth.go                 # 认证中间件（Bearer/api-key/X-API-Key）
+│   │   ├── admin_auth.go           # 管理后台认证中间件
+│   │   ├── admin_rate_limit.go     # 管理后台限流中间件
+│   │   └── localhost.go            # 本地访问限制中间件
 │   └── utils/
 │       ├── response.go             # 统一响应格式
 │       └── validator.go            # 参数校验
@@ -428,15 +569,28 @@ TODO/
 ├── frontend/                       # Vue 前端源码
 │   ├── Dockerfile                  # 分离部署前端 nginx 镜像
 │   ├── nginx.conf                  # 前端 SPA fallback 配置
-│   └── src/shared/                 # 前端共享模块
+│   ├── src/pages/admin/            # 管理后台页面
+│   │   ├── AdminLoginPage.vue      # 登录页
+│   │   ├── AdminDashboardPage.vue  # 仪表盘
+│   │   ├── AdminUsersPage.vue      # 用户管理
+│   │   ├── AdminTasksPage.vue      # 任务管理
+│   │   ├── AdminReminderConfigsPage.vue  # 提醒配置
+│   │   ├── AdminReminderLogsPage.vue     # 提醒日志
+│   │   └── AdminConfigPage.vue     # 系统配置
+│   └── src/widgets/
+│       ├── AdminLayout.vue         # 管理后台布局
+│       ├── AdminSidebar.vue        # 管理后台侧边栏
+│       └── admin-common.css        # 管理后台公共样式
 ├── web/                            # Go embed 前端构建产物入口
 │   ├── embed.go                    # 使用 //go:embed all:dist
 │   └── dist/                       # make build 生成并复制的静态文件
-├── config.yaml                     # 配置文件
+├── config.example.yaml             # 配置示例文件（敏感信息已隐藏）
 ├── Dockerfile                      # 单体镜像多阶段构建
 ├── docker-compose.yml              # 默认容器编排（直接使用 ghcr.io 单体镜像）
 └── Makefile                        # 构建命令
 ```
+
+**注意**：`config.yaml` 包含敏感信息，已被 Git 忽略。首次运行前需要复制 `config.example.yaml`。
 
 ## Makefile 命令
 
