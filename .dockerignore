@@ -2,5 +2,30 @@ frontend/node_modules
 frontend/dist
 node_modules
 .git
+.gitignore
 bin/
 data/
+
+# Environment & Config (敏感信息通过 volume 挂载)
+.env
+.env.local
+config.yaml
+coverage.out
+
+# IDE & Editor
+.idea
+.vscode
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+LICENSE

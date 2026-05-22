@@ -49,7 +49,9 @@ LABEL org.opencontainers.image.source="https://github.com/ahsaboy/todo"
 RUN mkdir -p /app/data
 
 COPY --from=builder /server .
-COPY config.yaml .
+
+# 复制配置文件模板（实际配置通过 volume 挂载）
+COPY config.example.yaml ./config.yaml
 
 EXPOSE 8080
 
