@@ -503,6 +503,11 @@ func registerAdminRoutes(
 		authed.GET("/reminder-configs", adminH.ListAllReminderConfigs)
 		authed.GET("/reminder-logs", adminH.ListAllReminderLogs)
 		authed.GET("/config", adminH.GetConfig)
+
+		systemLogH := handlers.NewSystemLogHandler(cfg)
+		authed.GET("/system-logs", systemLogH.ListLogFiles)
+		authed.GET("/system-logs/:filename/entries", systemLogH.GetLogEntries)
+		authed.GET("/system-logs/:filename/download", systemLogH.DownloadLogFile)
 	}
 	logger.Info("管理后台已启动", zap.String("prefix", "/admin/api"))
 }

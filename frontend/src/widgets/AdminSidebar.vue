@@ -7,6 +7,7 @@ import {
   ScrollText,
   Settings,
   LogOut,
+  Terminal,
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useAdminAuthStore } from '@/app/stores/admin-auth.store'
@@ -26,6 +27,7 @@ const navItems: NavItem[] = [
   { to: '/admin/tasks', label: '任务管理', icon: ListTodo },
   { to: '/admin/reminder-configs', label: '提醒配置', icon: BellRing },
   { to: '/admin/reminder-logs', label: '提醒日志', icon: ScrollText },
+  { to: '/admin/system-logs', label: '系统日志', icon: Terminal },
   { to: '/admin/config', label: '系统配置', icon: Settings },
 ]
 
