@@ -6,16 +6,20 @@
       <span class="column-count">{{ tasks.length }}</span>
     </div>
 
-    <TransitionGroup v-if="!collapsed" tag="div" name="list-move" class="column-cards">
-      <TaskBoardCard
-        v-for="task in tasks"
-        :key="task.id"
-        :task="task"
-        @click="$emit('cardClick', task)"
-      />
+    <CollapseTransition>
+      <div v-if="!collapsed" class="column-cards-wrap">
+        <TransitionGroup tag="div" name="list-move" class="column-cards">
+          <TaskBoardCard
+            v-for="task in tasks"
+            :key="task.id"
+            :task="task"
+            @click="$emit('cardClick', task)"
+          />
 
-      <div v-if="tasks.length === 0" class="column-empty">暂无任务</div>
-    </TransitionGroup>
+          <div v-if="tasks.length === 0" class="column-empty">暂无任务</div>
+        </TransitionGroup>
+      </div>
+    </CollapseTransition>
   </div>
 </template>
 
@@ -23,6 +27,7 @@
 import { ref } from 'vue'
 import type { Task } from '@/entities/task/model'
 import TaskBoardCard from './TaskBoardCard.vue'
+import CollapseTransition from '@/shared/ui/CollapseTransition.vue'
 
 defineProps<{
   title: string
@@ -77,11 +82,14 @@ const collapsed = ref(false)
   border-radius: 10px;
 }
 
+.column-cards-wrap {
+  margin-top: 8px;
+}
+
 .column-cards {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 8px;
   position: relative;
 }
 

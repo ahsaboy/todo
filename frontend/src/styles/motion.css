@@ -93,6 +93,21 @@
   --motion-panel-enter-from: translateX(calc(var(--motion-distance-xl) * -1));
 }
 
+/* 收起/展开过渡 */
+.collapse-enter-active,
+.collapse-leave-active {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition:
+    grid-template-rows var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.collapse-enter-active > *,
+.collapse-leave-active > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
 /* 骨架屏过渡 */
 .sk-fade-enter-active,
 .sk-fade-leave-active {

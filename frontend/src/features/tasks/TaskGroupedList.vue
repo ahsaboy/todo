@@ -7,35 +7,39 @@
         <span class="group-count">{{ group.tasks.length }}</span>
       </div>
 
-      <div v-if="!collapsedGroups.has(group.label)" class="group-tasks">
-        <div
-          v-for="task in group.tasks"
-          :key="task.id"
-          class="task-card"
-          :class="{ completed: task.completed }"
-        >
-          <input
-            :id="`task-group-completed-${task.id}`"
-            :name="`task_group_completed_${task.id}`"
-            type="checkbox"
-            :checked="task.completed"
-            class="checkbox-circle"
-            @change="$emit('toggle', task.id)"
-          />
-          <label class="sr-only" :for="`task-group-completed-${task.id}`">
-            {{ task.completed ? '标记为未完成' : '标记为完成' }}：{{ task.title }}
-          </label>
-          <div class="task-content">
-            <div class="task-title">{{ task.title }}</div>
-            <div class="task-meta">
-              <PriorityTag v-if="task.priority" :priority="task.priority" />
-              <span v-if="task.dueAt" class="meta-item">
-                {{ formatDate(task.dueAt) }}
-              </span>
+      <CollapseTransition>
+        <div v-if="!collapsedGroups.has(group.label)" class="group-tasks">
+          <div class="group-tasks-inner">
+            <div
+              v-for="task in group.tasks"
+              :key="task.id"
+              class="task-card"
+              :class="{ completed: task.completed }"
+            >
+              <input
+                :id="`task-group-completed-${task.id}`"
+                :name="`task_group_completed_${task.id}`"
+                type="checkbox"
+                :checked="task.completed"
+                class="checkbox-circle"
+                @change="$emit('toggle', task.id)"
+              />
+              <label class="sr-only" :for="`task-group-completed-${task.id}`">
+                {{ task.completed ? '标记为未完成' : '标记为完成' }}：{{ task.title }}
+              </label>
+              <div class="task-content">
+                <div class="task-title">{{ task.title }}</div>
+                <div class="task-meta">
+                  <PriorityTag v-if="task.priority" :priority="task.priority" />
+                  <span v-if="task.dueAt" class="meta-item">
+                    {{ formatDate(task.dueAt) }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </CollapseTransition>
     </div>
   </MotionStagger>
 </template>
@@ -45,6 +49,7 @@ import { ref } from 'vue'
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import MotionStagger from '@/shared/ui/MotionStagger.vue'
+import CollapseTransition from '@/shared/ui/CollapseTransition.vue'
 
 interface TaskGroup {
   label: string
@@ -129,6 +134,11 @@ function formatDate(dateStr: string): string {
 }
 
 .group-tasks {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-tasks-inner {
   display: flex;
   flex-direction: column;
   gap: 4px;
