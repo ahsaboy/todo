@@ -2,7 +2,7 @@
   <MotionStagger class="task-grouped-list">
     <div v-for="group in groups" :key="group.label" class="task-group">
       <div class="group-header" @click="toggleGroup(group.label)">
-        <span class="group-arrow" :class="{ collapsed: collapsedGroups.has(group.label) }">▼</span>
+        <ChevronDown class="group-arrow" :class="{ collapsed: collapsedGroups.has(group.label) }" :size="14" />
         <span class="group-label">{{ group.label }}</span>
         <span class="group-count">{{ group.tasks.length }}</span>
       </div>
@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { ChevronDown } from 'lucide-vue-next'
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import MotionStagger from '@/shared/ui/MotionStagger.vue'
@@ -114,7 +115,7 @@ function formatDate(dateStr: string): string {
 }
 
 .group-arrow {
-  font-size: 12px;
+  flex-shrink: 0;
   transition: transform var(--motion-duration-base);
   transform-origin: center center;
 }

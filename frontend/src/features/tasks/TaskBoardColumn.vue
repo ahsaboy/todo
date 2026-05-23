@@ -1,7 +1,7 @@
 <template>
   <div class="board-column" :class="{ collapsed }">
     <div class="column-header" @click="collapsed = !collapsed">
-      <span class="column-arrow" :class="{ collapsed }">▼</span>
+      <ChevronDown class="column-arrow" :class="{ collapsed }" :size="14" />
       <span class="column-title">{{ title }}</span>
       <span class="column-count">{{ tasks.length }}</span>
     </div>
@@ -25,6 +25,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { ChevronDown } from 'lucide-vue-next'
 import type { Task } from '@/entities/task/model'
 import TaskBoardCard from './TaskBoardCard.vue'
 import CollapseTransition from '@/shared/ui/CollapseTransition.vue'
@@ -60,7 +61,7 @@ const collapsed = ref(false)
 }
 
 .column-arrow {
-  font-size: 12px;
+  flex-shrink: 0;
   transition: transform var(--motion-duration-base);
   transform-origin: center center;
 }

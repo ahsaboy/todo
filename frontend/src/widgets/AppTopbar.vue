@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth.store'
 import { useThemeStore } from '@/app/stores/theme.store'
-import { LogOut, Menu, Moon, Sun, UserCircle } from 'lucide-vue-next'
+import { LogOut, Moon, PanelLeftClose, PanelLeftOpen, Sun, UserCircle } from 'lucide-vue-next'
 
 type SidebarToggleMode = 'desktop' | 'mobile' | null
 
@@ -89,7 +89,12 @@ async function handleLogout() {
       :aria-label="sidebarToggleLabel"
       @click="$emit('toggleSidebar')"
     >
-      <Menu
+      <PanelLeftClose
+        v-if="isSidebarOpen"
+        :size="18"
+      />
+      <PanelLeftOpen
+        v-else
         :size="18"
       />
     </button>
