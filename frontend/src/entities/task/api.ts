@@ -43,6 +43,10 @@ export function deleteTask(id: number) {
   return api.delete<ApiResponse<void>>(`/tasks/${id}`)
 }
 
-export function toggleTaskComplete(id: number) {
-  return api.patch<ApiResponse<TaskDto>>(`/tasks/${id}/complete`)
+export function toggleTaskComplete(id: number, focusDuration?: number | null) {
+  const body: Record<string, unknown> = {}
+  if (focusDuration != null) {
+    body.focus_duration = focusDuration
+  }
+  return api.patch<ApiResponse<TaskDto>>(`/tasks/${id}/complete`, Object.keys(body).length > 0 ? body : undefined)
 }

@@ -81,7 +81,7 @@ func TestTaskService_ToggleComplete_NotFound(t *testing.T) {
 	}
 	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{})
 
-	task, err := svc.ToggleComplete(context.Background(), 1, 99)
+	task, err := svc.ToggleComplete(context.Background(), 1, 99, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestTaskService_ToggleComplete_NoRepeat(t *testing.T) {
 	var capturedNext *models.Task
 	repo := &testutil.MockTaskRepository{
 		GetByIDFn: func(_ context.Context, _, _ int64) (*models.Task, error) { return existing, nil },
-		ToggleCompleteAndCreateRepeatFn: func(_ context.Context, _, _ int64, next *models.Task) (*models.Task, error) {
+		ToggleCompleteAndCreateRepeatFn: func(_ context.Context, _, _ int64, next *models.Task, focusDuration *int) (*models.Task, error) {
 			capturedNext = next
 			done := *existing
 			done.Completed = true
@@ -104,7 +104,7 @@ func TestTaskService_ToggleComplete_NoRepeat(t *testing.T) {
 	}
 	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{})
 
-	task, err := svc.ToggleComplete(context.Background(), 1, 1)
+	task, err := svc.ToggleComplete(context.Background(), 1, 1, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestTaskService_ToggleComplete_WithRepeat(t *testing.T) {
 	var capturedNext *models.Task
 	repo := &testutil.MockTaskRepository{
 		GetByIDFn: func(_ context.Context, _, _ int64) (*models.Task, error) { return existing, nil },
-		ToggleCompleteAndCreateRepeatFn: func(_ context.Context, _, _ int64, next *models.Task) (*models.Task, error) {
+		ToggleCompleteAndCreateRepeatFn: func(_ context.Context, _, _ int64, next *models.Task, focusDuration *int) (*models.Task, error) {
 			capturedNext = next
 			done := *existing
 			done.Completed = true
@@ -134,7 +134,7 @@ func TestTaskService_ToggleComplete_WithRepeat(t *testing.T) {
 	}
 	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{})
 
-	task, err := svc.ToggleComplete(context.Background(), 1, 1)
+	task, err := svc.ToggleComplete(context.Background(), 1, 1, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestTaskService_ToggleComplete_UncompletingDoesNotGenerateNext(t *testing.T
 	var capturedNext *models.Task
 	repo := &testutil.MockTaskRepository{
 		GetByIDFn: func(_ context.Context, _, _ int64) (*models.Task, error) { return existing, nil },
-		ToggleCompleteAndCreateRepeatFn: func(_ context.Context, _, _ int64, next *models.Task) (*models.Task, error) {
+		ToggleCompleteAndCreateRepeatFn: func(_ context.Context, _, _ int64, next *models.Task, focusDuration *int) (*models.Task, error) {
 			capturedNext = next
 			undone := *existing
 			undone.Completed = false
@@ -169,7 +169,7 @@ func TestTaskService_ToggleComplete_UncompletingDoesNotGenerateNext(t *testing.T
 	}
 	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{})
 
-	_, err := svc.ToggleComplete(context.Background(), 1, 1)
+	_, err := svc.ToggleComplete(context.Background(), 1, 1, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

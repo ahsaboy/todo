@@ -38,7 +38,7 @@
           <TaskCardList
             v-if="isMobile"
             :tasks="tasks"
-            @toggle="toggleComplete"
+            @toggle="handleToggle"
             @open="openTask"
           />
 
@@ -46,7 +46,7 @@
           <TaskTable
             v-else
             :tasks="tasks"
-            @toggle="toggleComplete"
+            @toggle="handleToggle"
             @open="openTask"
           />
 
@@ -69,6 +69,13 @@
 
     <!-- 抽屉 -->
     <TaskDetailDrawer v-model:visible="drawerVisible" :task="selectedTask" @submit="handleSubmit" @delete="handleDelete" />
+
+    <!-- 专注时长对话框 -->
+    <FocusDurationDialog
+      v-model:visible="focusDialogVisible"
+      :task-title="focusDialogTaskTitle"
+      @confirm="handleFocusConfirm"
+    />
   </div>
 </template>
 
@@ -81,8 +88,11 @@ import TaskCardList from '@/features/tasks/TaskCardList.vue'
 import TaskFilters from '@/features/tasks/TaskFilters.vue'
 import MobileFilters from '@/features/tasks/MobileFilters.vue'
 import TaskDetailDrawer from '@/features/tasks/TaskDetailDrawer.vue'
+import FocusDurationDialog from '@/features/tasks/FocusDurationDialog.vue'
 import TaskListSkeleton from '@/shared/ui/TaskListSkeleton.vue'
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@/entities/task/model'
+import { toggleTaskComplete as apiToggleComplete } from '@/entities/task/api'
+import { toTask } from '@/entities/task/mapper'
 
 const {
   tasks,
@@ -104,6 +114,10 @@ const drawerVisible = ref(false)
 const selectedTask = ref<Task | null>(null)
 const showFilters = ref(false)
 const windowWidth = ref(window.innerWidth)
+
+const focusDialogVisible = ref(false)
+const focusDialogTaskTitle = ref('')
+const pendingToggleTaskId = ref<number | null>(null)
 
 const isMobile = computed(() => windowWidth.value < 768)
 
@@ -143,6 +157,44 @@ async function handleDelete(id: number) {
   if (window.confirm('确定要删除这个任务吗？')) {
     await deleteTask(id)
     drawerVisible.value = false
+  }
+}
+
+function handleToggle(id: number) {
+  const task = tasks.value.find((t) => t.id === id)
+  if (!task) return
+
+  if (!task.completed) {
+    // 标记完成 → 弹出专注时长对话框
+    pendingToggleTaskId.value = id
+    focusDialogTaskTitle.value = task.title
+    focusDialogVisible.value = true
+  } else {
+    // 取消完成 → 直接调用
+    toggleComplete(id)
+  }
+}
+
+async function handleFocusConfirm(duration: number | null) {
+  if (pendingToggleTaskId.value == null) return
+  const id = pendingToggleTaskId.value
+  pendingToggleTaskId.value = null
+
+  const task = tasks.value.find((t) => t.id === id)
+  if (!task) return
+
+  const originalCompleted = task.completed
+  task.completed = !task.completed
+
+  try {
+    const response = await apiToggleComplete(id, duration != null ? duration : undefined)
+    const updatedTask = toTask(response.data)
+    const index = tasks.value.findIndex((t) => t.id === id)
+    if (index !== -1) {
+      tasks.value[index] = updatedTask
+    }
+  } catch {
+    task.completed = originalCompleted
   }
 }
 </script>

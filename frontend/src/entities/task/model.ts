@@ -4,6 +4,7 @@ export interface TaskDto {
   created_at: string
   description: string
   due_at: string
+  focus_duration: number | null
   id: number
   priority: number
   remind_at: string
@@ -23,6 +24,7 @@ export interface Task {
   createdAt: string
   description: string
   dueAt: string
+  focusDuration: number | null
   id: number
   priority: number
   remindAt: string

@@ -73,7 +73,7 @@ func (s *TaskService) requireEnabledReminderChannel(ctx context.Context, userID 
 	return nil
 }
 
-func (s *TaskService) ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error) {
+func (s *TaskService) ToggleComplete(ctx context.Context, userID, id int64, focusDuration *int) (*models.Task, error) {
 	task, err := s.repo.GetByID(ctx, userID, id)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (s *TaskService) ToggleComplete(ctx context.Context, userID, id int64) (*mo
 		}
 	}
 
-	return s.repo.ToggleCompleteAndCreateRepeat(ctx, userID, id, next)
+	return s.repo.ToggleCompleteAndCreateRepeat(ctx, userID, id, next, focusDuration)
 }
 
 func (s *TaskService) buildNextOccurrence(t *models.Task) (*models.Task, error) {

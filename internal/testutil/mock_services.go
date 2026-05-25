@@ -14,7 +14,7 @@ type MockTaskService struct {
 	ListFn           func(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error)
 	UpdateFn         func(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error)
 	DeleteFn         func(ctx context.Context, userID, id int64) (bool, error)
-	ToggleCompleteFn func(ctx context.Context, userID, id int64) (*models.Task, error)
+	ToggleCompleteFn func(ctx context.Context, userID, id int64, focusDuration *int) (*models.Task, error)
 }
 
 func (m *MockTaskService) Create(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error) {
@@ -32,8 +32,8 @@ func (m *MockTaskService) Update(ctx context.Context, userID, id int64, req mode
 func (m *MockTaskService) Delete(ctx context.Context, userID, id int64) (bool, error) {
 	return m.DeleteFn(ctx, userID, id)
 }
-func (m *MockTaskService) ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error) {
-	return m.ToggleCompleteFn(ctx, userID, id)
+func (m *MockTaskService) ToggleComplete(ctx context.Context, userID, id int64, focusDuration *int) (*models.Task, error) {
+	return m.ToggleCompleteFn(ctx, userID, id, focusDuration)
 }
 
 // ---- AuthServiceInterface mock ----

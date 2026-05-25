@@ -13,8 +13,8 @@ type TaskRepository interface {
 	List(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error)
 	Update(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error)
 	Delete(ctx context.Context, userID, id int64) (bool, error)
-	ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error)
-	ToggleCompleteAndCreateRepeat(ctx context.Context, userID, id int64, next *models.Task) (*models.Task, error)
+	ToggleComplete(ctx context.Context, userID, id int64, focusDuration *int) (*models.Task, error)
+	ToggleCompleteAndCreateRepeat(ctx context.Context, userID, id int64, next *models.Task, focusDuration *int) (*models.Task, error)
 	GetPendingReminders(ctx context.Context, now time.Time) ([]models.Task, error)
 	MarkReminderSent(ctx context.Context, id int64) (bool, error)
 	CreateRepeatTask(ctx context.Context, t *models.Task) error

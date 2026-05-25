@@ -292,7 +292,13 @@ func (h *TaskHandler) ToggleComplete(c *gin.Context) {
 		return
 	}
 
-	task, err := h.svc.ToggleComplete(c.Request.Context(), userID, id)
+	var req struct {
+		FocusDuration *int `json:"focus_duration"`
+	}
+	// 忽略解析错误（允许空 body）
+	_ = c.ShouldBindJSON(&req)
+
+	task, err := h.svc.ToggleComplete(c.Request.Context(), userID, id, req.FocusDuration)
 	if err != nil {
 		utils.RespondInternalError(c, "failed to toggle task", err)
 		return

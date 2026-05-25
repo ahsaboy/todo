@@ -18,8 +18,8 @@ type MockTaskRepository struct {
 	ListFn                          func(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error)
 	UpdateFn                        func(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error)
 	DeleteFn                        func(ctx context.Context, userID, id int64) (bool, error)
-	ToggleCompleteFn                func(ctx context.Context, userID, id int64) (*models.Task, error)
-	ToggleCompleteAndCreateRepeatFn func(ctx context.Context, userID, id int64, next *models.Task) (*models.Task, error)
+	ToggleCompleteFn                func(ctx context.Context, userID, id int64, focusDuration *int) (*models.Task, error)
+	ToggleCompleteAndCreateRepeatFn func(ctx context.Context, userID, id int64, next *models.Task, focusDuration *int) (*models.Task, error)
 	GetPendingRemindersFn           func(ctx context.Context, now time.Time) ([]models.Task, error)
 	MarkReminderSentFn              func(ctx context.Context, id int64) (bool, error)
 	CreateRepeatTaskFn              func(ctx context.Context, t *models.Task) error
@@ -42,11 +42,11 @@ func (m *MockTaskRepository) Update(ctx context.Context, userID, id int64, req m
 func (m *MockTaskRepository) Delete(ctx context.Context, userID, id int64) (bool, error) {
 	return m.DeleteFn(ctx, userID, id)
 }
-func (m *MockTaskRepository) ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error) {
-	return m.ToggleCompleteFn(ctx, userID, id)
+func (m *MockTaskRepository) ToggleComplete(ctx context.Context, userID, id int64, focusDuration *int) (*models.Task, error) {
+	return m.ToggleCompleteFn(ctx, userID, id, focusDuration)
 }
-func (m *MockTaskRepository) ToggleCompleteAndCreateRepeat(ctx context.Context, userID, id int64, next *models.Task) (*models.Task, error) {
-	return m.ToggleCompleteAndCreateRepeatFn(ctx, userID, id, next)
+func (m *MockTaskRepository) ToggleCompleteAndCreateRepeat(ctx context.Context, userID, id int64, next *models.Task, focusDuration *int) (*models.Task, error) {
+	return m.ToggleCompleteAndCreateRepeatFn(ctx, userID, id, next, focusDuration)
 }
 func (m *MockTaskRepository) GetPendingReminders(ctx context.Context, now time.Time) ([]models.Task, error) {
 	return m.GetPendingRemindersFn(ctx, now)

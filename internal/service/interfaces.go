@@ -12,7 +12,7 @@ type TaskServiceInterface interface {
 	List(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int, sortField, sortOrder string) ([]models.Task, int64, error)
 	Update(ctx context.Context, userID, id int64, req models.UpdateTaskRequest) (*models.Task, error)
 	Delete(ctx context.Context, userID, id int64) (bool, error)
-	ToggleComplete(ctx context.Context, userID, id int64) (*models.Task, error)
+	ToggleComplete(ctx context.Context, userID, id int64, focusDuration *int) (*models.Task, error)
 }
 
 type AuthServiceInterface interface {

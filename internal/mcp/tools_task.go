@@ -91,8 +91,9 @@ func buildDeleteTaskTool() mcpgo.Tool {
 
 func buildToggleTaskCompleteTool() mcpgo.Tool {
 	return mcpgo.NewTool("toggle_task_complete",
-		mcpgo.WithDescription("切换任务完成/未完成状态。重复任务被标记为完成时,自动生成下一次实例。"),
+		mcpgo.WithDescription("切换任务完成/未完成状态。重复任务被标记为完成时,自动生成下一次实例。可选传入专注时长(分钟)。"),
 		mcpgo.WithNumber("id", mcpgo.Required(), mcpgo.Description("任务 ID"), mcpgo.Min(1)),
+		mcpgo.WithNumber("focus_duration", mcpgo.Description("专注时长(分钟),可选;标记完成时传入可记录本次专注时长")),
 	)
 }
 
@@ -377,7 +378,13 @@ func toggleTaskCompleteHandler(svc service.TaskServiceInterface) mcpsrv.ToolHand
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 
-		task, err := svc.ToggleComplete(ctx, userID, int64(id))
+		var focusDuration *int
+		if hasArg(request, "focus_duration") {
+			v := int(request.GetInt("focus_duration", 0))
+			focusDuration = &v
+		}
+
+		task, err := svc.ToggleComplete(ctx, userID, int64(id), focusDuration)
 		if err != nil {
 			return mcpgo.NewToolResultErrorf("failed to toggle task: %v", err), nil
 		}

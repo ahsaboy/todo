@@ -86,7 +86,7 @@ export function useTasks() {
     meta.value.total_items--
   }
 
-  async function toggleComplete(id: number) {
+  async function toggleComplete(id: number, focusDuration?: number | null) {
     const task = tasks.value.find((t) => t.id === id)
     if (!task) return
 
@@ -95,7 +95,7 @@ export function useTasks() {
     task.completed = !task.completed
 
     try {
-      const response = await taskApi.toggleTaskComplete(id)
+      const response = await taskApi.toggleTaskComplete(id, focusDuration)
       const updatedTask = toTask(response.data)
       const index = tasks.value.findIndex((t) => t.id === id)
       if (index !== -1) {

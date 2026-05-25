@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     repeat_end_date TEXT,
     reminder_sent INTEGER DEFAULT 0,
     reminder_sent_at TEXT,
+    focus_duration INTEGER,
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
@@ -157,6 +158,16 @@ func migrate(db *sql.DB) error {
 	if legacyOwner.Valid {
 		if _, err := tx.Exec(`UPDATE tasks SET user_id = ? WHERE user_id IS NULL`, legacyOwner.Int64); err != nil {
 			return fmt.Errorf("backfill tasks.user_id: %w", err)
+		}
+	}
+
+	var hasFocusDuration int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name='focus_duration'`).Scan(&hasFocusDuration); err != nil {
+		return fmt.Errorf("check tasks.focus_duration: %w", err)
+	}
+	if hasFocusDuration == 0 {
+		if _, err := tx.Exec(`ALTER TABLE tasks ADD COLUMN focus_duration INTEGER`); err != nil {
+			return fmt.Errorf("add tasks.focus_duration: %w", err)
 		}
 	}
 

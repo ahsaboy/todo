@@ -6,6 +6,7 @@ export function toTask(dto: TaskDto): Task {
     createdAt: dto.created_at,
     description: dto.description,
     dueAt: dto.due_at,
+    focusDuration: dto.focus_duration,
     id: dto.id,
     priority: dto.priority,
     remindAt: dto.remind_at,

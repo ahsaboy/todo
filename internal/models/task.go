@@ -19,6 +19,7 @@ type Task struct {
 	RepeatEndDate  *string `json:"repeat_end_date"`
 	ReminderSent   bool    `json:"reminder_sent"`
 	ReminderSentAt *string `json:"reminder_sent_at"`
+	FocusDuration  *int    `json:"focus_duration"`
 	CreatedAt      string  `json:"created_at"`
 	UpdatedAt      string  `json:"updated_at"`
 }

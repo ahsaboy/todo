@@ -17,21 +17,35 @@
           <p>今日暂无任务</p>
         </div>
 
-        <TaskGroupedList v-else :groups="todayGroups" @toggle="toggleComplete" />
+        <TaskGroupedList v-else :groups="todayGroups" @toggle="handleToggle" />
       </template>
     </Transition>
+
+    <!-- 专注时长对话框 -->
+    <FocusDurationDialog
+      v-model:visible="focusDialogVisible"
+      :task-title="focusDialogTaskTitle"
+      @confirm="handleFocusConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTasks } from '@/features/tasks/useTasks'
 import QuickCreateTask from '@/features/tasks/QuickCreateTask.vue'
 import TaskGroupedList from '@/features/tasks/TaskGroupedList.vue'
+import FocusDurationDialog from '@/features/tasks/FocusDurationDialog.vue'
 import TaskGroupedSkeleton from '@/shared/ui/TaskGroupedSkeleton.vue'
 import type { Task } from '@/entities/task/model'
+import { toggleTaskComplete as apiToggleComplete } from '@/entities/task/api'
+import { toTask } from '@/entities/task/mapper'
 
 const { tasks, loading, error, fetchTasks, createTask, toggleComplete } = useTasks()
+
+const focusDialogVisible = ref(false)
+const focusDialogTaskTitle = ref('')
+const pendingToggleTaskId = ref<number | null>(null)
 
 onMounted(() => {
   fetchTasks()
@@ -75,6 +89,42 @@ const todayGroups = computed(() => {
 
 async function handleQuickCreate(title: string) {
   await createTask({ title })
+}
+
+function handleToggle(id: number) {
+  const task = tasks.value.find((t) => t.id === id)
+  if (!task) return
+
+  if (!task.completed) {
+    pendingToggleTaskId.value = id
+    focusDialogTaskTitle.value = task.title
+    focusDialogVisible.value = true
+  } else {
+    toggleComplete(id)
+  }
+}
+
+async function handleFocusConfirm(duration: number | null) {
+  if (pendingToggleTaskId.value == null) return
+  const id = pendingToggleTaskId.value
+  pendingToggleTaskId.value = null
+
+  const task = tasks.value.find((t) => t.id === id)
+  if (!task) return
+
+  const originalCompleted = task.completed
+  task.completed = !task.completed
+
+  try {
+    const response = await apiToggleComplete(id, duration != null ? duration : undefined)
+    const updatedTask = toTask(response.data)
+    const index = tasks.value.findIndex((t) => t.id === id)
+    if (index !== -1) {
+      tasks.value[index] = updatedTask
+    }
+  } catch {
+    task.completed = originalCompleted
+  }
 }
 </script>
 

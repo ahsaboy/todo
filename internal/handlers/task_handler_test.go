@@ -199,7 +199,7 @@ func TestTaskHandler_Delete_Success(t *testing.T) {
 
 func TestTaskHandler_ToggleComplete_NotFound(t *testing.T) {
 	svc := &testutil.MockTaskService{
-		ToggleCompleteFn: func(_ context.Context, _, _ int64) (*models.Task, error) {
+		ToggleCompleteFn: func(_ context.Context, _, _ int64, _ *int) (*models.Task, error) {
 			return nil, nil
 		},
 	}
@@ -214,7 +214,7 @@ func TestTaskHandler_ToggleComplete_NotFound(t *testing.T) {
 
 func TestTaskHandler_ToggleComplete_Success(t *testing.T) {
 	svc := &testutil.MockTaskService{
-		ToggleCompleteFn: func(_ context.Context, _, id int64) (*models.Task, error) {
+		ToggleCompleteFn: func(_ context.Context, _, id int64, _ *int) (*models.Task, error) {
 			return &models.Task{ID: id, UserID: 1, Completed: true}, nil
 		},
 	}
