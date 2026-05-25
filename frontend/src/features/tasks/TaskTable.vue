@@ -9,6 +9,7 @@
           <th class="col-due">截止时间</th>
           <th class="col-remind">提醒时间</th>
           <th class="col-repeat">重复</th>
+          <th class="col-focus">专注</th>
           <th class="col-created">创建时间</th>
         </tr>
       </thead>
@@ -43,6 +44,9 @@
           </td>
           <td class="col-repeat">
             {{ formatRepeat(task.repeatType, task.repeatInterval) }}
+          </td>
+          <td class="col-focus">
+            {{ task.focusDuration ? task.focusDuration + ' min' : '—' }}
           </td>
           <td class="col-created">
             {{ formatDate(task.createdAt) }}

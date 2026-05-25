@@ -59,6 +59,7 @@ type TemplateData struct {
 	DueAt         string
 	RemindAt      string
 	RepeatType    string
+	FocusDuration *int
 	CreatedAt     string
 }
 
@@ -75,15 +76,16 @@ func (t *Task) ToTemplateData(loc *time.Location) TemplateData {
 		remindAt = *t.RemindAt
 	}
 	return TemplateData{
-		TaskID:       t.ID,
-		Title:        t.Title,
-		Description:  t.Description,
-		Priority:     t.Priority,
-		PriorityText: priorityMap[t.Priority],
-		DueAt:        FormatReminderTime(dueAt, loc),
-		RemindAt:     FormatReminderTime(remindAt, loc),
-		RepeatType:   t.RepeatType,
-		CreatedAt:    FormatReminderTime(t.CreatedAt, loc),
+		TaskID:        t.ID,
+		Title:         t.Title,
+		Description:   t.Description,
+		Priority:      t.Priority,
+		PriorityText:  priorityMap[t.Priority],
+		DueAt:         FormatReminderTime(dueAt, loc),
+		RemindAt:      FormatReminderTime(remindAt, loc),
+		RepeatType:    t.RepeatType,
+		FocusDuration: t.FocusDuration,
+		CreatedAt:     FormatReminderTime(t.CreatedAt, loc),
 	}
 }
 

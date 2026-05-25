@@ -34,6 +34,9 @@
                   <span v-if="task.dueAt" class="meta-item">
                     {{ formatDate(task.dueAt) }}
                   </span>
+                  <span v-if="task.focusDuration" class="meta-item meta-focus">
+                    专注 {{ task.focusDuration }} min
+                  </span>
                 </div>
               </div>
             </div>
@@ -179,5 +182,9 @@ function formatDate(dateStr: string): string {
   margin-top: 4px;
   font-size: 12px;
   color: var(--color-text-muted);
+}
+
+.meta-focus {
+  color: var(--color-primary);
 }
 </style>

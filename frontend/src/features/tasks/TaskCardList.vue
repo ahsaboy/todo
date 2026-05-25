@@ -27,6 +27,9 @@
         <div v-if="task.dueAt" class="task-due" :class="{ overdue: isOverdue(task) }">
           {{ formatDue(task.dueAt) }}
         </div>
+        <div v-if="task.focusDuration" class="task-focus">
+          专注 {{ task.focusDuration }} min
+        </div>
       </div>
     </div>
   </TransitionGroup>
@@ -141,6 +144,11 @@ function formatDue(dateStr: string): string {
 .task-due.overdue {
   color: var(--color-danger);
   font-weight: 500;
+}
+
+.task-focus {
+  font-size: 12px;
+  color: var(--color-primary);
 }
 
 @media (max-width: 359px) {

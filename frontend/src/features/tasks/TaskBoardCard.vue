@@ -3,6 +3,9 @@
     <div class="card-title">{{ task.title }}</div>
     <div class="card-meta">
       <PriorityTag v-if="task.priority" :priority="task.priority" />
+      <span v-if="task.focusDuration" class="focus-tag">
+        专注 {{ task.focusDuration }} min
+      </span>
       <span v-if="task.dueAt" class="due-date">
         {{ formatDate(task.dueAt) }}
       </span>
@@ -67,5 +70,9 @@ function formatDate(dateStr: string): string {
   gap: 8px;
   font-size: 12px;
   color: var(--color-text-muted);
+}
+
+.focus-tag {
+  color: var(--color-primary);
 }
 </style>

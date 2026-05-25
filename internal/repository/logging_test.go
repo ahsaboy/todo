@@ -154,6 +154,7 @@ func openRepositoryTestDB(t *testing.T) *sql.DB {
 			repeat_end_date TEXT,
 			reminder_sent INTEGER DEFAULT 0,
 			reminder_sent_at TEXT,
+			focus_duration INTEGER,
 			created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
 			updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		)`,

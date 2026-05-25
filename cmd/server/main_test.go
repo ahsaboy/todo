@@ -256,10 +256,10 @@ func TestRegisterOptionalRoutesWithStaticFilesEnabled(t *testing.T) {
 	pageReq := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
 	pageRec := httptest.NewRecorder()
 	r.ServeHTTP(pageRec, pageReq)
-	if got, want := pageRec.Code, http.StatusOK; got != want {
+	if got, want := pageRec.Code, http.StatusFound; got != want {
 		t.Fatalf("page status = %d, want %d", got, want)
 	}
-	if body := pageRec.Body.String(); !strings.Contains(body, "<!doctype html>") && !strings.Contains(body, "<!DOCTYPE html>") {
-		t.Fatalf("page body does not look like index.html")
+	if loc := pageRec.Header().Get("Location"); loc != "/#/dashboard" {
+		t.Fatalf("page redirect Location = %q, want %q", loc, "/#/dashboard")
 	}
 }

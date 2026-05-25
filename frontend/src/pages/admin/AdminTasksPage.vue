@@ -11,6 +11,7 @@ interface Task {
   priority: number
   completed: boolean
   due_at: string | null
+  focus_duration: number | null
   created_at: string
 }
 
@@ -98,15 +99,16 @@ const totalPages = () => Math.ceil(total.value / limit)
             <th>优先级</th>
             <th>状态</th>
             <th>截止时间</th>
+            <th>专注</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="isLoading">
-            <td colspan="7" style="text-align:center; padding: 2rem;">加载中...</td>
+            <td colspan="8" style="text-align:center; padding: 2rem;">加载中...</td>
           </tr>
           <tr v-else-if="!tasks.length">
-            <td colspan="7" style="text-align:center; padding: 2rem; color: var(--color-text-muted);">暂无任务</td>
+            <td colspan="8" style="text-align:center; padding: 2rem; color: var(--color-text-muted);">暂无任务</td>
           </tr>
           <tr v-for="t in tasks" :key="t.id">
             <td>{{ t.id }}</td>
@@ -119,6 +121,7 @@ const totalPages = () => Math.ceil(total.value / limit)
               </span>
             </td>
             <td>{{ t.due_at || '—' }}</td>
+            <td>{{ t.focus_duration ? t.focus_duration + ' min' : '—' }}</td>
             <td>
               <button class="btn btn-sm btn-danger" @click="deleteTask(t.id, t.title)">删除</button>
             </td>
