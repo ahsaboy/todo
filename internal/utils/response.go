@@ -12,6 +12,7 @@ import (
 const (
 	CodeNotFound      = "NOT_FOUND"
 	CodeUnauthorized  = "UNAUTHORIZED"
+	CodeForbidden     = "FORBIDDEN"
 	CodeInvalidInput  = "INVALID_INPUT"
 	CodeInternalError = "INTERNAL_ERROR"
 	CodeRateLimited   = "RATE_LIMITED"

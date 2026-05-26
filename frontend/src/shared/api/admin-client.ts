@@ -5,16 +5,16 @@ const ADMIN_API_BASE_URL = 'admin/api'
 
 let isHandlingUnauthorized = false
 
-function getAdminToken(): string | null {
-  return sessionStorage.getItem('admin_token')
+function getAdminApiKey(): string | null {
+  return sessionStorage.getItem('admin_api_key')
 }
 
 function handleUnauthorized(endpoint: string): void {
-  if (endpoint.startsWith('/login')) {
+  if (endpoint.startsWith('/auth/login')) {
     return
   }
 
-  sessionStorage.removeItem('admin_token')
+  sessionStorage.removeItem('admin_api_key')
 
   if (!isHandlingUnauthorized) {
     isHandlingUnauthorized = true
@@ -32,9 +32,9 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     'Content-Type': 'application/json',
   }
 
-  const token = getAdminToken()
-  if (token) {
-    headers['X-Admin-Token'] = token
+  const apiKey = getAdminApiKey()
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`
   }
 
   try {
@@ -49,11 +49,11 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const data = await response.json().catch(() => ({}))
 
     if (response.status === 401) {
-      const isLoginAttempt = endpoint.startsWith('/auth/verify')
+      const isLoginAttempt = endpoint.startsWith('/auth/login')
       handleUnauthorized(endpoint)
       throw new ApiError({
         message: isLoginAttempt
-          ? '令牌无效，请检查后重试'
+          ? '用户名或密码错误'
           : '会话已过期，请重新登录',
         code: 'UNAUTHORIZED',
         status: 401,

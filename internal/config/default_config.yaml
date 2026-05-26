@@ -76,4 +76,7 @@ rate_limit:
 
 admin:
   enabled: false
-  token_hash: ""
+  # 初始管理员账号:首次启动时自动创建(用户名已存在则跳过);username/password 为空则不创建
+  username: ""
+  password: ""
+  email: ""

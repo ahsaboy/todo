@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"todo/internal/config"
+	"todo/internal/middleware"
 	"todo/internal/models"
 	"todo/internal/repository"
 	"todo/internal/timezone"
@@ -25,6 +26,7 @@ import (
 type AdminHandler struct {
 	db                 *sql.DB
 	userRepo           repository.UserRepository
+	apiKeyRepo         repository.APIKeyRepository
 	taskRepo           repository.TaskRepository
 	reminderConfigRepo repository.ReminderConfigRepository
 	reminderLogRepo    repository.ReminderLogRepository
@@ -34,6 +36,7 @@ type AdminHandler struct {
 func NewAdminHandler(
 	db *sql.DB,
 	userRepo repository.UserRepository,
+	apiKeyRepo repository.APIKeyRepository,
 	taskRepo repository.TaskRepository,
 	reminderConfigRepo repository.ReminderConfigRepository,
 	reminderLogRepo repository.ReminderLogRepository,
@@ -42,6 +45,7 @@ func NewAdminHandler(
 	return &AdminHandler{
 		db:                 db,
 		userRepo:           userRepo,
+		apiKeyRepo:         apiKeyRepo,
 		taskRepo:           taskRepo,
 		reminderConfigRepo: reminderConfigRepo,
 		reminderLogRepo:    reminderLogRepo,
@@ -49,22 +53,80 @@ func NewAdminHandler(
 	}
 }
 
-type adminVerifyRequest struct {
-	Token string `json:"token" binding:"required"`
+type adminLoginRequest struct {
+	Account  string `json:"account" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
-func (h *AdminHandler) VerifyToken(c *gin.Context) {
-	var req adminVerifyRequest
+type adminLoginResponse struct {
+	User    models.UserResponse `json:"user"`
+	APIKey  string              `json:"api_key"`
+	IsAdmin bool                `json:"is_admin"`
+}
+
+func (h *AdminHandler) AdminLogin(c *gin.Context) {
+	var req adminLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "missing token field", utils.CodeInvalidInput)
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 		return
 	}
-	hash := sha256.Sum256([]byte(req.Token))
-	if hex.EncodeToString(hash[:]) != h.cfg.Admin.TokenHash {
-		utils.RespondError(c, http.StatusUnauthorized, "invalid token", utils.CodeUnauthorized)
+
+	user, err := h.userRepo.GetByUsername(c.Request.Context(), req.Account)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to authenticate", err)
 		return
 	}
-	utils.RespondSuccess(c, gin.H{"ok": true})
+	if user == nil {
+		user, err = h.userRepo.GetByEmail(c.Request.Context(), req.Account)
+		if err != nil {
+			utils.RespondInternalError(c, "failed to authenticate", err)
+			return
+		}
+		if user == nil {
+			utils.RespondError(c, http.StatusUnauthorized, "invalid credentials", utils.CodeUnauthorized)
+			return
+		}
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		utils.RespondError(c, http.StatusUnauthorized, "invalid credentials", utils.CodeUnauthorized)
+		return
+	}
+
+	if !user.IsAdmin {
+		utils.RespondError(c, http.StatusForbidden, "admin access required", utils.CodeForbidden)
+		return
+	}
+
+	loginKey, err := h.generateAdminLoginKey(c.Request.Context(), user.ID)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to generate session key", err)
+		return
+	}
+
+	loc := timezone.Get()
+	resp := adminLoginResponse{
+		User:    views.UserResponseView(user.ToResponse(), loc),
+		APIKey:  loginKey,
+		IsAdmin: true,
+	}
+	utils.RespondSuccess(c, resp)
+}
+
+func (h *AdminHandler) generateAdminLoginKey(ctx context.Context, userID int64) (string, error) {
+	_, _ = h.apiKeyRepo.CleanupExpiredLoginKeys(ctx, userID)
+
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	apiKey := base64.URLEncoding.EncodeToString(b)
+	keyHash := middleware.HashAPIKey(apiKey)
+
+	if _, err := h.apiKeyRepo.Create(ctx, userID, keyHash, "admin-login"); err != nil {
+		return "", err
+	}
+	return apiKey, nil
 }
 
 type adminStats struct {
@@ -108,16 +170,23 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 		return
 	}
 	loc := timezone.Get()
-	result := make([]models.UserResponse, 0, len(users))
+	type adminUserListItem struct {
+		models.UserResponse
+		IsAdmin bool `json:"is_admin"`
+	}
+	result := make([]adminUserListItem, 0, len(users))
 	for _, u := range users {
-		resp := views.UserResponseView(u.ToResponse(), loc)
-		result = append(result, resp)
+		result = append(result, adminUserListItem{
+			UserResponse: views.UserResponseView(u.ToResponse(), loc),
+			IsAdmin:      u.IsAdmin,
+		})
 	}
 	utils.RespondPaginated(c, result, page, limit, total)
 }
 
 type adminUserDetail struct {
 	models.UserResponse
+	IsAdmin     bool  `json:"is_admin"`
 	TaskCount   int64 `json:"task_count"`
 	APIKeyCount int64 `json:"api_key_count"`
 }
@@ -152,6 +221,7 @@ func (h *AdminHandler) GetUser(c *gin.Context) {
 	loc := timezone.Get()
 	detail := adminUserDetail{
 		UserResponse: views.UserResponseView(u.ToResponse(), loc),
+		IsAdmin:      u.IsAdmin,
 		TaskCount:    taskCount,
 		APIKeyCount:  keyCount,
 	}
@@ -291,7 +361,7 @@ func (h *AdminHandler) ListAllReminderLogs(c *gin.Context) {
 
 func (h *AdminHandler) GetConfig(c *gin.Context) {
 	safe := *h.cfg
-	safe.Admin.TokenHash = "***"
+	safe.Admin.TokenHash = ""
 	b, err := json.MarshalIndent(safe, "", "  ")
 	if err != nil {
 		utils.RespondInternalError(c, "failed to serialize config", err)

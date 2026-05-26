@@ -102,9 +102,9 @@ onUnmounted(() => {
 
 function downloadLog() {
   if (!selectedFile.value) return
-  const token = sessionStorage.getItem('admin_token')
+  const token = sessionStorage.getItem('admin_api_key')
   const url = `admin/api/system-logs/${encodeURIComponent(selectedFile.value)}/download`
-  fetch(url, { headers: { 'X-Admin-Token': token || '' } })
+  fetch(url, { headers: { 'Authorization': `Bearer ${token || ''}` } })
     .then((r) => {
       if (!r.ok) throw new Error('download failed')
       return r.blob()

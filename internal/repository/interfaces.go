@@ -34,6 +34,8 @@ type UserRepository interface {
 	ListAll(ctx context.Context, page, limit int, search string) ([]models.User, int64, error)
 	Delete(ctx context.Context, id int64) error
 	ForceResetPassword(ctx context.Context, id int64, passwordHash string) error
+	IsAdmin(ctx context.Context, userID int64) (bool, error)
+	SetIsAdmin(ctx context.Context, userID int64, isAdmin bool) error
 }
 
 type APIKeyRepository interface {
@@ -62,4 +64,16 @@ type ReminderLogRepository interface {
 	DeleteByTaskID(ctx context.Context, taskID int64) error
 	// Admin methods
 	ListAll(ctx context.Context, page, limit int) ([]models.ReminderLog, int64, error)
+}
+
+type TagRepository interface {
+	Create(ctx context.Context, t *models.UserTag) (*models.UserTag, error)
+	GetByID(ctx context.Context, id, userID int64) (*models.UserTag, error)
+	GetByName(ctx context.Context, userID int64, name string) (*models.UserTag, error)
+	ListByUserID(ctx context.Context, userID int64) ([]models.UserTag, error)
+	GetNamesSet(ctx context.Context, userID int64) (map[string]struct{}, error)
+	Update(ctx context.Context, id, userID int64, name *string, color *string, icon *string, sortOrder *int) (*models.UserTag, error)
+	Delete(ctx context.Context, id, userID int64) (bool, error)
+	RenameWithTaskSync(ctx context.Context, id, userID int64, newName string) (*models.UserTag, error)
+	DeleteWithTaskSync(ctx context.Context, id, userID int64) (bool, int64, error)
 }

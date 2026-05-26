@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL UNIQUE,
     email TEXT,
     password_hash TEXT NOT NULL,
+    is_admin INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
@@ -62,9 +63,23 @@ CREATE TABLE IF NOT EXISTS tasks (
     reminder_sent INTEGER DEFAULT 0,
     reminder_sent_at TEXT,
     focus_duration INTEGER,
+    tags TEXT NOT NULL DEFAULT '[]',
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#3b82f6',
+    icon TEXT NOT NULL DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    UNIQUE(user_id, name),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS reminder_logs (
@@ -96,6 +111,8 @@ CREATE INDEX IF NOT EXISTS idx_tasks_reminder_pending
 CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON tasks(due_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+CREATE INDEX IF NOT EXISTS idx_user_tags_user_id ON user_tags(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_tags_user_sort ON user_tags(user_id, sort_order, id);
 CREATE INDEX IF NOT EXISTS idx_reminder_logs_user_id_created_at ON reminder_logs(user_id, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_reminder_logs_task_config
     ON reminder_logs(task_id, reminder_config_id)
@@ -168,6 +185,26 @@ func migrate(db *sql.DB) error {
 	if hasFocusDuration == 0 {
 		if _, err := tx.Exec(`ALTER TABLE tasks ADD COLUMN focus_duration INTEGER`); err != nil {
 			return fmt.Errorf("add tasks.focus_duration: %w", err)
+		}
+	}
+
+	var hasTags int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name='tags'`).Scan(&hasTags); err != nil {
+		return fmt.Errorf("check tasks.tags: %w", err)
+	}
+	if hasTags == 0 {
+		if _, err := tx.Exec(`ALTER TABLE tasks ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'`); err != nil {
+			return fmt.Errorf("add tasks.tags: %w", err)
+		}
+	}
+
+	var hasIsAdmin int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='is_admin'`).Scan(&hasIsAdmin); err != nil {
+		return fmt.Errorf("check users.is_admin: %w", err)
+	}
+	if hasIsAdmin == 0 {
+		if _, err := tx.Exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`); err != nil {
+			return fmt.Errorf("add users.is_admin: %w", err)
 		}
 	}
 

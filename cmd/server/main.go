@@ -24,6 +24,7 @@ import (
 	"todo/internal/logging"
 	mcpserver "todo/internal/mcp"
 	"todo/internal/middleware"
+	"todo/internal/models"
 	"todo/internal/repository"
 	"todo/internal/service"
 	"todo/internal/timezone"
@@ -170,17 +171,20 @@ func main() {
 	apiKeyRepo := repository.NewAPIKeyRepo(db)
 	reminderConfigRepo := repository.NewReminderConfigRepo(db)
 	reminderLogRepo := repository.NewReminderLogRepo(db)
+	tagRepo := repository.NewTagRepo(db)
 	taskRepo := repository.NewTaskRepo(db, time.Duration(cfg.Reminder.GracePeriodMinutes)*time.Minute)
 
 	authSvc := service.NewAuthService(userRepo, apiKeyRepo)
 	reminderConfigSvc := service.NewReminderConfigService(reminderConfigRepo)
-	taskSvc := service.NewTaskService(taskRepo, reminderConfigRepo)
+	tagSvc := service.NewTagService(tagRepo)
+	taskSvc := service.NewTaskService(taskRepo, reminderConfigRepo, tagSvc)
 
 	authHandler := handlers.NewAuthHandler(authSvc)
 	reminderConfigHandler := handlers.NewReminderConfigHandler(reminderConfigSvc)
 	reminderLogSvc := service.NewReminderLogService(reminderLogRepo)
 	reminderLogHandler := handlers.NewReminderLogHandler(reminderLogSvc)
 	taskHandler := handlers.NewTaskHandler(taskSvc)
+	tagHandler := handlers.NewTagHandler(tagSvc)
 
 	// 初始化提醒服务
 	reminderSvc, err := service.NewReminderService(
@@ -195,6 +199,10 @@ func main() {
 	// 启动后台提醒
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// 初始管理员账号:首次启动时自动创建
+	seedAdminUser(ctx, cfg, authSvc, userRepo, logger)
+
 	go reminderSvc.Start(ctx)
 
 	// 设置 Gin
@@ -256,6 +264,12 @@ func main() {
 		api.PUT("/user/reminder-configs/:id", reminderConfigHandler.Update)
 		api.DELETE("/user/reminder-configs/:id", reminderConfigHandler.Delete)
 		api.GET("/user/reminder-logs", reminderLogHandler.List)
+
+		api.GET("/tags", tagHandler.List)
+		api.POST("/tags", tagHandler.Create)
+		api.GET("/tags/:id", tagHandler.GetByID)
+		api.PUT("/tags/:id", tagHandler.Update)
+		api.DELETE("/tags/:id", tagHandler.Delete)
 	}
 
 	// MCP(Model Context Protocol)端点。
@@ -271,7 +285,7 @@ func main() {
 	r.Any("/mcp", gin.WrapH(mcpHandler))
 
 	registerOptionalRoutes(r, logger, cfg.StaticFiles)
-	registerAdminRoutes(r, db, cfg, userRepo, taskRepo, reminderConfigRepo, reminderLogRepo, logger)
+	registerAdminRoutes(r, db, cfg, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, logger)
 
 	// 启动 HTTP 服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -478,20 +492,21 @@ func registerAdminRoutes(
 	db *sql.DB,
 	cfg *config.Config,
 	userRepo repository.UserRepository,
+	apiKeyRepo repository.APIKeyRepository,
 	taskRepo repository.TaskRepository,
 	reminderConfigRepo repository.ReminderConfigRepository,
 	reminderLogRepo repository.ReminderLogRepository,
 	logger *zap.Logger,
 ) {
-	if !cfg.Admin.Enabled || cfg.Admin.TokenHash == "" {
-		logger.Warn("管理后台已禁用，请在 config.yaml 中配置 admin.enabled=true 和 admin.token_hash")
+	if !cfg.Admin.Enabled {
+		logger.Warn("管理后台已禁用，请在 config.yaml 中配置 admin.enabled=true")
 		return
 	}
-	adminH := handlers.NewAdminHandler(db, userRepo, taskRepo, reminderConfigRepo, reminderLogRepo, cfg)
+	adminH := handlers.NewAdminHandler(db, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, cfg)
 	adm := r.Group("/admin/api")
 	adm.Use(middleware.LocalhostOnly())
-	adm.POST("/auth/verify", middleware.AdminLoginRateLimit(10, time.Minute), adminH.VerifyToken)
-	authed := adm.Group("", middleware.AdminAuthMiddleware(cfg.Admin))
+	adm.POST("/auth/login", middleware.AdminLoginRateLimit(10, time.Minute), adminH.AdminLogin)
+	authed := adm.Group("", middleware.AuthMiddleware(apiKeyRepo), middleware.AdminOnlyMiddleware(db))
 	{
 		authed.GET("/stats", adminH.GetStats)
 		authed.GET("/users", adminH.ListUsers)
@@ -510,4 +525,41 @@ func registerAdminRoutes(
 		authed.GET("/system-logs/:filename/download", systemLogH.DownloadLogFile)
 	}
 	logger.Info("管理后台已启动", zap.String("prefix", "/admin/api"))
+}
+
+// seedAdminUser 根据配置文件的 admin.username/password 自动创建初始管理员。
+// 幂等：用户名已存在则跳过；username 或 password 为空则不执行。
+func seedAdminUser(ctx context.Context, cfg *config.Config, authSvc *service.AuthService, userRepo repository.UserRepository, logger *zap.Logger) {
+	adminUser := cfg.Admin.Username
+	adminPass := cfg.Admin.Password
+	if adminUser == "" || adminPass == "" {
+		return
+	}
+
+	_, _, err := authSvc.Register(ctx, models.RegisterRequest{
+		Username: adminUser,
+		Password: adminPass,
+		Email:    cfg.Admin.Email,
+	})
+	if err == service.ErrUsernameTaken {
+		logger.Info("管理员账号已存在,跳过自动创建", zap.String("username", adminUser))
+	} else if err != nil {
+		logger.Fatal("自动创建管理员失败", zap.String("username", adminUser), zap.Error(err))
+	} else {
+		logger.Info("初始管理员账号已创建", zap.String("username", adminUser))
+	}
+
+	// 确保管理员用户有 is_admin 标记
+	user, err := userRepo.GetByUsername(ctx, adminUser)
+	if err != nil || user == nil {
+		logger.Error("查找管理员用户失败", zap.String("username", adminUser), zap.Error(err))
+		return
+	}
+	if !user.IsAdmin {
+		if err := userRepo.SetIsAdmin(ctx, user.ID, true); err != nil {
+			logger.Error("设置管理员标记失败", zap.String("username", adminUser), zap.Error(err))
+		} else {
+			logger.Info("已设置 is_admin 标记", zap.String("username", adminUser))
+		}
+	}
 }

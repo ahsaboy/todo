@@ -2,18 +2,18 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useAdminAuthStore = defineStore('admin-auth', () => {
-  const token = ref<string | null>(sessionStorage.getItem('admin_token'))
-  const isAuthenticated = computed(() => !!token.value)
+  const apiKey = ref<string | null>(sessionStorage.getItem('admin_api_key'))
+  const isAuthenticated = computed(() => !!apiKey.value)
 
-  function setAuth(rawToken: string) {
-    token.value = rawToken
-    sessionStorage.setItem('admin_token', rawToken)
+  function setAuth(key: string) {
+    apiKey.value = key
+    sessionStorage.setItem('admin_api_key', key)
   }
 
   function logout() {
-    token.value = null
-    sessionStorage.removeItem('admin_token')
+    apiKey.value = null
+    sessionStorage.removeItem('admin_api_key')
   }
 
-  return { token, isAuthenticated, setAuth, logout }
+  return { apiKey, isAuthenticated, setAuth, logout }
 })

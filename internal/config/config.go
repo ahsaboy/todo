@@ -23,7 +23,10 @@ type Config struct {
 
 type AdminConfig struct {
 	Enabled   bool   `yaml:"enabled"`
-	TokenHash string `yaml:"token_hash"`
+	TokenHash string `yaml:"token_hash"` // Deprecated: 管理后台已改为用户名密码认证
+	Username  string `yaml:"username"`
+	Password  string `yaml:"password"`
+	Email     string `yaml:"email"`
 }
 
 type ServerConfig struct {

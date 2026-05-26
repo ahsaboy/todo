@@ -74,8 +74,8 @@ func (r *UserRepo) GetByID(ctx context.Context, id int64) (*models.User, error) 
 	log := beginDBOperation(ctx, userRepositoryName, "get_user_by_id", zap.Int64("user_id", id))
 	u := &models.User{}
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE id = ?`, id,
-	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt)
+		`SELECT id, username, email, password_hash, is_admin, created_at, updated_at FROM users WHERE id = ?`, id,
+	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt)
 	if err == sql.ErrNoRows {
 		log.complete(nil, zap.Bool("found", false))
 		return nil, nil
@@ -92,8 +92,8 @@ func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*models.
 	log := beginDBOperation(ctx, userRepositoryName, "get_user_by_username", zap.String("username", username))
 	u := &models.User{}
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE username = ?`, username,
-	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt)
+		`SELECT id, username, email, password_hash, is_admin, created_at, updated_at FROM users WHERE username = ?`, username,
+	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt)
 	if err == sql.ErrNoRows {
 		log.complete(nil, zap.Bool("found", false))
 		return nil, nil
@@ -113,8 +113,8 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, 
 	log := beginDBOperation(ctx, userRepositoryName, "get_user_by_email", zap.String("email", email))
 	u := &models.User{}
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE email = ?`, email,
-	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt)
+		`SELECT id, username, email, password_hash, is_admin, created_at, updated_at FROM users WHERE email = ?`, email,
+	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt)
 	if err == sql.ErrNoRows {
 		log.complete(nil, zap.Bool("found", false))
 		return nil, nil
@@ -183,7 +183,7 @@ func (r *UserRepo) ListAll(ctx context.Context, page, limit int, search string) 
 	}
 
 	offset := (page - 1) * limit
-	query := `SELECT id, username, email, password_hash, created_at, updated_at FROM users`
+	query := `SELECT id, username, email, password_hash, is_admin, created_at, updated_at FROM users`
 	if search != "" {
 		query += ` WHERE username LIKE ? OR email LIKE ?`
 	}
@@ -200,7 +200,7 @@ func (r *UserRepo) ListAll(ctx context.Context, page, limit int, search string) 
 	users := make([]models.User, 0)
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			log.complete(err, zap.Int64("count", total))
 			return nil, 0, fmt.Errorf("scan user: %w", err)
 		}
@@ -246,5 +246,42 @@ func (r *UserRepo) ForceResetPassword(ctx context.Context, id int64, passwordHas
 		return ErrNotFound
 	}
 	log.complete(nil, zap.Int64("rows_affected", ra))
+	return nil
+}
+
+func (r *UserRepo) IsAdmin(ctx context.Context, userID int64) (bool, error) {
+	log := beginDBOperation(ctx, userRepositoryName, "check_is_admin", zap.Int64("user_id", userID))
+	var isAdmin int
+	err := r.db.QueryRowContext(ctx, `SELECT is_admin FROM users WHERE id = ?`, userID).Scan(&isAdmin)
+	if err == sql.ErrNoRows {
+		log.complete(nil, zap.Bool("found", false))
+		return false, nil
+	}
+	if err != nil {
+		log.complete(err)
+		return false, fmt.Errorf("check is_admin: %w", err)
+	}
+	log.complete(nil, zap.Bool("is_admin", isAdmin == 1))
+	return isAdmin == 1, nil
+}
+
+func (r *UserRepo) SetIsAdmin(ctx context.Context, userID int64, isAdmin bool) error {
+	log := beginDBOperation(ctx, userRepositoryName, "set_is_admin",
+		zap.Int64("user_id", userID),
+		zap.Bool("is_admin", isAdmin),
+	)
+	val := 0
+	if isAdmin {
+		val = 1
+	}
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET is_admin = ?, updated_at = ? WHERE id = ?`,
+		val, time.Now().UTC().Format(time.RFC3339), userID,
+	)
+	if err != nil {
+		log.complete(err)
+		return fmt.Errorf("set is_admin: %w", err)
+	}
+	log.complete(nil, zap.Int64("rows_affected", rowsAffected(result)))
 	return nil
 }

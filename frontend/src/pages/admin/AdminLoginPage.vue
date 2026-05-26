@@ -9,7 +9,8 @@ const router = useRouter()
 const route = useRoute()
 const adminAuthStore = useAdminAuthStore()
 
-const token = ref('')
+const account = ref('')
+const password = ref('')
 const error = ref('')
 const isLoading = ref(false)
 
@@ -17,8 +18,11 @@ async function handleSubmit() {
   error.value = ''
   isLoading.value = true
   try {
-    await adminApi.post<ApiResponse<{ ok: boolean }>>('/auth/verify', { token: token.value })
-    adminAuthStore.setAuth(token.value)
+    const res = await adminApi.post<ApiResponse<{ api_key: string }>>('/auth/login', {
+      account: account.value,
+      password: password.value,
+    })
+    adminAuthStore.setAuth(res.data.api_key)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
     if (redirect) {
       await router.replace(redirect)
@@ -26,7 +30,7 @@ async function handleSubmit() {
       router.push({ name: 'admin-dashboard' })
     }
   } catch {
-    error.value = '令牌无效，请检查后重试'
+    error.value = '用户名或密码错误'
   } finally {
     isLoading.value = false
   }
@@ -42,19 +46,30 @@ async function handleSubmit() {
       </div>
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
-          <label for="admin-token">管理令牌</label>
+          <label for="admin-account">用户名</label>
           <input
-            id="admin-token"
-            v-model="token"
+            id="admin-account"
+            v-model="account"
+            type="text"
+            required
+            autocomplete="username"
+            placeholder="请输入管理员用户名"
+          />
+        </div>
+        <div class="form-group">
+          <label for="admin-password">密码</label>
+          <input
+            id="admin-password"
+            v-model="password"
             type="password"
             required
-            autocomplete="off"
-            placeholder="请输入管理员令牌"
+            autocomplete="current-password"
+            placeholder="请输入密码"
           />
         </div>
         <div v-if="error" class="error-message">{{ error }}</div>
         <button type="submit" :disabled="isLoading">
-          {{ isLoading ? '验证中...' : '进入管理后台' }}
+          {{ isLoading ? '登录中...' : '登录管理后台' }}
         </button>
       </form>
     </section>

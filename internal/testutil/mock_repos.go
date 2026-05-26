@@ -82,6 +82,8 @@ type MockUserRepository struct {
 	ListAllFn            func(ctx context.Context, page, limit int, search string) ([]models.User, int64, error)
 	DeleteFn             func(ctx context.Context, id int64) error
 	ForceResetPasswordFn func(ctx context.Context, id int64, passwordHash string) error
+	IsAdminFn            func(ctx context.Context, userID int64) (bool, error)
+	SetIsAdminFn         func(ctx context.Context, userID int64, isAdmin bool) error
 }
 
 func (m *MockUserRepository) Create(ctx context.Context, username, email, passwordHash string) (*models.User, error) {
@@ -117,6 +119,18 @@ func (m *MockUserRepository) Delete(ctx context.Context, id int64) error {
 func (m *MockUserRepository) ForceResetPassword(ctx context.Context, id int64, passwordHash string) error {
 	if m.ForceResetPasswordFn != nil {
 		return m.ForceResetPasswordFn(ctx, id, passwordHash)
+	}
+	return nil
+}
+func (m *MockUserRepository) IsAdmin(ctx context.Context, userID int64) (bool, error) {
+	if m.IsAdminFn != nil {
+		return m.IsAdminFn(ctx, userID)
+	}
+	return false, nil
+}
+func (m *MockUserRepository) SetIsAdmin(ctx context.Context, userID int64, isAdmin bool) error {
+	if m.SetIsAdminFn != nil {
+		return m.SetIsAdminFn(ctx, userID, isAdmin)
 	}
 	return nil
 }
