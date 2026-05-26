@@ -94,6 +94,7 @@ logging:
 # ==============================
 admin:
   enabled: true
-  # 生成 token_hash：echo -n "your_token" | sha256sum | cut -d' ' -f1
-  # 或 PowerShell：[System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("your_token"))).Replace("-","").ToLower()
-  token_hash: ""  # 必填，留空则管理后台无法登录
+  # 初始管理员账号:首次启动时自动创建(用户名已存在则跳过);username/password 为空则不创建
+  username: admin
+  password: admin123
+  email: ""

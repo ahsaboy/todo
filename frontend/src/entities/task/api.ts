@@ -12,6 +12,8 @@ export interface TaskListParams {
   due_before?: string
   due_after?: string
   search?: string
+  tags?: string
+  tags_all?: string
 }
 
 export function getTasks(params?: TaskListParams) {

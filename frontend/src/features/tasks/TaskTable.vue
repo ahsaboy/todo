@@ -32,6 +32,9 @@
             <button class="task-title-btn" type="button" @click="$emit('open', task)">
               {{ task.title }}
             </button>
+            <span v-if="task.tags && task.tags.length > 0" class="title-tags">
+              <TagChip v-for="t in task.tags" :key="t" :name="t" />
+            </span>
           </td>
           <td class="col-priority">
             <PriorityTag :priority="task.priority" />
@@ -61,6 +64,7 @@
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import MotionStagger from '@/shared/ui/MotionStagger.vue'
+import TagChip from '@/features/tags/TagChip.vue'
 
 defineProps<{
   tasks: Task[]
@@ -137,6 +141,14 @@ th {
 
 .task-title-btn:hover {
   color: var(--color-primary);
+}
+
+.title-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 tr.completed {

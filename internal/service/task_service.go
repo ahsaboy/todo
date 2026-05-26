@@ -14,12 +14,14 @@ import (
 type TaskService struct {
 	repo               repository.TaskRepository
 	reminderConfigRepo repository.ReminderConfigRepository
+	tagService         *TagService
 }
 
-func NewTaskService(repo repository.TaskRepository, reminderConfigRepo repository.ReminderConfigRepository) *TaskService {
+func NewTaskService(repo repository.TaskRepository, reminderConfigRepo repository.ReminderConfigRepository, tagService *TagService) *TaskService {
 	return &TaskService{
 		repo:               repo,
 		reminderConfigRepo: reminderConfigRepo,
+		tagService:         tagService,
 	}
 }
 
@@ -31,6 +33,15 @@ func (s *TaskService) Create(ctx context.Context, userID int64, req models.Creat
 
 	if err := s.requireEnabledReminderChannel(ctx, userID, req.RemindAt); err != nil {
 		return nil, err
+	}
+
+	// 校验 tags 全部存在于该用户字典
+	if s.tagService != nil {
+		clean, err := s.tagService.ValidateTagsExist(ctx, userID, req.Tags)
+		if err != nil {
+			return nil, err
+		}
+		req.Tags = clean
 	}
 	return s.repo.Create(ctx, userID, req)
 }
@@ -49,6 +60,13 @@ func (s *TaskService) Update(ctx context.Context, userID, id int64, req models.U
 	}
 	if err := s.requireEnabledReminderChannel(ctx, userID, req.RemindAt); err != nil {
 		return nil, err
+	}
+	if req.Tags != nil && s.tagService != nil {
+		clean, err := s.tagService.ValidateTagsExist(ctx, userID, *req.Tags)
+		if err != nil {
+			return nil, err
+		}
+		req.Tags = &clean
 	}
 	return s.repo.Update(ctx, userID, id, req)
 }
@@ -129,6 +147,7 @@ func (s *TaskService) buildNextOccurrence(t *models.Task) (*models.Task, error) 
 		RepeatType:     t.RepeatType,
 		RepeatInterval: t.RepeatInterval,
 		RepeatEndDate:  t.RepeatEndDate,
+		Tags:           t.Tags,
 	}, nil
 }
 

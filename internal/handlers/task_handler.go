@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -53,7 +54,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 
 	task, err := h.svc.Create(c.Request.Context(), userID, req)
 	if err != nil {
-		if errors.Is(err, service.ErrReminderChannelMissing) || errors.Is(err, service.ErrInvalidTime) {
+		if errors.Is(err, service.ErrReminderChannelMissing) || errors.Is(err, service.ErrInvalidTime) || errors.Is(err, service.ErrUnknownTag) {
 			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 			return
 		}
@@ -116,6 +117,8 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 // @Param        due_before query string false "截止时间上限 (RFC3339 UTC，例如 2026-05-10T10:30:00Z)"
 // @Param        due_after  query string false "截止时间下限 (RFC3339 UTC，例如 2026-05-10T10:30:00Z)"
 // @Param        search    query string false "搜索关键字（标题/描述）"
+// @Param        tags      query string false "按标签过滤（OR 语义,逗号分隔标签名,任一命中即出现）"
+// @Param        tags_all  query string false "按标签过滤（AND 语义,逗号分隔标签名,全部命中才出现）"
 // @Success      200  {object} utils.PaginatedResponse{data=[]models.Task}
 // @Failure      500  {object} utils.ErrorResponse
 // @Security     ApiKeyAuth
@@ -162,6 +165,8 @@ func (h *TaskHandler) List(c *gin.Context) {
 		DueBefore: dueBefore,
 		DueAfter:  dueAfter,
 		Search:    c.Query("search"),
+		Tags:      splitTagsParam(c.Query("tags")),
+		TagsAll:   splitTagsParam(c.Query("tags_all")),
 	}
 
 	sortField := c.DefaultQuery("sort", "created_at")
@@ -214,7 +219,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 
 	task, err := h.svc.Update(c.Request.Context(), userID, id, req)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidTime) || errors.Is(err, service.ErrReminderChannelMissing) {
+		if errors.Is(err, service.ErrInvalidTime) || errors.Is(err, service.ErrReminderChannelMissing) || errors.Is(err, service.ErrUnknownTag) {
 			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 			return
 		}
@@ -309,6 +314,30 @@ func (h *TaskHandler) ToggleComplete(c *gin.Context) {
 	}
 
 	utils.RespondSuccess(c, views.TaskView(task, timezone.Get()))
+}
+
+// splitTagsParam 把逗号分隔的 tags 查询参数切成 []string,空字符串返回 nil,自动 trim + 去空。
+// 上限 20 个,避免生成过大的 SQL IN 子句。
+func splitTagsParam(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+		if len(out) >= 20 {
+			break
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // HealthCheck 健康检查

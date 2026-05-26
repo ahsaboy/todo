@@ -17,7 +17,7 @@ func TestTaskService_Create_NoRemindAt(t *testing.T) {
 		},
 	}
 	cfgRepo := &testutil.MockReminderConfigRepository{}
-	svc := service.NewTaskService(repo, cfgRepo)
+	svc := service.NewTaskService(repo, cfgRepo, nil)
 
 	task, err := svc.Create(context.Background(), 1, models.CreateTaskRequest{Title: "buy milk"})
 	if err != nil {
@@ -35,7 +35,7 @@ func TestTaskService_Create_RemindAt_NoChannel(t *testing.T) {
 			return false, nil
 		},
 	}
-	svc := service.NewTaskService(repo, cfgRepo)
+	svc := service.NewTaskService(repo, cfgRepo, nil)
 
 	remindAt := "2099-01-01T00:00:00Z"
 	_, err := svc.Create(context.Background(), 1, models.CreateTaskRequest{
@@ -59,7 +59,7 @@ func TestTaskService_Create_RemindAt_WithChannel(t *testing.T) {
 			return true, nil
 		},
 	}
-	svc := service.NewTaskService(repo, cfgRepo)
+	svc := service.NewTaskService(repo, cfgRepo, nil)
 
 	task, err := svc.Create(context.Background(), 1, models.CreateTaskRequest{
 		Title:    "remind me",
@@ -79,7 +79,7 @@ func TestTaskService_ToggleComplete_NotFound(t *testing.T) {
 			return nil, nil
 		},
 	}
-	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{})
+	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{}, nil)
 
 	task, err := svc.ToggleComplete(context.Background(), 1, 99, nil)
 	if err != nil {
@@ -102,7 +102,7 @@ func TestTaskService_ToggleComplete_NoRepeat(t *testing.T) {
 			return &done, nil
 		},
 	}
-	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{})
+	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{}, nil)
 
 	task, err := svc.ToggleComplete(context.Background(), 1, 1, nil)
 	if err != nil {
@@ -132,7 +132,7 @@ func TestTaskService_ToggleComplete_WithRepeat(t *testing.T) {
 			return &done, nil
 		},
 	}
-	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{})
+	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{}, nil)
 
 	task, err := svc.ToggleComplete(context.Background(), 1, 1, nil)
 	if err != nil {
@@ -167,7 +167,7 @@ func TestTaskService_ToggleComplete_UncompletingDoesNotGenerateNext(t *testing.T
 			return &undone, nil
 		},
 	}
-	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{})
+	svc := service.NewTaskService(repo, &testutil.MockReminderConfigRepository{}, nil)
 
 	_, err := svc.ToggleComplete(context.Background(), 1, 1, nil)
 	if err != nil {

@@ -15,6 +15,7 @@ export function toTask(dto: TaskDto): Task {
     repeatEndDate: dto.repeat_end_date,
     repeatInterval: dto.repeat_interval,
     repeatType: dto.repeat_type,
+    tags: Array.isArray(dto.tags) ? dto.tags : [],
     title: dto.title,
     updatedAt: dto.updated_at,
     userId: dto.user_id,

@@ -144,3 +144,29 @@ func ReminderLogsView(ls []models.ReminderLog, loc *time.Location) []models.Remi
 	}
 	return out
 }
+
+// ---------- UserTag ----------
+
+// UserTagView 返回新的 *UserTag,时间字段已按 loc 重写。nil 输入返回 nil。
+func UserTagView(t *models.UserTag, loc *time.Location) *models.UserTag {
+	if t == nil {
+		return nil
+	}
+	out := *t
+	out.CreatedAt = utils.FormatOutputTime(t.CreatedAt, loc)
+	out.UpdatedAt = utils.FormatOutputTime(t.UpdatedAt, loc)
+	return &out
+}
+
+// UserTagsView 批量转换 UserTag 列表。nil 输入返回 []UserTag{}。
+func UserTagsView(ts []models.UserTag, loc *time.Location) []models.UserTag {
+	if ts == nil {
+		return []models.UserTag{}
+	}
+	out := make([]models.UserTag, len(ts))
+	for i := range ts {
+		v := UserTagView(&ts[i], loc)
+		out[i] = *v
+	}
+	return out
+}

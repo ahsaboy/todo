@@ -29,6 +29,11 @@
       </select>
     </div>
 
+    <div class="filter-group tags">
+      <label>标签</label>
+      <TagPicker v-model="localFilters.tags" placeholder="按标签筛选..." @update:modelValue="applyFilters" />
+    </div>
+
     <div class="filter-group search">
       <label class="sr-only" for="task-filter-search">搜索任务</label>
       <input
@@ -46,6 +51,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import type { TaskFilters } from './useTasks'
+import TagPicker from '@/features/tags/TagPicker.vue'
 
 const props = defineProps<{
   filters: TaskFilters
@@ -59,6 +65,7 @@ const localFilters = reactive({
   status: props.filters.status,
   priority: props.filters.priority,
   search: props.filters.search,
+  tags: Array.isArray(props.filters.tags) ? [...props.filters.tags] : [],
 })
 
 function applyFilters() {
@@ -92,6 +99,15 @@ function applyFilters() {
   border-radius: 4px;
   font-size: 13px;
   background: var(--color-surface);
+}
+
+.filter-group.tags {
+  min-width: 220px;
+}
+
+.filter-group.tags :deep(.tag-picker) {
+  width: auto;
+  min-width: 200px;
 }
 
 .filter-group.search {

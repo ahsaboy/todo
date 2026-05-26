@@ -6,22 +6,23 @@ import (
 )
 
 type Task struct {
-	ID             int64   `json:"id"`
-	UserID         int64   `json:"user_id"`
-	Title          string  `json:"title"`
-	Description    string  `json:"description"`
-	Completed      bool    `json:"completed"`
-	Priority       int     `json:"priority"`
-	DueAt          *string `json:"due_at"`
-	RemindAt       *string `json:"remind_at"`
-	RepeatType     string  `json:"repeat_type"`
-	RepeatInterval int     `json:"repeat_interval"`
-	RepeatEndDate  *string `json:"repeat_end_date"`
-	ReminderSent   bool    `json:"reminder_sent"`
-	ReminderSentAt *string `json:"reminder_sent_at"`
-	FocusDuration  *int    `json:"focus_duration"`
-	CreatedAt      string  `json:"created_at"`
-	UpdatedAt      string  `json:"updated_at"`
+	ID             int64    `json:"id"`
+	UserID         int64    `json:"user_id"`
+	Title          string   `json:"title"`
+	Description    string   `json:"description"`
+	Completed      bool     `json:"completed"`
+	Priority       int      `json:"priority"`
+	DueAt          *string  `json:"due_at"`
+	RemindAt       *string  `json:"remind_at"`
+	RepeatType     string   `json:"repeat_type"`
+	RepeatInterval int      `json:"repeat_interval"`
+	RepeatEndDate  *string  `json:"repeat_end_date"`
+	ReminderSent   bool     `json:"reminder_sent"`
+	ReminderSentAt *string  `json:"reminder_sent_at"`
+	FocusDuration  *int     `json:"focus_duration"`
+	Tags           []string `json:"tags"`
+	CreatedAt      string   `json:"created_at"`
+	UpdatedAt      string   `json:"updated_at"`
 }
 
 // FormatReminderTime 将 RFC3339 时间格式化为 "M月D日 周X HH:MM" 格式
@@ -90,25 +91,27 @@ func (t *Task) ToTemplateData(loc *time.Location) TemplateData {
 }
 
 type CreateTaskRequest struct {
-	Title          string  `json:"title" binding:"required,min=1,max=255"`
-	Description    string  `json:"description" binding:"max=1000"`
-	Priority       *int    `json:"priority" binding:"omitempty,oneof=1 2 3"`
-	DueAt          *string `json:"due_at"`
-	RemindAt       *string `json:"remind_at"`
-	RepeatType     *string `json:"repeat_type" binding:"omitempty,oneof=none daily weekly monthly yearly"`
-	RepeatInterval *int    `json:"repeat_interval" binding:"omitempty,min=1,max=365"`
-	RepeatEndDate  *string `json:"repeat_end_date"`
+	Title          string   `json:"title" binding:"required,min=1,max=255"`
+	Description    string   `json:"description" binding:"max=1000"`
+	Priority       *int     `json:"priority" binding:"omitempty,oneof=1 2 3"`
+	DueAt          *string  `json:"due_at"`
+	RemindAt       *string  `json:"remind_at"`
+	RepeatType     *string  `json:"repeat_type" binding:"omitempty,oneof=none daily weekly monthly yearly"`
+	RepeatInterval *int     `json:"repeat_interval" binding:"omitempty,min=1,max=365"`
+	RepeatEndDate  *string  `json:"repeat_end_date"`
+	Tags           []string `json:"tags" binding:"omitempty,dive,min=1,max=32"`
 }
 
 type UpdateTaskRequest struct {
-	Title          *string `json:"title" binding:"omitempty,min=1,max=255"`
-	Description    *string `json:"description" binding:"omitempty,max=1000"`
-	Priority       *int    `json:"priority" binding:"omitempty,oneof=1 2 3"`
-	DueAt          *string `json:"due_at"`
-	RemindAt       *string `json:"remind_at"`
-	RepeatType     *string `json:"repeat_type" binding:"omitempty,oneof=none daily weekly monthly yearly"`
-	RepeatInterval *int    `json:"repeat_interval" binding:"omitempty,min=1,max=365"`
-	RepeatEndDate  *string `json:"repeat_end_date"`
+	Title          *string   `json:"title" binding:"omitempty,min=1,max=255"`
+	Description    *string   `json:"description" binding:"omitempty,max=1000"`
+	Priority       *int      `json:"priority" binding:"omitempty,oneof=1 2 3"`
+	DueAt          *string   `json:"due_at"`
+	RemindAt       *string   `json:"remind_at"`
+	RepeatType     *string   `json:"repeat_type" binding:"omitempty,oneof=none daily weekly monthly yearly"`
+	RepeatInterval *int      `json:"repeat_interval" binding:"omitempty,min=1,max=365"`
+	RepeatEndDate  *string   `json:"repeat_end_date"`
+	Tags           *[]string `json:"tags" binding:"omitempty,dive,min=1,max=32"`
 }
 
 type TaskFilters struct {
@@ -117,6 +120,8 @@ type TaskFilters struct {
 	DueBefore string
 	DueAfter  string
 	Search    string
+	Tags      []string // OR 语义:任一命中即匹配
+	TagsAll   []string // AND 语义:全部命中(可选,预留)
 }
 
 type Pagination struct {

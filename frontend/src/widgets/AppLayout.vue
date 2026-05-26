@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useTagStore } from '@/entities/tag/store'
 import DesktopSidebar from './DesktopSidebar.vue'
 import AppTopbar from './AppTopbar.vue'
 import AppFooter from './AppFooter.vue'
@@ -72,6 +73,8 @@ onMounted(() => {
   mobileMediaQuery.addEventListener('change', syncViewportState)
   desktopMediaQuery.addEventListener('change', syncViewportState)
   window.addEventListener('keydown', handleWindowKeydown)
+  // 预加载标签字典,确保 TagChip 在首次渲染时就有颜色/图标数据
+  useTagStore().fetchTags()
 })
 
 onBeforeUnmount(() => {

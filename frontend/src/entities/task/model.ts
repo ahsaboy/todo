@@ -13,6 +13,7 @@ export interface TaskDto {
   repeat_end_date: string
   repeat_interval: number
   repeat_type: string
+  tags: string[] | null
   title: string
   updated_at: string
   user_id: number
@@ -33,6 +34,7 @@ export interface Task {
   repeatEndDate: string
   repeatInterval: number
   repeatType: string
+  tags: string[]
   title: string
   updatedAt: string
   userId: number
@@ -47,6 +49,7 @@ export interface CreateTaskPayload {
   repeat_end_date?: string
   repeat_interval?: number
   repeat_type?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly'
+  tags?: string[]
   title: string
 }
 
@@ -58,5 +61,6 @@ export interface UpdateTaskPayload {
   repeat_end_date?: string
   repeat_interval?: number
   repeat_type?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly'
+  tags?: string[]
   title?: string
 }

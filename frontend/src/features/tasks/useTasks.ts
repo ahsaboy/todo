@@ -8,6 +8,7 @@ export interface TaskFilters {
   status: 'all' | 'completed' | 'pending'
   priority?: 1 | 2 | 3
   search: string
+  tags: string[]
 }
 
 export interface TaskSort {
@@ -30,6 +31,7 @@ export function useTasks() {
   const filters = reactive<TaskFilters>({
     status: 'all',
     search: '',
+    tags: [],
   })
 
   const sort = reactive<TaskSort>({
@@ -48,6 +50,7 @@ export function useTasks() {
         status: filters.status,
         priority: filters.priority,
         search: filters.search,
+        tags: filters.tags.length > 0 ? filters.tags.join(',') : undefined,
         sort: sort.field,
         order: sort.order,
       })

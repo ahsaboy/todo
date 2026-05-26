@@ -9,6 +9,7 @@ import {
   ScrollText,
   KeyRound,
   UserCircle,
+  Tags,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-vue-next'
@@ -45,6 +46,7 @@ const taskItems: NavItem[] = [
 ]
 
 const configItems: NavItem[] = [
+  { to: '/tags', label: '标签管理', icon: Tags },
   { to: '/reminder-configs', label: '提醒配置', icon: BellRing },
   { to: '/reminder-logs', label: '提醒日志', icon: ScrollText },
   { to: '/api-keys', label: 'API Key', icon: KeyRound },

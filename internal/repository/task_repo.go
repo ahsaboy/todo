@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -27,6 +28,33 @@ func NewTaskRepo(db *sql.DB, gracePeriod time.Duration) *TaskRepo {
 	return &TaskRepo{db: db, gracePeriod: gracePeriod}
 }
 
+// marshalTags 把 []string 序列化为 JSON 字符串,nil/空数组都写 "[]"。
+func marshalTags(tags []string) string {
+	if len(tags) == 0 {
+		return "[]"
+	}
+	b, err := json.Marshal(tags)
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
+}
+
+// unmarshalTags 把数据库的 tags 列反序列化为 []string,容忍空串/旧数据。
+func unmarshalTags(raw string) []string {
+	if raw == "" {
+		return []string{}
+	}
+	var tags []string
+	if err := json.Unmarshal([]byte(raw), &tags); err != nil {
+		return []string{}
+	}
+	if tags == nil {
+		return []string{}
+	}
+	return tags
+}
+
 func (r *TaskRepo) Create(ctx context.Context, userID int64, req models.CreateTaskRequest) (*models.Task, error) {
 	log := beginDBOperation(ctx, taskRepositoryName, "create_task",
 		zap.Int64("user_id", userID),
@@ -47,9 +75,9 @@ func (r *TaskRepo) Create(ctx context.Context, userID int64, req models.CreateTa
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		userID, req.Title, req.Description, priority, req.DueAt, req.RemindAt, repeatType, repeatInterval, req.RepeatEndDate, now, now,
+		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, tags, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		userID, req.Title, req.Description, priority, req.DueAt, req.RemindAt, repeatType, repeatInterval, req.RepeatEndDate, marshalTags(req.Tags), now, now,
 	)
 	if err != nil {
 		log.complete(err)
@@ -70,15 +98,16 @@ func (r *TaskRepo) GetByID(ctx context.Context, userID, id int64) (*models.Task,
 		zap.Int64("task_id", id),
 	)
 	task := &models.Task{}
+	var tagsRaw string
 	err := r.db.QueryRowContext(ctx, `
 		SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
 		       repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at,
-		       focus_duration, created_at, updated_at
+		       focus_duration, tags, created_at, updated_at
 		FROM tasks WHERE id = ? AND user_id = ?`, id, userID).Scan(
 		&task.ID, &task.UserID, &task.Title, &task.Description, &task.Completed, &task.Priority,
 		&task.DueAt, &task.RemindAt, &task.RepeatType, &task.RepeatInterval,
 		&task.RepeatEndDate, &task.ReminderSent, &task.ReminderSentAt,
-		&task.FocusDuration, &task.CreatedAt, &task.UpdatedAt,
+		&task.FocusDuration, &tagsRaw, &task.CreatedAt, &task.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		log.complete(nil, zap.Bool("found", false))
@@ -88,6 +117,7 @@ func (r *TaskRepo) GetByID(ctx context.Context, userID, id int64) (*models.Task,
 		log.complete(err)
 		return nil, fmt.Errorf("get task: %w", err)
 	}
+	task.Tags = unmarshalTags(tagsRaw)
 	log.complete(nil,
 		zap.Bool("found", true),
 		zap.Bool("completed", task.Completed),
@@ -107,6 +137,8 @@ func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFi
 		zap.Bool("has_due_before", filters.DueBefore != ""),
 		zap.Bool("has_due_after", filters.DueAfter != ""),
 		zap.Bool("has_search", filters.Search != ""),
+		zap.Int("tags_filter_count", len(filters.Tags)),
+		zap.Int("tags_all_filter_count", len(filters.TagsAll)),
 	)
 	where, args := buildWhereClause(filters)
 
@@ -130,7 +162,7 @@ func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFi
 	orderBy := buildTaskListOrderBy(sortField, sortOrder)
 
 	offset := (page - 1) * limit
-	query := fmt.Sprintf("SELECT id, user_id, title, description, completed, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, focus_duration, created_at, updated_at FROM tasks%s ORDER BY %s LIMIT ? OFFSET ?", where, orderBy)
+	query := fmt.Sprintf("SELECT id, user_id, title, description, completed, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, focus_duration, tags, created_at, updated_at FROM tasks%s ORDER BY %s LIMIT ? OFFSET ?", where, orderBy)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -143,10 +175,12 @@ func (r *TaskRepo) List(ctx context.Context, userID int64, filters models.TaskFi
 	var tasks []models.Task
 	for rows.Next() {
 		var t models.Task
-		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.FocusDuration, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		var tagsRaw string
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.FocusDuration, &tagsRaw, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			log.complete(err, zap.Int64("count", total))
 			return nil, 0, fmt.Errorf("scan task: %w", err)
 		}
+		t.Tags = unmarshalTags(tagsRaw)
 		tasks = append(tasks, t)
 	}
 	if err := rows.Err(); err != nil {
@@ -191,6 +225,7 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 		zap.Bool("update_repeat_type", req.RepeatType != nil),
 		zap.Bool("update_repeat_interval", req.RepeatInterval != nil),
 		zap.Bool("update_repeat_end_date", req.RepeatEndDate != nil),
+		zap.Bool("update_tags", req.Tags != nil),
 	)
 	setClauses := []string{}
 	args := []any{}
@@ -226,6 +261,10 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 	if req.RepeatEndDate != nil {
 		setClauses = append(setClauses, "repeat_end_date = ?")
 		args = append(args, *req.RepeatEndDate)
+	}
+	if req.Tags != nil {
+		setClauses = append(setClauses, "tags = ?")
+		args = append(args, marshalTags(*req.Tags))
 	}
 
 	if len(setClauses) == 0 {
@@ -336,7 +375,7 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]mo
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
 		       repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at,
-		       focus_duration, created_at, updated_at
+		       focus_duration, tags, created_at, updated_at
 		FROM tasks
 		WHERE user_id IS NOT NULL
 		  AND remind_at IS NOT NULL
@@ -352,10 +391,12 @@ func (r *TaskRepo) GetPendingReminders(ctx context.Context, now time.Time) ([]mo
 	nowUTC := now.UTC()
 	for rows.Next() {
 		var t models.Task
-		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.FocusDuration, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		var tagsRaw string
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate, &t.ReminderSent, &t.ReminderSentAt, &t.FocusDuration, &tagsRaw, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			log.complete(err)
 			return nil, fmt.Errorf("scan reminder task: %w", err)
 		}
+		t.Tags = unmarshalTags(tagsRaw)
 		// 运行时兼容：解析 remind_at（支持 RFC3339 和旧格式），在 Go 侧比较
 		if t.RemindAt != nil {
 			remindTime, err := utils.ParseDBTime(*t.RemindAt)
@@ -406,9 +447,9 @@ func (r *TaskRepo) CreateRepeatTask(ctx context.Context, t *models.Task) error {
 	)
 	now := time.Now().UTC().Format(time.RFC3339)
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
-		t.UserID, t.Title, t.Description, t.Priority, t.DueAt, t.RemindAt, t.RepeatType, t.RepeatInterval, t.RepeatEndDate, now, now,
+		INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, tags, reminder_sent, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+		t.UserID, t.Title, t.Description, t.Priority, t.DueAt, t.RemindAt, t.RepeatType, t.RepeatInterval, t.RepeatEndDate, marshalTags(t.Tags), now, now,
 	)
 	if err != nil {
 		log.complete(err)
@@ -453,10 +494,10 @@ func (r *TaskRepo) ToggleCompleteAndCreateRepeat(ctx context.Context, userID, id
 	if next != nil {
 		now := time.Now().UTC().Format(time.RFC3339)
 		_, err = tx.ExecContext(ctx, `
-			INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, reminder_sent, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+			INSERT INTO tasks (user_id, title, description, priority, due_at, remind_at, repeat_type, repeat_interval, repeat_end_date, tags, reminder_sent, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
 			next.UserID, next.Title, next.Description, next.Priority, next.DueAt, next.RemindAt,
-			next.RepeatType, next.RepeatInterval, next.RepeatEndDate, now, now,
+			next.RepeatType, next.RepeatInterval, next.RepeatEndDate, marshalTags(next.Tags), now, now,
 		)
 		if err != nil {
 			log.complete(err)
@@ -498,6 +539,22 @@ func buildWhereClause(f models.TaskFilters) (string, []any) {
 		clauses = append(clauses, "(INSTR(title, ?) > 0 OR INSTR(description, ?) > 0)")
 		args = append(args, f.Search, f.Search)
 	}
+	if len(f.Tags) > 0 {
+		// OR 语义:任一命中即匹配。使用 SQLite JSON1 的 json_each 展开 tasks.tags。
+		placeholders := strings.Repeat("?,", len(f.Tags))
+		placeholders = placeholders[:len(placeholders)-1]
+		clauses = append(clauses, fmt.Sprintf("EXISTS (SELECT 1 FROM json_each(tasks.tags) WHERE json_each.value IN (%s))", placeholders))
+		for _, name := range f.Tags {
+			args = append(args, name)
+		}
+	}
+	if len(f.TagsAll) > 0 {
+		// AND 语义:每个 tag 都必须存在
+		for _, name := range f.TagsAll {
+			clauses = append(clauses, "EXISTS (SELECT 1 FROM json_each(tasks.tags) WHERE json_each.value = ?)")
+			args = append(args, name)
+		}
+	}
 
 	if len(clauses) == 0 {
 		return "", nil
@@ -530,7 +587,7 @@ func (r *TaskRepo) ListAll(ctx context.Context, userID int64, filters models.Tas
 
 	offset := (page - 1) * limit
 	query := fmt.Sprintf(`SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
-		repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, focus_duration, created_at, updated_at
+		repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at, focus_duration, tags, created_at, updated_at
 		FROM tasks%s ORDER BY created_at DESC LIMIT ? OFFSET ?`, where)
 	args = append(args, limit, offset)
 
@@ -544,12 +601,14 @@ func (r *TaskRepo) ListAll(ctx context.Context, userID int64, filters models.Tas
 	tasks := make([]models.Task, 0)
 	for rows.Next() {
 		var t models.Task
+		var tagsRaw string
 		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Completed, &t.Priority,
 			&t.DueAt, &t.RemindAt, &t.RepeatType, &t.RepeatInterval, &t.RepeatEndDate,
-			&t.ReminderSent, &t.ReminderSentAt, &t.FocusDuration, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.ReminderSent, &t.ReminderSentAt, &t.FocusDuration, &tagsRaw, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			log.complete(err, zap.Int64("count", total))
 			return nil, 0, fmt.Errorf("scan task: %w", err)
 		}
+		t.Tags = unmarshalTags(tagsRaw)
 		tasks = append(tasks, t)
 	}
 	if err := rows.Err(); err != nil {

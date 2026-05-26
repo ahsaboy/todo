@@ -50,6 +50,12 @@ const router = createRouter({
           meta: { motion: 'board' },
         },
         {
+          path: 'tags',
+          name: 'tags',
+          component: () => import('@/pages/TagsPage.vue'),
+          meta: { motion: 'page' },
+        },
+        {
           path: 'reminder-configs',
           name: 'reminder-configs',
           component: () => import('@/pages/ReminderConfigsPage.vue'),

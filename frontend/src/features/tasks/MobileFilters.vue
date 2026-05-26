@@ -31,6 +31,11 @@
       </div>
 
       <div class="filter-group">
+        <label>标签</label>
+        <TagPicker v-model="localFilters.tags" placeholder="按标签筛选..." />
+      </div>
+
+      <div class="filter-group">
         <label for="mobile-task-filter-search">搜索</label>
         <input
           id="mobile-task-filter-search"
@@ -53,6 +58,7 @@
 import { reactive, watch, computed } from 'vue'
 import MobileSheet from '@/shared/ui/MobileSheet.vue'
 import type { TaskFilters } from './useTasks'
+import TagPicker from '@/features/tags/TagPicker.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -77,6 +83,7 @@ const localFilters = reactive({
   status: props.filters.status,
   priority: props.filters.priority,
   search: props.filters.search,
+  tags: Array.isArray(props.filters.tags) ? [...props.filters.tags] : [],
 })
 
 watch(
@@ -86,6 +93,7 @@ watch(
       status: val.status,
       priority: val.priority,
       search: val.search,
+      tags: Array.isArray(val.tags) ? [...val.tags] : [],
     })
   },
   { deep: true },
@@ -95,6 +103,7 @@ function clearFilters() {
   localFilters.status = 'all'
   localFilters.priority = undefined
   localFilters.search = ''
+  localFilters.tags = []
   applyFilters()
 }
 
@@ -130,6 +139,10 @@ function applyFilters() {
   font-size: 14px;
   background: var(--color-surface);
   color: var(--color-text);
+}
+
+.filter-group :deep(.tag-picker) {
+  min-width: 0;
 }
 
 .filter-actions {

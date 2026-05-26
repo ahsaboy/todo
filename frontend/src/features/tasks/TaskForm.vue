@@ -88,6 +88,11 @@
       </div>
     </div>
 
+    <div class="form-group">
+      <label>标签</label>
+      <TagPicker v-model="form.tags" placeholder="选择或新建标签..." />
+    </div>
+
     <div class="form-actions">
       <slot name="actions">
         <button type="button" class="btn-secondary" @click="$emit('cancel')">取消</button>
@@ -102,9 +107,10 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
 import type { CreateTaskPayload, Task, UpdateTaskPayload } from '@/entities/task/model'
+import TagPicker from '@/features/tags/TagPicker.vue'
 
 type TaskFormInitialData = Partial<CreateTaskPayload> &
-  Partial<Pick<Task, 'dueAt' | 'remindAt' | 'repeatEndDate' | 'repeatInterval' | 'repeatType'>> & {
+  Partial<Pick<Task, 'dueAt' | 'remindAt' | 'repeatEndDate' | 'repeatInterval' | 'repeatType' | 'tags'>> & {
     title?: string
     description?: string
     priority?: 1 | 2 | 3
@@ -158,6 +164,7 @@ const form = reactive<CreateTaskPayload>({
   repeat_type: d?.repeat_type || d?.repeatType || 'none',
   repeat_interval: d?.repeat_interval || d?.repeatInterval || 1,
   repeat_end_date: (d?.repeat_end_date || d?.repeatEndDate) ? isoToLocalDateInputValue(d.repeat_end_date || d.repeatEndDate) : undefined,
+  tags: Array.isArray(d?.tags) ? [...d.tags] : [],
 })
 
 const errors = reactive({

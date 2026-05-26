@@ -29,6 +29,9 @@
               </label>
               <div class="task-content">
                 <div class="task-title">{{ task.title }}</div>
+                <div v-if="task.tags && task.tags.length > 0" class="task-tags">
+                  <TagChip v-for="t in task.tags" :key="t" :name="t" />
+                </div>
                 <div class="task-meta">
                   <PriorityTag v-if="task.priority" :priority="task.priority" />
                   <span v-if="task.dueAt" class="meta-item">
@@ -52,6 +55,7 @@ import { ref } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
+import TagChip from '@/features/tags/TagChip.vue'
 import MotionStagger from '@/shared/ui/MotionStagger.vue'
 import CollapseTransition from '@/shared/ui/CollapseTransition.vue'
 
@@ -174,6 +178,13 @@ function formatDate(dateStr: string): string {
 
 .task-card.completed .task-title {
   text-decoration: line-through;
+}
+
+.task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .task-meta {

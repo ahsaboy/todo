@@ -1,6 +1,9 @@
 <template>
   <div class="board-card" :class="{ completed: task.completed }" @click="$emit('click', task)">
     <div class="card-title">{{ task.title }}</div>
+    <div v-if="task.tags && task.tags.length > 0" class="card-tags">
+      <TagChip v-for="t in task.tags" :key="t" :name="t" />
+    </div>
     <div class="card-meta">
       <PriorityTag v-if="task.priority" :priority="task.priority" />
       <span v-if="task.focusDuration" class="focus-tag">
@@ -16,6 +19,7 @@
 <script setup lang="ts">
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
+import TagChip from '@/features/tags/TagChip.vue'
 
 defineProps<{
   task: Task
@@ -63,6 +67,13 @@ function formatDate(dateStr: string): string {
 
 .board-card.completed .card-title {
   text-decoration: line-through;
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .card-meta {

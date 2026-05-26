@@ -24,6 +24,9 @@
           <span class="task-title">{{ task.title }}</span>
           <PriorityTag :priority="task.priority" />
         </div>
+        <div v-if="task.tags && task.tags.length > 0" class="task-tags">
+          <TagChip v-for="t in task.tags" :key="t" :name="t" />
+        </div>
         <div v-if="task.dueAt" class="task-due" :class="{ overdue: isOverdue(task) }">
           {{ formatDue(task.dueAt) }}
         </div>
@@ -38,6 +41,7 @@
 <script setup lang="ts">
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
+import TagChip from '@/features/tags/TagChip.vue'
 
 defineProps<{
   tasks: Task[]
@@ -134,6 +138,12 @@ function formatDue(dateStr: string): string {
 
 .task-card.completed .task-title {
   text-decoration: line-through;
+}
+
+.task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .task-due {
