@@ -1,5 +1,5 @@
 <template>
-  <MotionStagger class="task-grouped-list">
+  <div class="task-grouped-list">
     <div v-for="group in groups" :key="group.label" class="task-group">
       <div class="group-header" @click="toggleGroup(group.label)">
         <ChevronDown class="group-arrow" :class="{ collapsed: collapsedGroups.has(group.label) }" :size="14" />
@@ -47,7 +47,7 @@
         </div>
       </CollapseTransition>
     </div>
-  </MotionStagger>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -56,7 +56,6 @@ import { ChevronDown } from 'lucide-vue-next'
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import TagChip from '@/features/tags/TagChip.vue'
-import MotionStagger from '@/shared/ui/MotionStagger.vue'
 import CollapseTransition from '@/shared/ui/CollapseTransition.vue'
 
 interface TaskGroup {

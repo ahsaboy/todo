@@ -8,7 +8,7 @@ import AppFooter from './AppFooter.vue'
 import MobileBottomNav from './MobileBottomNav.vue'
 
 const MOBILE_MEDIA_QUERY = '(max-width: 767px)'
-const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)'
+const DESKTOP_MEDIA_QUERY = '(min-width: 768px)'
 
 const route = useRoute()
 const sidebarCollapsed = ref(false)

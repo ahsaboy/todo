@@ -509,8 +509,4 @@
   .app-main {
     margin-left: var(--sidebar-collapsed-width);
   }
-
-  .app-sidebar.collapsed ~ .app-main {
-    margin-left: var(--sidebar-collapsed-width);
-  }
 }

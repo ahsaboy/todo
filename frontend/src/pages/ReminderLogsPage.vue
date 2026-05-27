@@ -18,8 +18,8 @@
           <p>暂无提醒日志</p>
         </div>
 
-        <template v-else>
-          <MotionStagger class="log-card-list">
+        <div v-else>
+          <div class="log-card-list">
             <article v-for="item in logs" :key="item.id" class="log-card">
               <div class="log-card-header">
                 <div class="log-card-heading">
@@ -51,7 +51,7 @@
                 <p>{{ item.errorMessage }}</p>
               </div>
             </article>
-          </MotionStagger>
+          </div>
 
           <div class="log-table-wrap">
             <table class="log-table">
@@ -65,7 +65,7 @@
                   <th>错误</th>
                 </tr>
               </thead>
-              <MotionStagger tag="tbody">
+              <tbody>
                 <tr v-for="item in logs" :key="item.id">
                   <td>{{ formatDate(item.createdAt) }}</td>
                   <td class="task-cell">{{ item.taskTitle || `任务 #${item.taskId}` }}</td>
@@ -78,10 +78,10 @@
                   <td>{{ item.attempts }}</td>
                   <td class="error-cell">{{ item.errorMessage || '-' }}</td>
                 </tr>
-              </MotionStagger>
+              </tbody>
             </table>
           </div>
-        </template>
+        </div>
       </template>
     </Transition>
 
@@ -99,7 +99,6 @@
 import { onMounted, ref } from 'vue'
 import { RefreshCw } from 'lucide-vue-next'
 import TableSkeleton from '@/shared/ui/TableSkeleton.vue'
-import MotionStagger from '@/shared/ui/MotionStagger.vue'
 import { getReminderLogs } from '@/entities/reminder-config/api'
 import { toReminderLog } from '@/entities/reminder-config/mapper'
 import type { ReminderLog } from '@/entities/reminder-config/model'

@@ -45,7 +45,6 @@ html[data-theme='light'] {
   --motion-duration-slow: 420ms;
   --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
-  --motion-stagger-step: 46ms;
   --motion-distance-sm: 10px;
   --motion-distance-md: 18px;
   --motion-distance-lg: 28px;

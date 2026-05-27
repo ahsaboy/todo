@@ -80,9 +80,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Plus, SlidersHorizontal } from 'lucide-vue-next'
 import { useTasks } from '@/features/tasks/useTasks'
+import { useMediaQuery } from '@/shared/composables/useMediaQuery'
 import TaskTable from '@/features/tasks/TaskTable.vue'
 import TaskCardList from '@/features/tasks/TaskCardList.vue'
 import TaskFilters from '@/features/tasks/TaskFilters.vue'
@@ -113,26 +114,15 @@ const {
 const drawerVisible = ref(false)
 const selectedTask = ref<Task | null>(null)
 const showFilters = ref(false)
-const windowWidth = ref(window.innerWidth)
+const isMobile = useMediaQuery('(max-width: 767px)')
 
 const focusDialogVisible = ref(false)
 const focusDialogTaskTitle = ref('')
 const pendingToggleTaskId = ref<number | null>(null)
 
-const isMobile = computed(() => windowWidth.value < 768)
-
-function handleResize() {
-  windowWidth.value = window.innerWidth
-}
-
 onMounted(() => {
-  window.addEventListener('resize', handleResize)
   setSort('task_center', 'asc')
   fetchTasks()
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
 })
 
 function openCreate() {

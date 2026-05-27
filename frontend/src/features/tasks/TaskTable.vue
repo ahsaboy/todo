@@ -13,7 +13,7 @@
           <th class="col-created">创建时间</th>
         </tr>
       </thead>
-      <MotionStagger tag="tbody">
+      <tbody>
         <tr v-for="task in tasks" :key="task.id" :class="{ completed: task.completed }">
           <td class="col-completed">
             <input
@@ -55,7 +55,7 @@
             {{ formatDate(task.createdAt) }}
           </td>
         </tr>
-      </MotionStagger>
+      </tbody>
     </table>
   </div>
 </template>
@@ -63,7 +63,6 @@
 <script setup lang="ts">
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
-import MotionStagger from '@/shared/ui/MotionStagger.vue'
 import TagChip from '@/features/tags/TagChip.vue'
 
 defineProps<{
