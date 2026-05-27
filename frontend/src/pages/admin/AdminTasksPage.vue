@@ -8,11 +8,19 @@ interface Task {
   user_id: number
   username: string
   title: string
+  description: string
   priority: number
   completed: boolean
   due_at: string | null
+  remind_at: string | null
+  repeat_type: string
+  repeat_interval: number
+  repeat_end_date: string | null
+  reminder_sent: boolean
+  reminder_sent_at: string | null
   focus_duration: number | null
   created_at: string
+  updated_at: string
 }
 
 const tasks = ref<Task[]>([])
@@ -21,8 +29,14 @@ const page = ref(1)
 const limit = 20
 const filterUserId = ref('')
 const filterStatus = ref('')
+const filterPriority = ref('')
 const error = ref('')
 const isLoading = ref(false)
+
+const editDialog = ref<{ show: boolean; task: Task | null; saving: boolean; err: string }>({
+  show: false, task: null, saving: false, err: ''
+})
+const editForm = ref({ title: '', description: '', priority: 2, due_at: '' })
 
 const priorityText: Record<number, string> = { 1: '高', 2: '中', 3: '低' }
 
@@ -35,8 +49,9 @@ async function loadTasks() {
       limit: String(limit),
       ...(filterUserId.value ? { user_id: filterUserId.value } : {}),
       ...(filterStatus.value ? { status: filterStatus.value } : {}),
+      ...(filterPriority.value ? { priority: filterPriority.value } : {}),
     })
-    const res = await adminApi.get<PaginatedResponse<Task[]>>(`/tasks?${params}`)
+    const res = await adminApi.get<PaginatedResponse<Task>>(`/tasks?${params}`)
     tasks.value = res.data
     total.value = res.meta.total_items
   } catch {
@@ -64,6 +79,54 @@ async function deleteTask(id: number, title: string) {
   }
 }
 
+async function toggleComplete(task: Task) {
+  try {
+    await adminApi.patch(`/tasks/${task.id}/toggle`)
+    await loadTasks()
+  } catch {
+    error.value = '切换任务状态失败'
+  }
+}
+
+function openEdit(task: Task) {
+  editForm.value = {
+    title: task.title,
+    description: task.description || '',
+    priority: task.priority,
+    due_at: task.due_at ? task.due_at.replace('Z', '').slice(0, 16) : '',
+  }
+  editDialog.value = { show: true, task, saving: false, err: '' }
+}
+
+async function saveEdit() {
+  if (!editDialog.value.task) return
+  if (!editForm.value.title.trim()) {
+    editDialog.value.err = '标题不能为空'
+    return
+  }
+  editDialog.value.saving = true
+  editDialog.value.err = ''
+  try {
+    const body: Record<string, unknown> = {
+      title: editForm.value.title,
+      description: editForm.value.description || null,
+      priority: editForm.value.priority,
+    }
+    if (editForm.value.due_at) {
+      body.due_at = new Date(editForm.value.due_at).toISOString()
+    } else {
+      body.due_at = null
+    }
+    await adminApi.put(`/tasks/${editDialog.value.task.id}`, body)
+    editDialog.value.show = false
+    await loadTasks()
+  } catch {
+    editDialog.value.err = '保存失败'
+  } finally {
+    editDialog.value.saving = false
+  }
+}
+
 const totalPages = () => Math.ceil(total.value / limit)
 </script>
 
@@ -83,6 +146,12 @@ const totalPages = () => Math.ceil(total.value / limit)
         <option value="">全部状态</option>
         <option value="pending">未完成</option>
         <option value="completed">已完成</option>
+      </select>
+      <select v-model="filterPriority" class="admin-search-input" style="max-width: 120px;">
+        <option value="">全部优先级</option>
+        <option value="1">高</option>
+        <option value="2">中</option>
+        <option value="3">低</option>
       </select>
       <button class="btn btn-primary" @click="handleFilter">筛选</button>
     </div>
@@ -122,7 +191,11 @@ const totalPages = () => Math.ceil(total.value / limit)
             </td>
             <td>{{ t.due_at || '—' }}</td>
             <td>{{ t.focus_duration ? t.focus_duration + ' min' : '—' }}</td>
-            <td>
+            <td class="action-cell">
+              <button class="btn btn-sm" @click="toggleComplete(t)">
+                {{ t.completed ? '标记待办' : '标记完成' }}
+              </button>
+              <button class="btn btn-sm" @click="openEdit(t)">编辑</button>
               <button class="btn btn-sm btn-danger" @click="deleteTask(t.id, t.title)">删除</button>
             </td>
           </tr>
@@ -136,9 +209,101 @@ const totalPages = () => Math.ceil(total.value / limit)
       <span>{{ page }} / {{ totalPages() }}</span>
       <button :disabled="page >= totalPages()" class="btn btn-sm" @click="page++">下一页</button>
     </div>
+
+    <!-- 编辑任务弹窗 -->
+    <div v-if="editDialog.show" class="admin-modal-overlay" @click.self="editDialog.show = false">
+      <div class="admin-modal">
+        <h3>编辑任务 #{{ editDialog.task?.id }}</h3>
+        <div class="form-group">
+          <label>标题</label>
+          <input v-model="editForm.title" type="text" class="form-input" maxlength="255" />
+        </div>
+        <div class="form-group">
+          <label>描述</label>
+          <textarea v-model="editForm.description" class="form-input" rows="3" maxlength="1000"></textarea>
+        </div>
+        <div class="form-group">
+          <label>优先级</label>
+          <select v-model.number="editForm.priority" class="form-input">
+            <option :value="1">高</option>
+            <option :value="2">中</option>
+            <option :value="3">低</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>截止时间</label>
+          <input v-model="editForm.due_at" type="datetime-local" class="form-input" />
+        </div>
+        <div v-if="editDialog.err" class="error-message">{{ editDialog.err }}</div>
+        <div class="modal-actions">
+          <button class="btn" @click="editDialog.show = false" :disabled="editDialog.saving">取消</button>
+          <button class="btn btn-primary" @click="saveEdit" :disabled="editDialog.saving">
+            {{ editDialog.saving ? '保存中...' : '保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 @import '@/widgets/admin-common.css';
+
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.admin-modal {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  min-width: 400px;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-modal h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.form-input {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+textarea.form-input {
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
 </style>

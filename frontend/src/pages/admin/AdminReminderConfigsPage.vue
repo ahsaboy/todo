@@ -28,7 +28,7 @@ async function loadConfigs() {
   isLoading.value = true
   error.value = ''
   try {
-    const res = await adminApi.get<PaginatedResponse<ReminderConfig[]>>(
+    const res = await adminApi.get<PaginatedResponse<ReminderConfig>>(
       `/reminder-configs?page=${page.value}&limit=${limit}`
     )
     configs.value = res.data
@@ -42,6 +42,27 @@ async function loadConfigs() {
 
 onMounted(loadConfigs)
 watch(page, loadConfigs)
+
+async function toggleEnabled(config: ReminderConfig) {
+  const action = config.enabled ? '禁用' : '启用'
+  if (!confirm(`确定${action}提醒配置 "${config.name}"？`)) return
+  try {
+    await adminApi.patch(`/reminder-configs/${config.id}/toggle`)
+    await loadConfigs()
+  } catch {
+    error.value = '切换状态失败'
+  }
+}
+
+async function deleteConfig(config: ReminderConfig) {
+  if (!confirm(`确定删除提醒配置 "${config.name}"？此操作不可恢复！`)) return
+  try {
+    await adminApi.delete(`/reminder-configs/${config.id}`)
+    await loadConfigs()
+  } catch {
+    error.value = '删除提醒配置失败'
+  }
+}
 
 const totalPages = () => Math.ceil(total.value / limit)
 </script>
@@ -64,14 +85,15 @@ const totalPages = () => Math.ceil(total.value / limit)
             <th>最大重试</th>
             <th>状态</th>
             <th>创建时间</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="isLoading">
-            <td colspan="8" style="text-align:center; padding: 2rem;">加载中...</td>
+            <td colspan="9" style="text-align:center; padding: 2rem;">加载中...</td>
           </tr>
           <tr v-else-if="!configs.length">
-            <td colspan="8" style="text-align:center; padding: 2rem; color: var(--color-text-muted);">暂无提醒配置</td>
+            <td colspan="9" style="text-align:center; padding: 2rem; color: var(--color-text-muted);">暂无提醒配置</td>
           </tr>
           <tr v-for="c in configs" :key="c.id">
             <td>{{ c.id }}</td>
@@ -86,6 +108,12 @@ const totalPages = () => Math.ceil(total.value / limit)
               </span>
             </td>
             <td>{{ c.created_at }}</td>
+            <td class="action-cell">
+              <button class="btn btn-sm" @click="toggleEnabled(c)">
+                {{ c.enabled ? '禁用' : '启用' }}
+              </button>
+              <button class="btn btn-sm btn-danger" @click="deleteConfig(c)">删除</button>
+            </td>
           </tr>
         </tbody>
       </table>

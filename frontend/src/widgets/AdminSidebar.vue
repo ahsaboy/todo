@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   Terminal,
+  ShieldCheck,
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useAdminAuthStore } from '@/app/stores/admin-auth.store'
@@ -28,6 +29,7 @@ const navItems: NavItem[] = [
   { to: '/admin/reminder-configs', label: '提醒配置', icon: BellRing },
   { to: '/admin/reminder-logs', label: '提醒日志', icon: ScrollText },
   { to: '/admin/system-logs', label: '系统日志', icon: Terminal },
+  { to: '/admin/audit-logs', label: '操作日志', icon: ShieldCheck },
   { to: '/admin/config', label: '系统配置', icon: Settings },
 ]
 

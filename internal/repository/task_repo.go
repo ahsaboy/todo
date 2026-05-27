@@ -619,6 +619,122 @@ func (r *TaskRepo) ListAll(ctx context.Context, userID int64, filters models.Tas
 	return tasks, total, nil
 }
 
+func (r *TaskRepo) AdminGetByID(ctx context.Context, id int64) (*models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "admin_get_task_by_id", zap.Int64("task_id", id))
+	task := &models.Task{}
+	var tagsRaw string
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, user_id, title, description, completed, priority, due_at, remind_at,
+		       repeat_type, repeat_interval, repeat_end_date, reminder_sent, reminder_sent_at,
+		       focus_duration, tags, created_at, updated_at
+		FROM tasks WHERE id = ?`, id).Scan(
+		&task.ID, &task.UserID, &task.Title, &task.Description, &task.Completed, &task.Priority,
+		&task.DueAt, &task.RemindAt, &task.RepeatType, &task.RepeatInterval,
+		&task.RepeatEndDate, &task.ReminderSent, &task.ReminderSentAt,
+		&task.FocusDuration, &tagsRaw, &task.CreatedAt, &task.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		log.complete(nil, zap.Bool("found", false))
+		return nil, nil
+	}
+	if err != nil {
+		log.complete(err)
+		return nil, fmt.Errorf("admin get task: %w", err)
+	}
+	task.Tags = unmarshalTags(tagsRaw)
+	log.complete(nil, zap.Bool("found", true))
+	return task, nil
+}
+
+func (r *TaskRepo) AdminToggleComplete(ctx context.Context, id int64) (*models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "admin_toggle_task_complete", zap.Int64("task_id", id))
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE tasks SET completed = CASE WHEN completed = 0 THEN 1 ELSE 0 END, updated_at = ? WHERE id = ?`,
+		time.Now().UTC().Format(time.RFC3339), id)
+	if err != nil {
+		log.complete(err)
+		return nil, fmt.Errorf("admin toggle complete: %w", err)
+	}
+	rows := rowsAffected(result)
+	if rows == 0 {
+		log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("found", false))
+		return nil, nil
+	}
+	log.complete(nil, zap.Int64("rows_affected", rows))
+	return r.AdminGetByID(ctx, id)
+}
+
+func (r *TaskRepo) AdminUpdate(ctx context.Context, id int64, req models.UpdateTaskRequest) (*models.Task, error) {
+	log := beginDBOperation(ctx, taskRepositoryName, "admin_update_task",
+		zap.Int64("task_id", id),
+		zap.Bool("update_title", req.Title != nil),
+		zap.Bool("update_description", req.Description != nil),
+		zap.Bool("update_priority", req.Priority != nil),
+		zap.Bool("update_due_at", req.DueAt != nil),
+	)
+	setClauses := []string{}
+	args := []any{}
+
+	if req.Title != nil {
+		setClauses = append(setClauses, "title = ?")
+		args = append(args, *req.Title)
+	}
+	if req.Description != nil {
+		setClauses = append(setClauses, "description = ?")
+		args = append(args, *req.Description)
+	}
+	if req.Priority != nil {
+		setClauses = append(setClauses, "priority = ?")
+		args = append(args, *req.Priority)
+	}
+	if req.DueAt != nil {
+		setClauses = append(setClauses, "due_at = ?")
+		args = append(args, *req.DueAt)
+	}
+	if req.RemindAt != nil {
+		setClauses = append(setClauses, "remind_at = ?, reminder_sent = 0, reminder_sent_at = NULL")
+		args = append(args, *req.RemindAt)
+	}
+	if req.RepeatType != nil {
+		setClauses = append(setClauses, "repeat_type = ?")
+		args = append(args, *req.RepeatType)
+	}
+	if req.RepeatInterval != nil {
+		setClauses = append(setClauses, "repeat_interval = ?")
+		args = append(args, *req.RepeatInterval)
+	}
+	if req.RepeatEndDate != nil {
+		setClauses = append(setClauses, "repeat_end_date = ?")
+		args = append(args, *req.RepeatEndDate)
+	}
+	if req.Tags != nil {
+		setClauses = append(setClauses, "tags = ?")
+		args = append(args, marshalTags(*req.Tags))
+	}
+
+	if len(setClauses) == 0 {
+		log.complete(nil, zap.String("result", "no_fields_to_update"))
+		return r.AdminGetByID(ctx, id)
+	}
+
+	setClauses = append(setClauses, "updated_at = ?")
+	args = append(args, time.Now().UTC().Format(time.RFC3339), id)
+
+	query := "UPDATE tasks SET " + strings.Join(setClauses, ", ") + " WHERE id = ?"
+	result, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		log.complete(err)
+		return nil, fmt.Errorf("admin update task: %w", err)
+	}
+	rows := rowsAffected(result)
+	if rows == 0 {
+		log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("found", false))
+		return nil, nil
+	}
+	log.complete(nil, zap.Int64("rows_affected", rows))
+	return r.AdminGetByID(ctx, id)
+}
+
 func (r *TaskRepo) AdminDelete(ctx context.Context, id int64) (bool, error) {
 	log := beginDBOperation(ctx, taskRepositoryName, "admin_delete_task", zap.Int64("task_id", id))
 	result, err := r.db.ExecContext(ctx, "DELETE FROM tasks WHERE id = ?", id)

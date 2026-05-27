@@ -22,6 +22,8 @@ const logs = ref<ReminderLog[]>([])
 const total = ref(0)
 const page = ref(1)
 const limit = 20
+const filterUserId = ref('')
+const filterStatus = ref('')
 const error = ref('')
 const isLoading = ref(false)
 
@@ -29,8 +31,14 @@ async function loadLogs() {
   isLoading.value = true
   error.value = ''
   try {
-    const res = await adminApi.get<PaginatedResponse<ReminderLog[]>>(
-      `/reminder-logs?page=${page.value}&limit=${limit}`
+    const params = new URLSearchParams({
+      page: String(page.value),
+      limit: String(limit),
+      ...(filterUserId.value ? { user_id: filterUserId.value } : {}),
+      ...(filterStatus.value ? { status: filterStatus.value } : {}),
+    })
+    const res = await adminApi.get<PaginatedResponse<ReminderLog>>(
+      `/reminder-logs?${params}`
     )
     logs.value = res.data
     total.value = res.meta.total_items
@@ -44,6 +52,11 @@ async function loadLogs() {
 onMounted(loadLogs)
 watch(page, loadLogs)
 
+function handleFilter() {
+  page.value = 1
+  loadLogs()
+}
+
 const totalPages = () => Math.ceil(total.value / limit)
 
 function statusClass(status: string): string {
@@ -56,6 +69,22 @@ function statusClass(status: string): string {
 <template>
   <div class="page-container">
     <h1 class="page-title">提醒日志</h1>
+
+    <div class="admin-toolbar">
+      <input
+        v-model="filterUserId"
+        type="number"
+        placeholder="用户 ID 筛选"
+        class="admin-search-input"
+        style="max-width: 140px;"
+      />
+      <select v-model="filterStatus" class="admin-search-input" style="max-width: 120px;">
+        <option value="">全部状态</option>
+        <option value="sent">已发送</option>
+        <option value="failed">失败</option>
+      </select>
+      <button class="btn btn-primary" @click="handleFilter">筛选</button>
+    </div>
 
     <div v-if="error" class="error-message">{{ error }}</div>
 

@@ -282,6 +282,10 @@ func (r *UserRepo) SetIsAdmin(ctx context.Context, userID int64, isAdmin bool) e
 		log.complete(err)
 		return fmt.Errorf("set is_admin: %w", err)
 	}
-	log.complete(nil, zap.Int64("rows_affected", rowsAffected(result)))
+	rows := rowsAffected(result)
+	log.complete(nil, zap.Int64("rows_affected", rows))
+	if rows == 0 {
+		return ErrNotFound
+	}
 	return nil
 }

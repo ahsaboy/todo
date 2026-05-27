@@ -97,6 +97,17 @@ CREATE TABLE IF NOT EXISTS reminder_logs (
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
     FOREIGN KEY (reminder_config_id) REFERENCES user_reminder_configs(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_user_id INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id INTEGER,
+    detail TEXT DEFAULT '',
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 `
 
 const indexes = `
@@ -117,6 +128,7 @@ CREATE INDEX IF NOT EXISTS idx_reminder_logs_user_id_created_at ON reminder_logs
 CREATE UNIQUE INDEX IF NOT EXISTS idx_reminder_logs_task_config
     ON reminder_logs(task_id, reminder_config_id)
     WHERE reminder_config_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at DESC);
 `
 
 func Init(dbPath string) (*sql.DB, error) {

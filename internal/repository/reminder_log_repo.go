@@ -227,3 +227,77 @@ func (r *ReminderLogRepo) ListAll(ctx context.Context, page, limit int) ([]model
 	log.complete(nil, zap.Int64("count", total), zap.Int("result_size", len(logs)))
 	return logs, total, nil
 }
+
+func (r *ReminderLogRepo) AdminListFiltered(ctx context.Context, page, limit int, userID int64, status string) ([]models.ReminderLog, int64, error) {
+	log := beginDBOperation(ctx, reminderLogRepositoryName, "admin_list_filtered_reminder_logs",
+		zap.Int("page", page),
+		zap.Int("limit", limit),
+		zap.Int64("user_id", userID),
+		zap.String("status", status),
+	)
+	where := ""
+	args := []any{}
+	if userID > 0 {
+		where += " WHERE l.user_id = ?"
+		args = append(args, userID)
+	}
+	if status != "" {
+		if where == "" {
+			where = " WHERE l.status = ?"
+		} else {
+			where += " AND l.status = ?"
+		}
+		args = append(args, status)
+	}
+
+	var total int64
+	countArgs := make([]any, len(args))
+	copy(countArgs, args)
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM reminder_logs l`+where, countArgs...).Scan(&total); err != nil {
+		log.complete(err)
+		return nil, 0, fmt.Errorf("count reminder logs: %w", err)
+	}
+
+	offset := (page - 1) * limit
+	query := fmt.Sprintf(`
+		SELECT l.id, l.user_id, l.task_id, COALESCE(t.title, ''),
+		       l.reminder_config_id, l.channel_name, l.channel_type, l.status,
+		       l.attempts, l.error_message, l.created_at
+		FROM reminder_logs l
+		LEFT JOIN tasks t ON t.id = l.task_id
+		%s
+		ORDER BY l.created_at DESC, l.id DESC
+		LIMIT ? OFFSET ?`, where)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("list filtered reminder logs: %w", err)
+	}
+	defer rows.Close()
+
+	logs := make([]models.ReminderLog, 0)
+	for rows.Next() {
+		var item models.ReminderLog
+		var configID sql.NullInt64
+		if err := rows.Scan(
+			&item.ID, &item.UserID, &item.TaskID, &item.TaskTitle,
+			&configID, &item.ChannelName, &item.ChannelType,
+			&item.Status, &item.Attempts, &item.ErrorMessage, &item.CreatedAt,
+		); err != nil {
+			log.complete(err, zap.Int64("count", total))
+			return nil, 0, fmt.Errorf("scan reminder log: %w", err)
+		}
+		if configID.Valid {
+			item.ReminderConfigID = &configID.Int64
+		}
+		logs = append(logs, item)
+	}
+	if err := rows.Err(); err != nil {
+		log.complete(err, zap.Int64("count", total))
+		return nil, 0, fmt.Errorf("rows iteration: %w", err)
+	}
+	log.complete(nil, zap.Int64("count", total), zap.Int("result_size", len(logs)))
+	return logs, total, nil
+}

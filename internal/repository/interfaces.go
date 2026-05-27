@@ -20,6 +20,9 @@ type TaskRepository interface {
 	CreateRepeatTask(ctx context.Context, t *models.Task) error
 	// Admin methods: userID=0 queries all users, >0 queries that user only
 	ListAll(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int) ([]models.Task, int64, error)
+	AdminGetByID(ctx context.Context, id int64) (*models.Task, error)
+	AdminToggleComplete(ctx context.Context, id int64) (*models.Task, error)
+	AdminUpdate(ctx context.Context, id int64, req models.UpdateTaskRequest) (*models.Task, error)
 	AdminDelete(ctx context.Context, id int64) (bool, error)
 }
 
@@ -55,6 +58,8 @@ type ReminderConfigRepository interface {
 	HasEnabledByUserID(ctx context.Context, userID int64) (bool, error)
 	// Admin methods
 	ListAll(ctx context.Context, page, limit int) ([]models.UserReminderConfig, int64, error)
+	AdminToggleEnabled(ctx context.Context, id int64) (bool, error)
+	AdminDelete(ctx context.Context, id int64) (bool, error)
 }
 
 type ReminderLogRepository interface {
@@ -64,6 +69,7 @@ type ReminderLogRepository interface {
 	DeleteByTaskID(ctx context.Context, taskID int64) error
 	// Admin methods
 	ListAll(ctx context.Context, page, limit int) ([]models.ReminderLog, int64, error)
+	AdminListFiltered(ctx context.Context, page, limit int, userID int64, status string) ([]models.ReminderLog, int64, error)
 }
 
 type TagRepository interface {
@@ -76,4 +82,9 @@ type TagRepository interface {
 	Delete(ctx context.Context, id, userID int64) (bool, error)
 	RenameWithTaskSync(ctx context.Context, id, userID int64, newName string) (*models.UserTag, error)
 	DeleteWithTaskSync(ctx context.Context, id, userID int64) (bool, int64, error)
+}
+
+type AuditLogRepository interface {
+	Create(ctx context.Context, adminUserID int64, action, targetType string, targetID *int64, detail string) error
+	ListAll(ctx context.Context, page, limit int) ([]AuditLog, int64, error)
 }

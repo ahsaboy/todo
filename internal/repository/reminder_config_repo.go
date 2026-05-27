@@ -208,6 +208,39 @@ func (r *ReminderConfigRepo) Delete(ctx context.Context, id, userID int64) (bool
 	return rows > 0, nil
 }
 
+func (r *ReminderConfigRepo) AdminToggleEnabled(ctx context.Context, id int64) (bool, error) {
+	log := beginDBOperation(ctx, reminderConfigRepositoryName, "admin_toggle_reminder_config_enabled",
+		zap.Int64("reminder_config_id", id),
+	)
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE user_reminder_configs SET enabled = CASE WHEN enabled = 0 THEN 1 ELSE 0 END, updated_at = ? WHERE id = ?`,
+		time.Now().UTC().Format(time.RFC3339), id,
+	)
+	if err != nil {
+		log.complete(err)
+		return false, fmt.Errorf("admin toggle reminder config enabled: %w", err)
+	}
+	rows := rowsAffected(result)
+	log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("found", rows > 0))
+	return rows > 0, nil
+}
+
+func (r *ReminderConfigRepo) AdminDelete(ctx context.Context, id int64) (bool, error) {
+	log := beginDBOperation(ctx, reminderConfigRepositoryName, "admin_delete_reminder_config",
+		zap.Int64("reminder_config_id", id),
+	)
+	result, err := r.db.ExecContext(ctx,
+		`DELETE FROM user_reminder_configs WHERE id = ?`, id,
+	)
+	if err != nil {
+		log.complete(err)
+		return false, fmt.Errorf("admin delete reminder config: %w", err)
+	}
+	rows := rowsAffected(result)
+	log.complete(nil, zap.Int64("rows_affected", rows), zap.Bool("deleted", rows > 0))
+	return rows > 0, nil
+}
+
 func (r *ReminderConfigRepo) HasEnabledByUserID(ctx context.Context, userID int64) (bool, error) {
 	log := beginDBOperation(ctx, reminderConfigRepositoryName, "has_enabled_reminder_config",
 		zap.Int64("user_id", userID),

@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"todo/internal/config"
+	"todo/internal/logging"
 	"todo/internal/middleware"
 	"todo/internal/models"
 	"todo/internal/repository"
@@ -30,6 +32,7 @@ type AdminHandler struct {
 	taskRepo           repository.TaskRepository
 	reminderConfigRepo repository.ReminderConfigRepository
 	reminderLogRepo    repository.ReminderLogRepository
+	auditLogRepo       repository.AuditLogRepository
 	cfg                *config.Config
 }
 
@@ -40,6 +43,7 @@ func NewAdminHandler(
 	taskRepo repository.TaskRepository,
 	reminderConfigRepo repository.ReminderConfigRepository,
 	reminderLogRepo repository.ReminderLogRepository,
+	auditLogRepo repository.AuditLogRepository,
 	cfg *config.Config,
 ) *AdminHandler {
 	return &AdminHandler{
@@ -49,6 +53,7 @@ func NewAdminHandler(
 		taskRepo:           taskRepo,
 		reminderConfigRepo: reminderConfigRepo,
 		reminderLogRepo:    reminderLogRepo,
+		auditLogRepo:       auditLogRepo,
 		cfg:                cfg,
 	}
 }
@@ -160,6 +165,74 @@ func (h *AdminHandler) GetStats(c *gin.Context) {
 	utils.RespondSuccess(c, stats)
 }
 
+type adminTrends struct {
+	TasksPerDay        []adminDayCount `json:"tasks_per_day"`
+	UsersPerDay        []adminDayCount `json:"users_per_day"`
+	ReminderStatusDist map[string]int  `json:"reminder_status_dist"`
+}
+
+type adminDayCount struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}
+
+func (h *AdminHandler) GetTrends(c *gin.Context) {
+	ctx := c.Request.Context()
+	trends := adminTrends{
+		ReminderStatusDist: make(map[string]int),
+	}
+
+	rows, err := h.db.QueryContext(ctx, `
+		SELECT DATE(created_at) as day, COUNT(*) as cnt
+		FROM tasks
+		WHERE created_at >= DATE('now', '-30 days')
+		GROUP BY day ORDER BY day`)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to get task trends", err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var dc adminDayCount
+		if err := rows.Scan(&dc.Date, &dc.Count); err == nil {
+			trends.TasksPerDay = append(trends.TasksPerDay, dc)
+		}
+	}
+
+	rows2, err := h.db.QueryContext(ctx, `
+		SELECT DATE(created_at) as day, COUNT(*) as cnt
+		FROM users
+		WHERE created_at >= DATE('now', '-30 days')
+		GROUP BY day ORDER BY day`)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to get user trends", err)
+		return
+	}
+	defer rows2.Close()
+	for rows2.Next() {
+		var dc adminDayCount
+		if err := rows2.Scan(&dc.Date, &dc.Count); err == nil {
+			trends.UsersPerDay = append(trends.UsersPerDay, dc)
+		}
+	}
+
+	rows3, err := h.db.QueryContext(ctx, `SELECT status, COUNT(*) FROM reminder_logs GROUP BY status`)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to get reminder status", err)
+		return
+	}
+	defer rows3.Close()
+	for rows3.Next() {
+		var status string
+		var count int
+		if err := rows3.Scan(&status, &count); err == nil {
+			trends.ReminderStatusDist[status] = count
+		}
+	}
+
+	utils.RespondSuccess(c, trends)
+}
+
 func (h *AdminHandler) ListUsers(c *gin.Context) {
 	page, limit := parsePaginationParams(c)
 	search := c.Query("search")
@@ -242,6 +315,7 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 		}
 		return
 	}
+	h.addAuditLog(c, "delete_user", "user", &id, "")
 	c.Status(http.StatusNoContent)
 }
 
@@ -273,6 +347,43 @@ func (h *AdminHandler) ForceResetPassword(c *gin.Context) {
 		}
 		return
 	}
+	h.addAuditLog(c, "reset_password", "user", &id, "")
+	utils.RespondSuccess(c, gin.H{"ok": true})
+}
+
+type adminToggleAdminRequest struct {
+	IsAdmin bool `json:"is_admin"`
+}
+
+func (h *AdminHandler) ToggleAdmin(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid user id", utils.CodeInvalidInput)
+		return
+	}
+	var req adminToggleAdminRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
+		return
+	}
+	// Prevent admin from demoting themselves
+	if !req.IsAdmin && c.GetInt64("user_id") == id {
+		utils.RespondError(c, http.StatusForbidden, "cannot remove your own admin privileges", utils.CodeForbidden)
+		return
+	}
+	if err := h.userRepo.SetIsAdmin(c.Request.Context(), id, req.IsAdmin); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			utils.RespondError(c, http.StatusNotFound, "user not found", utils.CodeNotFound)
+		} else {
+			utils.RespondInternalError(c, "failed to update admin status", err)
+		}
+		return
+	}
+	action := "promote_admin"
+	if !req.IsAdmin {
+		action = "demote_admin"
+	}
+	h.addAuditLog(c, action, "user", &id, "")
 	utils.RespondSuccess(c, gin.H{"ok": true})
 }
 
@@ -311,6 +422,51 @@ func (h *AdminHandler) ListAllTasks(c *gin.Context) {
 	utils.RespondPaginated(c, adminTasksView(tasks, usernames), page, limit, total)
 }
 
+func (h *AdminHandler) AdminToggleComplete(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		return
+	}
+	task, err := h.taskRepo.AdminToggleComplete(c.Request.Context(), id)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to toggle task", err)
+		return
+	}
+	if task == nil {
+		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		return
+	}
+	h.addAuditLog(c, "toggle_task_complete", "task", &id, fmt.Sprintf("completed=%v", task.Completed))
+	usernames := h.lookupUsernames(c.Request.Context(), []int64{task.UserID})
+	utils.RespondSuccess(c, singleAdminTaskView(task, usernames))
+}
+
+func (h *AdminHandler) AdminUpdateTask(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		return
+	}
+	var req models.UpdateTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
+		return
+	}
+	task, err := h.taskRepo.AdminUpdate(c.Request.Context(), id, req)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to update task", err)
+		return
+	}
+	if task == nil {
+		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		return
+	}
+	h.addAuditLog(c, "update_task", "task", &id, "")
+	usernames := h.lookupUsernames(c.Request.Context(), []int64{task.UserID})
+	utils.RespondSuccess(c, singleAdminTaskView(task, usernames))
+}
+
 func (h *AdminHandler) AdminDeleteTask(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -326,6 +482,7 @@ func (h *AdminHandler) AdminDeleteTask(c *gin.Context) {
 		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
 		return
 	}
+	h.addAuditLog(c, "delete_task", "task", &id, "")
 	c.Status(http.StatusNoContent)
 }
 
@@ -344,9 +501,60 @@ func (h *AdminHandler) ListAllReminderConfigs(c *gin.Context) {
 	utils.RespondPaginated(c, adminReminderConfigsView(configs, usernames), page, limit, total)
 }
 
+func (h *AdminHandler) AdminToggleReminderConfig(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid reminder config id", utils.CodeInvalidInput)
+		return
+	}
+	found, err := h.reminderConfigRepo.AdminToggleEnabled(c.Request.Context(), id)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to toggle reminder config", err)
+		return
+	}
+	if !found {
+		utils.RespondError(c, http.StatusNotFound, "reminder config not found", utils.CodeNotFound)
+		return
+	}
+	h.addAuditLog(c, "toggle_reminder_config", "reminder_config", &id, "")
+	utils.RespondSuccess(c, gin.H{"ok": true})
+}
+
+func (h *AdminHandler) AdminDeleteReminderConfig(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid reminder config id", utils.CodeInvalidInput)
+		return
+	}
+	deleted, err := h.reminderConfigRepo.AdminDelete(c.Request.Context(), id)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to delete reminder config", err)
+		return
+	}
+	if !deleted {
+		utils.RespondError(c, http.StatusNotFound, "reminder config not found", utils.CodeNotFound)
+		return
+	}
+	h.addAuditLog(c, "delete_reminder_config", "reminder_config", &id, "")
+	c.Status(http.StatusNoContent)
+}
+
 func (h *AdminHandler) ListAllReminderLogs(c *gin.Context) {
 	page, limit := parsePaginationParams(c)
-	logs, total, err := h.reminderLogRepo.ListAll(c.Request.Context(), page, limit)
+
+	var userID int64
+	if raw := c.Query("user_id"); raw != "" {
+		if v, err := strconv.ParseInt(raw, 10, 64); err == nil {
+			userID = v
+		}
+	}
+	status := c.Query("status")
+	if status != "" && status != "success" && status != "failed" {
+		utils.RespondError(c, http.StatusBadRequest, "invalid status, must be 'success' or 'failed'", utils.CodeInvalidInput)
+		return
+	}
+
+	logs, total, err := h.reminderLogRepo.AdminListFiltered(c.Request.Context(), page, limit, userID, status)
 	if err != nil {
 		utils.RespondInternalError(c, "failed to list reminder logs", err)
 		return
@@ -362,6 +570,7 @@ func (h *AdminHandler) ListAllReminderLogs(c *gin.Context) {
 func (h *AdminHandler) GetConfig(c *gin.Context) {
 	safe := *h.cfg
 	safe.Admin.TokenHash = ""
+	safe.Admin.Password = ""
 	b, err := json.MarshalIndent(safe, "", "  ")
 	if err != nil {
 		utils.RespondInternalError(c, "failed to serialize config", err)
@@ -423,6 +632,8 @@ type adminTaskResponse struct {
 	RepeatEndDate  *string `json:"repeat_end_date"`
 	ReminderSent   bool    `json:"reminder_sent"`
 	ReminderSentAt *string `json:"reminder_sent_at"`
+	FocusDuration  *int    `json:"focus_duration"`
+	Tags           []string `json:"tags"`
 	CreatedAt      string  `json:"created_at"`
 	UpdatedAt      string  `json:"updated_at"`
 }
@@ -436,10 +647,23 @@ func adminTasksView(tasks []models.Task, usernames map[int64]string) []adminTask
 			Priority: t.Priority, DueAt: t.DueAt, RemindAt: t.RemindAt,
 			RepeatType: t.RepeatType, RepeatInterval: t.RepeatInterval,
 			RepeatEndDate: t.RepeatEndDate, ReminderSent: t.ReminderSent,
-			ReminderSentAt: t.ReminderSentAt, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
+			ReminderSentAt: t.ReminderSentAt, FocusDuration: t.FocusDuration,
+			Tags: t.Tags, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
 		}
 	}
 	return out
+}
+
+func singleAdminTaskView(t *models.Task, usernames map[int64]string) adminTaskResponse {
+	return adminTaskResponse{
+		ID: t.ID, UserID: t.UserID, Username: usernames[t.UserID],
+		Title: t.Title, Description: t.Description, Completed: t.Completed,
+		Priority: t.Priority, DueAt: t.DueAt, RemindAt: t.RemindAt,
+		RepeatType: t.RepeatType, RepeatInterval: t.RepeatInterval,
+		RepeatEndDate: t.RepeatEndDate, ReminderSent: t.ReminderSent,
+		ReminderSentAt: t.ReminderSentAt, FocusDuration: t.FocusDuration,
+		Tags: t.Tags, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
+	}
 }
 
 type adminReminderConfigResponse struct {
@@ -525,4 +749,28 @@ func parsePaginationParams(c *gin.Context) (page, limit int) {
 		limit = v
 	}
 	return
+}
+
+func (h *AdminHandler) addAuditLog(c *gin.Context, action, targetType string, targetID *int64, detail string) {
+	if h.auditLogRepo == nil {
+		return
+	}
+	adminUserID := c.GetInt64("user_id")
+	if adminUserID == 0 {
+		return
+	}
+	if err := h.auditLogRepo.Create(c.Request.Context(), adminUserID, action, targetType, targetID, detail); err != nil {
+		logging.Logger(c.Request.Context(), nil).Sugar().Warnw("failed to write audit log",
+			"action", action, "target_type", targetType, "error", err)
+	}
+}
+
+func (h *AdminHandler) ListAuditLogs(c *gin.Context) {
+	page, limit := parsePaginationParams(c)
+	logs, total, err := h.auditLogRepo.ListAll(c.Request.Context(), page, limit)
+	if err != nil {
+		utils.RespondInternalError(c, "failed to list audit logs", err)
+		return
+	}
+	utils.RespondPaginated(c, logs, page, limit, total)
 }

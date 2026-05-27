@@ -24,6 +24,9 @@ type MockTaskRepository struct {
 	MarkReminderSentFn              func(ctx context.Context, id int64) (bool, error)
 	CreateRepeatTaskFn              func(ctx context.Context, t *models.Task) error
 	ListAllFn                       func(ctx context.Context, userID int64, filters models.TaskFilters, page, limit int) ([]models.Task, int64, error)
+	AdminGetByIDFn                  func(ctx context.Context, id int64) (*models.Task, error)
+	AdminToggleCompleteFn           func(ctx context.Context, id int64) (*models.Task, error)
+	AdminUpdateFn                   func(ctx context.Context, id int64, req models.UpdateTaskRequest) (*models.Task, error)
 	AdminDeleteFn                   func(ctx context.Context, id int64) (bool, error)
 }
 
@@ -62,6 +65,24 @@ func (m *MockTaskRepository) ListAll(ctx context.Context, userID int64, filters 
 		return m.ListAllFn(ctx, userID, filters, page, limit)
 	}
 	return nil, 0, nil
+}
+func (m *MockTaskRepository) AdminGetByID(ctx context.Context, id int64) (*models.Task, error) {
+	if m.AdminGetByIDFn != nil {
+		return m.AdminGetByIDFn(ctx, id)
+	}
+	return nil, nil
+}
+func (m *MockTaskRepository) AdminToggleComplete(ctx context.Context, id int64) (*models.Task, error) {
+	if m.AdminToggleCompleteFn != nil {
+		return m.AdminToggleCompleteFn(ctx, id)
+	}
+	return nil, nil
+}
+func (m *MockTaskRepository) AdminUpdate(ctx context.Context, id int64, req models.UpdateTaskRequest) (*models.Task, error) {
+	if m.AdminUpdateFn != nil {
+		return m.AdminUpdateFn(ctx, id, req)
+	}
+	return nil, nil
 }
 func (m *MockTaskRepository) AdminDelete(ctx context.Context, id int64) (bool, error) {
 	if m.AdminDeleteFn != nil {
@@ -171,6 +192,8 @@ type MockReminderConfigRepository struct {
 	DeleteFn             func(ctx context.Context, id, userID int64) (bool, error)
 	HasEnabledByUserIDFn func(ctx context.Context, userID int64) (bool, error)
 	ListAllFn            func(ctx context.Context, page, limit int) ([]models.UserReminderConfig, int64, error)
+	AdminToggleEnabledFn func(ctx context.Context, id int64) (bool, error)
+	AdminDeleteCfgFn     func(ctx context.Context, id int64) (bool, error)
 }
 
 func (m *MockReminderConfigRepository) Create(ctx context.Context, cfg *models.UserReminderConfig) (*models.UserReminderConfig, error) {
@@ -197,6 +220,18 @@ func (m *MockReminderConfigRepository) ListAll(ctx context.Context, page, limit 
 	}
 	return nil, 0, nil
 }
+func (m *MockReminderConfigRepository) AdminToggleEnabled(ctx context.Context, id int64) (bool, error) {
+	if m.AdminToggleEnabledFn != nil {
+		return m.AdminToggleEnabledFn(ctx, id)
+	}
+	return false, nil
+}
+func (m *MockReminderConfigRepository) AdminDelete(ctx context.Context, id int64) (bool, error) {
+	if m.AdminDeleteCfgFn != nil {
+		return m.AdminDeleteCfgFn(ctx, id)
+	}
+	return false, nil
+}
 
 // ---- ReminderLogRepository mock ----
 
@@ -206,6 +241,7 @@ type MockReminderLogRepository struct {
 	ListByUserIDFn           func(ctx context.Context, userID int64, page, limit int) ([]models.ReminderLog, int64, error)
 	DeleteByTaskIDFn         func(ctx context.Context, taskID int64) error
 	ListAllFn                func(ctx context.Context, page, limit int) ([]models.ReminderLog, int64, error)
+	AdminListFilteredFn      func(ctx context.Context, page, limit int, userID int64, status string) ([]models.ReminderLog, int64, error)
 }
 
 func (m *MockReminderLogRepository) Upsert(ctx context.Context, p repository.CreateReminderLogParams) error {
@@ -223,6 +259,12 @@ func (m *MockReminderLogRepository) DeleteByTaskID(ctx context.Context, taskID i
 func (m *MockReminderLogRepository) ListAll(ctx context.Context, page, limit int) ([]models.ReminderLog, int64, error) {
 	if m.ListAllFn != nil {
 		return m.ListAllFn(ctx, page, limit)
+	}
+	return nil, 0, nil
+}
+func (m *MockReminderLogRepository) AdminListFiltered(ctx context.Context, page, limit int, userID int64, status string) ([]models.ReminderLog, int64, error) {
+	if m.AdminListFilteredFn != nil {
+		return m.AdminListFilteredFn(ctx, page, limit, userID, status)
 	}
 	return nil, 0, nil
 }

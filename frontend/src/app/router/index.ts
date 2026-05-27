@@ -99,6 +99,7 @@ const router = createRouter({
         { path: 'reminder-configs', name: 'admin-reminder-configs', component: () => import('@/pages/admin/AdminReminderConfigsPage.vue') },
         { path: 'reminder-logs', name: 'admin-reminder-logs', component: () => import('@/pages/admin/AdminReminderLogsPage.vue') },
         { path: 'system-logs', name: 'admin-system-logs', component: () => import('@/pages/admin/AdminSystemLogsPage.vue') },
+        { path: 'audit-logs', name: 'admin-audit-logs', component: () => import('@/pages/admin/AdminAuditLogsPage.vue') },
         { path: 'config', name: 'admin-config', component: () => import('@/pages/admin/AdminConfigPage.vue') },
       ],
     },
