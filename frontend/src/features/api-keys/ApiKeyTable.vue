@@ -1,5 +1,5 @@
 <template>
-  <div class="key-list motion-stagger">
+  <div class="key-list">
     <article v-for="key in keys" :key="key.id" class="key-card">
       <div class="key-card-header">
         <div class="key-card-heading">
@@ -34,7 +34,7 @@
           <th>操作</th>
         </tr>
       </thead>
-      <tbody class="motion-stagger">
+      <tbody>
         <tr v-for="key in keys" :key="key.id">
           <td class="name-cell">{{ key.name || '未命名' }}</td>
           <td>

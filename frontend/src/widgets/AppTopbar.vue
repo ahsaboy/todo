@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth.store'
 import { useThemeStore } from '@/app/stores/theme.store'
+import { useClickOutside } from '@/shared/composables/useClickOutside'
 import { LogOut, Moon, PanelLeftClose, PanelLeftOpen, Sun, UserCircle } from 'lucide-vue-next'
 
 type SidebarToggleMode = 'desktop' | 'mobile' | null
@@ -24,6 +25,8 @@ const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const isUserMenuOpen = ref(false)
+const userMenuRef = ref<HTMLElement | null>(null)
+let closeTimer: ReturnType<typeof setTimeout> | null = null
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
@@ -62,19 +65,47 @@ const sidebarToggleLabel = computed(() => {
 })
 
 function openUserMenu() {
+  if (closeTimer) {
+    clearTimeout(closeTimer)
+    closeTimer = null
+  }
   isUserMenuOpen.value = true
 }
 
-function closeUserMenu() {
+function scheduleCloseUserMenu() {
+  closeTimer = setTimeout(() => {
+    isUserMenuOpen.value = false
+    closeTimer = null
+  }, 150)
+}
+
+function closeUserMenuImmediate() {
+  if (closeTimer) {
+    clearTimeout(closeTimer)
+    closeTimer = null
+  }
   isUserMenuOpen.value = false
 }
 
 function toggleUserMenu() {
+  if (closeTimer) {
+    clearTimeout(closeTimer)
+    closeTimer = null
+  }
   isUserMenuOpen.value = !isUserMenuOpen.value
 }
 
+function handleBtnKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    toggleUserMenu()
+  }
+}
+
+useClickOutside(userMenuRef, closeUserMenuImmediate)
+
 async function handleLogout() {
-  closeUserMenu()
+  closeUserMenuImmediate()
   authStore.logout()
   await router.replace({ name: 'login' })
 }
@@ -112,9 +143,10 @@ async function handleLogout() {
         />
       </button>
       <div
+        ref="userMenuRef"
         class="user-menu"
         @mouseenter="openUserMenu"
-        @mouseleave="closeUserMenu"
+        @mouseleave="scheduleCloseUserMenu"
       >
         <button
           class="user-btn"
@@ -123,7 +155,7 @@ async function handleLogout() {
           :aria-expanded="isUserMenuOpen"
           aria-haspopup="menu"
           @click="toggleUserMenu"
-          @focus="openUserMenu"
+          @keydown="handleBtnKeydown"
         >
           {{ userInitial }}
         </button>
@@ -137,7 +169,7 @@ async function handleLogout() {
               class="user-menu-item"
               to="/profile"
               role="menuitem"
-              @click="closeUserMenu"
+              @click="closeUserMenuImmediate"
             >
               <UserCircle :size="16" />
               <span>个人资料</span>

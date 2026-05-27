@@ -1,19 +1,18 @@
 <template>
-  <MotionStagger class="task-board">
+  <div class="task-board">
     <TaskBoardColumn title="待处理" :tasks="pendingTasks" @cardClick="$emit('cardClick', $event)" />
     <TaskBoardColumn
       title="已完成"
       :tasks="completedTasks"
       @cardClick="$emit('cardClick', $event)"
     />
-  </MotionStagger>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Task } from '@/entities/task/model'
 import TaskBoardColumn from './TaskBoardColumn.vue'
-import MotionStagger from '@/shared/ui/MotionStagger.vue'
 
 const props = defineProps<{
   tasks: Task[]
