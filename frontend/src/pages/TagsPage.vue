@@ -5,7 +5,7 @@
         <h1>标签管理</h1>
         <p class="page-desc">为任务自定义彩色标签,支持图标与排序;改名/删除会同步更新所有任务上的标签。</p>
       </div>
-      <button class="btn-primary" @click="openCreate">+ 新建标签</button>
+      <button class="btn-primary desktop-only" @click="openCreate">+ 新建标签</button>
     </header>
 
     <div v-if="store.loading && store.tags.length === 0" class="state-text">加载中...</div>
@@ -28,17 +28,15 @@
       >
         <span class="drag-handle" title="拖拽排序">⋮⋮</span>
         <TagChip :name="tag.name" size="md" />
-        <span class="tag-meta">
-          <span class="meta-color" :style="{ background: tag.color }"></span>
-          <code class="meta-hex">{{ tag.color }}</code>
-          <span v-if="tag.icon" class="meta-icon">{{ tag.icon }}</span>
-        </span>
         <div class="tag-actions">
           <button class="btn-link" @click="openEdit(tag)">编辑</button>
           <button class="btn-link danger" @click="confirmDelete(tag)">删除</button>
         </div>
       </li>
     </ul>
+
+    <!-- 移动端浮动按钮 -->
+    <button class="fab" type="button" aria-label="新建标签" @click="openCreate"><Plus :size="24" /></button>
 
     <!-- 编辑/新建 dialog -->
     <div v-if="dialogOpen" class="dialog-mask" @click.self="closeDialog">
@@ -83,6 +81,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { Plus } from 'lucide-vue-next'
 import ColorPicker from '@/shared/ui/ColorPicker.vue'
 import IconPicker from '@/shared/ui/IconPicker.vue'
 import TagChip from '@/features/tags/TagChip.vue'
@@ -238,6 +237,23 @@ onMounted(() => {
   gap: 16px;
 }
 
+/* 桌面端/移动端显示控制 */
+.desktop-only {
+  display: block;
+}
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .desktop-only {
+    display: none;
+  }
+  .mobile-only {
+    display: block;
+  }
+}
+
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -265,9 +281,21 @@ onMounted(() => {
   gap: 8px;
 }
 
+@media (max-width: 767px) {
+  .tag-list {
+    gap: 12px;
+  }
+  .tag-list :deep(.tag-chip) {
+    font-size: 13px;
+    padding: 4px 12px;
+    max-width: none;
+    flex: 1;
+  }
+}
+
 .tag-row {
   display: grid;
-  grid-template-columns: 24px auto 1fr auto;
+  grid-template-columns: 24px 1fr auto;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
@@ -276,14 +304,48 @@ onMounted(() => {
   background: var(--color-surface);
 }
 
-@media (max-width: 600px) {
+/* 移动端浮动按钮 */
+.fab {
+  display: none;
+}
+
+@media (max-width: 767px) {
   .tag-row {
-    grid-template-columns: 24px 1fr auto;
-    gap: 8px;
-    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
-  .tag-meta {
+  .drag-handle {
     display: none;
+  }
+
+  .fab {
+    display: flex;
+    position: fixed;
+    right: 16px;
+    bottom: calc(var(--bottom-nav-height) + 16px);
+    width: 56px;
+    height: 56px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-glow-primary);
+    z-index: 50;
+    cursor: pointer;
+  }
+  .fab:hover {
+    background: var(--color-primary-hover);
+  }
+
+  .tag-manager-page {
+    padding-bottom: 80px;
   }
 }
 
@@ -301,36 +363,35 @@ onMounted(() => {
   cursor: grabbing;
 }
 
-.tag-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
-
-.meta-color {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-}
-
-.meta-hex {
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-}
-
-.meta-icon {
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-  opacity: 0.7;
-}
-
 .tag-actions {
   display: flex;
   gap: 4px;
+}
+
+@media (max-width: 767px) {
+  .tag-actions {
+    gap: 8px;
+    margin-left: auto;
+  }
+  .tag-actions .btn-link {
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    transition: all 0.15s ease;
+  }
+  .tag-actions .btn-link:hover {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+  .tag-actions .btn-link.danger:hover {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: white;
+  }
 }
 
 .btn-link {
@@ -381,6 +442,15 @@ onMounted(() => {
   flex-direction: column;
   gap: 14px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 767px) {
+  .dialog {
+    width: calc(100vw - 32px);
+    max-height: 80vh;
+    margin: auto 16px;
+    padding: 24px;
+  }
 }
 
 .dialog h2 {
