@@ -31,7 +31,7 @@ func AdminLoginRateLimit(maxAttempts int, window time.Duration) gin.HandlerFunc 
 
 		if len(attempts) >= maxAttempts {
 			mu.Unlock()
-			utils.RespondError(c, http.StatusTooManyRequests, "too many login attempts, please try again later", utils.CodeRateLimited)
+			utils.RespondLocalizedError(c, http.StatusTooManyRequests, "rate_limited_admin_login")
 			c.Abort()
 			return
 		}

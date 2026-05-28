@@ -19,6 +19,11 @@ type Config struct {
 	RateLimit   RateLimitConfig `yaml:"rate_limit"`
 	Admin       AdminConfig     `yaml:"admin"`
 	StaticFiles bool            `yaml:"static_files"`
+	I18n        I18nConfig      `yaml:"i18n"`
+}
+
+type I18nConfig struct {
+	DefaultLang string `yaml:"default_lang"`
 }
 
 type AdminConfig struct {

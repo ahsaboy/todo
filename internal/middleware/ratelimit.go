@@ -60,7 +60,7 @@ func IPRateLimit(maxReqPerSec float64, burst int) gin.HandlerFunc {
 		mu.Unlock()
 
 		if !b.allow() {
-			utils.RespondError(c, http.StatusTooManyRequests, "too many requests, please slow down", utils.CodeInvalidInput)
+			utils.RespondLocalizedError(c, http.StatusTooManyRequests, "rate_limited")
 			c.Abort()
 			return
 		}

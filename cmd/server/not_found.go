@@ -13,5 +13,5 @@ func isAPIRoute(path string) bool {
 }
 
 func writeAPINotFound(c *gin.Context) {
-	utils.RespondError(c, 404, "endpoint not found", utils.CodeNotFound)
+	utils.RespondLocalizedError(c, 404, "system.endpoint_not_found")
 }

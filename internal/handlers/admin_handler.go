@@ -78,34 +78,34 @@ func (h *AdminHandler) AdminLogin(c *gin.Context) {
 
 	user, err := h.userRepo.GetByUsername(c.Request.Context(), req.Account)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to authenticate", err)
+		utils.RespondLocalizedInternalError(c, "auth.authenticate", err)
 		return
 	}
 	if user == nil {
 		user, err = h.userRepo.GetByEmail(c.Request.Context(), req.Account)
 		if err != nil {
-			utils.RespondInternalError(c, "failed to authenticate", err)
+			utils.RespondLocalizedInternalError(c, "auth.authenticate", err)
 			return
 		}
 		if user == nil {
-			utils.RespondError(c, http.StatusUnauthorized, "invalid credentials", utils.CodeUnauthorized)
+			utils.RespondLocalizedError(c, http.StatusUnauthorized, "auth.invalid_credentials")
 			return
 		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		utils.RespondError(c, http.StatusUnauthorized, "invalid credentials", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "auth.invalid_credentials")
 		return
 	}
 
 	if !user.IsAdmin {
-		utils.RespondError(c, http.StatusForbidden, "admin access required", utils.CodeForbidden)
+		utils.RespondLocalizedError(c, http.StatusForbidden, "admin.access_required")
 		return
 	}
 
 	loginKey, err := h.generateAdminLoginKey(c.Request.Context(), user.ID)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to generate session key", err)
+		utils.RespondLocalizedInternalError(c, "auth.generate_session", err)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (h *AdminHandler) GetStats(c *gin.Context) {
 		&stats.TotalReminderConfigs,
 		&stats.TotalReminderLogs,
 	); err != nil {
-		utils.RespondInternalError(c, "failed to get stats", err)
+		utils.RespondLocalizedInternalError(c, "system.stats", err)
 		return
 	}
 	utils.RespondSuccess(c, stats)
@@ -188,7 +188,7 @@ func (h *AdminHandler) GetTrends(c *gin.Context) {
 		WHERE created_at >= DATE('now', '-30 days')
 		GROUP BY day ORDER BY day`)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to get task trends", err)
+		utils.RespondLocalizedInternalError(c, "system.task_trends", err)
 		return
 	}
 	defer rows.Close()
@@ -205,7 +205,7 @@ func (h *AdminHandler) GetTrends(c *gin.Context) {
 		WHERE created_at >= DATE('now', '-30 days')
 		GROUP BY day ORDER BY day`)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to get user trends", err)
+		utils.RespondLocalizedInternalError(c, "user.list", err)
 		return
 	}
 	defer rows2.Close()
@@ -218,7 +218,7 @@ func (h *AdminHandler) GetTrends(c *gin.Context) {
 
 	rows3, err := h.db.QueryContext(ctx, `SELECT status, COUNT(*) FROM reminder_logs GROUP BY status`)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to get reminder status", err)
+		utils.RespondLocalizedInternalError(c, "system.reminder_status", err)
 		return
 	}
 	defer rows3.Close()
@@ -239,7 +239,7 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 
 	users, total, err := h.userRepo.ListAll(c.Request.Context(), page, limit, search)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list users", err)
+		utils.RespondLocalizedInternalError(c, "user.list", err)
 		return
 	}
 	loc := timezone.Get()
@@ -267,27 +267,27 @@ type adminUserDetail struct {
 func (h *AdminHandler) GetUser(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid user id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "user.invalid_id")
 		return
 	}
 	ctx := c.Request.Context()
 	u, err := h.userRepo.GetByID(ctx, id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to get user", err)
+		utils.RespondLocalizedInternalError(c, "user.get", err)
 		return
 	}
 	if u == nil {
-		utils.RespondError(c, http.StatusNotFound, "user not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "user.not_found")
 		return
 	}
 
 	var taskCount, keyCount int64
 	if err := h.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tasks WHERE user_id = ?", id).Scan(&taskCount); err != nil {
-		utils.RespondInternalError(c, "failed to count tasks", err)
+		utils.RespondLocalizedInternalError(c, "user.count_tasks", err)
 		return
 	}
 	if err := h.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM user_api_keys WHERE user_id = ?", id).Scan(&keyCount); err != nil {
-		utils.RespondInternalError(c, "failed to count api keys", err)
+		utils.RespondLocalizedInternalError(c, "user.count_api_keys", err)
 		return
 	}
 
@@ -304,14 +304,14 @@ func (h *AdminHandler) GetUser(c *gin.Context) {
 func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid user id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "user.invalid_id")
 		return
 	}
 	if err := h.userRepo.Delete(c.Request.Context(), id); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			utils.RespondError(c, http.StatusNotFound, "user not found", utils.CodeNotFound)
+			utils.RespondLocalizedError(c, http.StatusNotFound, "user.not_found")
 		} else {
-			utils.RespondInternalError(c, "failed to delete user", err)
+			utils.RespondLocalizedInternalError(c, "user.delete", err)
 		}
 		return
 	}
@@ -326,7 +326,7 @@ type adminResetPasswordRequest struct {
 func (h *AdminHandler) ForceResetPassword(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid user id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "user.invalid_id")
 		return
 	}
 	var req adminResetPasswordRequest
@@ -336,14 +336,14 @@ func (h *AdminHandler) ForceResetPassword(c *gin.Context) {
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), 14)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to hash password", err)
+		utils.RespondLocalizedInternalError(c, "user.hash_password", err)
 		return
 	}
 	if err := h.userRepo.ForceResetPassword(c.Request.Context(), id, string(hash)); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			utils.RespondError(c, http.StatusNotFound, "user not found", utils.CodeNotFound)
+			utils.RespondLocalizedError(c, http.StatusNotFound, "user.not_found")
 		} else {
-			utils.RespondInternalError(c, "failed to reset password", err)
+			utils.RespondLocalizedInternalError(c, "user.reset_password", err)
 		}
 		return
 	}
@@ -358,7 +358,7 @@ type adminToggleAdminRequest struct {
 func (h *AdminHandler) ToggleAdmin(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid user id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "user.invalid_id")
 		return
 	}
 	var req adminToggleAdminRequest
@@ -368,14 +368,14 @@ func (h *AdminHandler) ToggleAdmin(c *gin.Context) {
 	}
 	// Prevent admin from demoting themselves
 	if !req.IsAdmin && c.GetInt64("user_id") == id {
-		utils.RespondError(c, http.StatusForbidden, "cannot remove your own admin privileges", utils.CodeForbidden)
+		utils.RespondLocalizedError(c, http.StatusForbidden, "admin.cannot_remove_own_privilege")
 		return
 	}
 	if err := h.userRepo.SetIsAdmin(c.Request.Context(), id, req.IsAdmin); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			utils.RespondError(c, http.StatusNotFound, "user not found", utils.CodeNotFound)
+			utils.RespondLocalizedError(c, http.StatusNotFound, "user.not_found")
 		} else {
-			utils.RespondInternalError(c, "failed to update admin status", err)
+			utils.RespondLocalizedInternalError(c, "user.update_admin", err)
 		}
 		return
 	}
@@ -409,7 +409,7 @@ func (h *AdminHandler) ListAllTasks(c *gin.Context) {
 
 	tasks, total, err := h.taskRepo.ListAll(c.Request.Context(), userID, filters, page, limit)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list tasks", err)
+		utils.RespondLocalizedInternalError(c, "task.list", err)
 		return
 	}
 	ids := make([]int64, 0, len(tasks))
@@ -425,16 +425,16 @@ func (h *AdminHandler) ListAllTasks(c *gin.Context) {
 func (h *AdminHandler) AdminToggleComplete(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "task.invalid_id")
 		return
 	}
 	task, err := h.taskRepo.AdminToggleComplete(c.Request.Context(), id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to toggle task", err)
+		utils.RespondLocalizedInternalError(c, "task.toggle", err)
 		return
 	}
 	if task == nil {
-		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "task.not_found")
 		return
 	}
 	h.addAuditLog(c, "toggle_task_complete", "task", &id, fmt.Sprintf("completed=%v", task.Completed))
@@ -445,7 +445,7 @@ func (h *AdminHandler) AdminToggleComplete(c *gin.Context) {
 func (h *AdminHandler) AdminUpdateTask(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "task.invalid_id")
 		return
 	}
 	var req models.UpdateTaskRequest
@@ -455,11 +455,11 @@ func (h *AdminHandler) AdminUpdateTask(c *gin.Context) {
 	}
 	task, err := h.taskRepo.AdminUpdate(c.Request.Context(), id, req)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to update task", err)
+		utils.RespondLocalizedInternalError(c, "task.update", err)
 		return
 	}
 	if task == nil {
-		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "task.not_found")
 		return
 	}
 	h.addAuditLog(c, "update_task", "task", &id, "")
@@ -470,16 +470,16 @@ func (h *AdminHandler) AdminUpdateTask(c *gin.Context) {
 func (h *AdminHandler) AdminDeleteTask(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "task.invalid_id")
 		return
 	}
 	deleted, err := h.taskRepo.AdminDelete(c.Request.Context(), id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to delete task", err)
+		utils.RespondLocalizedInternalError(c, "task.delete", err)
 		return
 	}
 	if !deleted {
-		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "task.not_found")
 		return
 	}
 	h.addAuditLog(c, "delete_task", "task", &id, "")
@@ -490,7 +490,7 @@ func (h *AdminHandler) ListAllReminderConfigs(c *gin.Context) {
 	page, limit := parsePaginationParams(c)
 	configs, total, err := h.reminderConfigRepo.ListAll(c.Request.Context(), page, limit)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list reminder configs", err)
+		utils.RespondLocalizedInternalError(c, "reminder_config.list", err)
 		return
 	}
 	ids := make([]int64, 0, len(configs))
@@ -504,16 +504,16 @@ func (h *AdminHandler) ListAllReminderConfigs(c *gin.Context) {
 func (h *AdminHandler) AdminToggleReminderConfig(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid reminder config id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "config.invalid_id")
 		return
 	}
 	found, err := h.reminderConfigRepo.AdminToggleEnabled(c.Request.Context(), id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to toggle reminder config", err)
+		utils.RespondLocalizedInternalError(c, "reminder_config.toggle", err)
 		return
 	}
 	if !found {
-		utils.RespondError(c, http.StatusNotFound, "reminder config not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "config.not_found")
 		return
 	}
 	h.addAuditLog(c, "toggle_reminder_config", "reminder_config", &id, "")
@@ -523,16 +523,16 @@ func (h *AdminHandler) AdminToggleReminderConfig(c *gin.Context) {
 func (h *AdminHandler) AdminDeleteReminderConfig(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid reminder config id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "config.invalid_id")
 		return
 	}
 	deleted, err := h.reminderConfigRepo.AdminDelete(c.Request.Context(), id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to delete reminder config", err)
+		utils.RespondLocalizedInternalError(c, "reminder_config.delete", err)
 		return
 	}
 	if !deleted {
-		utils.RespondError(c, http.StatusNotFound, "reminder config not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "config.not_found")
 		return
 	}
 	h.addAuditLog(c, "delete_reminder_config", "reminder_config", &id, "")
@@ -550,13 +550,13 @@ func (h *AdminHandler) ListAllReminderLogs(c *gin.Context) {
 	}
 	status := c.Query("status")
 	if status != "" && status != "success" && status != "failed" {
-		utils.RespondError(c, http.StatusBadRequest, "invalid status, must be 'success' or 'failed'", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "system.invalid_status_filter")
 		return
 	}
 
 	logs, total, err := h.reminderLogRepo.AdminListFiltered(c.Request.Context(), page, limit, userID, status)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list reminder logs", err)
+		utils.RespondLocalizedInternalError(c, "reminder_log.list", err)
 		return
 	}
 	ids := make([]int64, 0, len(logs))
@@ -573,12 +573,12 @@ func (h *AdminHandler) GetConfig(c *gin.Context) {
 	safe.Admin.Password = ""
 	b, err := json.MarshalIndent(safe, "", "  ")
 	if err != nil {
-		utils.RespondInternalError(c, "failed to serialize config", err)
+		utils.RespondLocalizedInternalError(c, "system.serialize", err)
 		return
 	}
 	var configMap map[string]any
 	if err := json.Unmarshal(b, &configMap); err != nil {
-		utils.RespondInternalError(c, "failed to deserialize config", err)
+		utils.RespondLocalizedInternalError(c, "system.deserialize", err)
 		return
 	}
 	utils.RespondSuccess(c, configMap)

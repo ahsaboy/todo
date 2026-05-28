@@ -21,6 +21,7 @@ import (
 	"todo/internal/config"
 	"todo/internal/database"
 	"todo/internal/handlers"
+	"todo/internal/i18n"
 	"todo/internal/logging"
 	mcpserver "todo/internal/mcp"
 	"todo/internal/middleware"
@@ -129,6 +130,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "清理旧日志失败: %v\n", err)
 			os.Exit(1)
 		}
+	}
+
+	// 初始化i18n默认语言
+	if cfg.I18n.DefaultLang != "" {
+		i18n.SetDefaultLang(cfg.I18n.DefaultLang)
 	}
 
 	// 初始化日志

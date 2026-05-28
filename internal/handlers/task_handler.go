@@ -42,7 +42,7 @@ func NewTaskHandler(svc service.TaskServiceInterface) *TaskHandler {
 func (h *TaskHandler) Create(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -58,7 +58,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 			return
 		}
-		utils.RespondInternalError(c, "failed to create task", err)
+		utils.RespondLocalizedInternalError(c, "task.create", err)
 		return
 	}
 
@@ -80,23 +80,23 @@ func (h *TaskHandler) Create(c *gin.Context) {
 func (h *TaskHandler) GetByID(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "task.invalid_id")
 		return
 	}
 
 	task, err := h.svc.GetByID(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to get task", err)
+		utils.RespondLocalizedInternalError(c, "task.get", err)
 		return
 	}
 	if task == nil {
-		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "task.not_found")
 		return
 	}
 
@@ -126,7 +126,7 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 func (h *TaskHandler) List(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -174,7 +174,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 
 	tasks, total, err := h.svc.List(c.Request.Context(), userID, filters, page, limit, sortField, sortOrder)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list tasks", err)
+		utils.RespondLocalizedInternalError(c, "task.list", err)
 		return
 	}
 
@@ -201,13 +201,13 @@ func (h *TaskHandler) List(c *gin.Context) {
 func (h *TaskHandler) Update(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "task.invalid_id")
 		return
 	}
 
@@ -223,11 +223,11 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 			return
 		}
-		utils.RespondInternalError(c, "failed to update task", err)
+		utils.RespondLocalizedInternalError(c, "task.update", err)
 		return
 	}
 	if task == nil {
-		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "task.not_found")
 		return
 	}
 
@@ -249,23 +249,23 @@ func (h *TaskHandler) Update(c *gin.Context) {
 func (h *TaskHandler) Delete(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "task.invalid_id")
 		return
 	}
 
 	deleted, err := h.svc.Delete(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to delete task", err)
+		utils.RespondLocalizedInternalError(c, "task.delete", err)
 		return
 	}
 	if !deleted {
-		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "task.not_found")
 		return
 	}
 
@@ -287,13 +287,13 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 func (h *TaskHandler) ToggleComplete(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid task id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "task.invalid_id")
 		return
 	}
 
@@ -305,11 +305,11 @@ func (h *TaskHandler) ToggleComplete(c *gin.Context) {
 
 	task, err := h.svc.ToggleComplete(c.Request.Context(), userID, id, req.FocusDuration)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to toggle task", err)
+		utils.RespondLocalizedInternalError(c, "task.toggle", err)
 		return
 	}
 	if task == nil {
-		utils.RespondError(c, http.StatusNotFound, "task not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "task.not_found")
 		return
 	}
 

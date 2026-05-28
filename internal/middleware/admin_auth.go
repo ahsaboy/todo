@@ -15,7 +15,7 @@ func AdminOnlyMiddleware(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uid, ok := GetUserID(c)
 		if !ok {
-			utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+			utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 			c.Abort()
 			return
 		}
@@ -24,7 +24,7 @@ func AdminOnlyMiddleware(db *sql.DB) gin.HandlerFunc {
 			`SELECT is_admin FROM users WHERE id = ?`, uid,
 		).Scan(&isAdmin)
 		if err != nil || isAdmin != 1 {
-			utils.RespondError(c, http.StatusForbidden, "admin access required", utils.CodeForbidden)
+			utils.RespondLocalizedError(c, http.StatusForbidden, "admin.access_required")
 			c.Abort()
 			return
 		}

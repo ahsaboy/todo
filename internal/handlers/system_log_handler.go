@@ -33,7 +33,7 @@ func (h *SystemLogHandler) ListLogFiles(c *gin.Context) {
 	pattern := filepath.Join(logDir, "backend-*.log")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list log files", err)
+		utils.RespondLocalizedInternalError(c, "system.log_list", err)
 		return
 	}
 
@@ -70,14 +70,14 @@ func (h *SystemLogHandler) ListLogFiles(c *gin.Context) {
 func (h *SystemLogHandler) GetLogEntries(c *gin.Context) {
 	filename := c.Param("filename")
 	if !validateLogFile(filename) {
-		utils.RespondError(c, 400, "invalid log filename", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, 400, "system.invalid_log_filename")
 		return
 	}
 
 	logPath := filepath.Join(h.resolveLogDir(), filepath.Base(filename))
 	entries, total, err := readLogEntries(logPath, c.Query("level"))
 	if err != nil {
-		utils.RespondInternalError(c, "failed to read log file", err)
+		utils.RespondLocalizedInternalError(c, "system.log_read", err)
 		return
 	}
 
@@ -98,13 +98,13 @@ func (h *SystemLogHandler) GetLogEntries(c *gin.Context) {
 func (h *SystemLogHandler) DownloadLogFile(c *gin.Context) {
 	filename := c.Param("filename")
 	if !validateLogFile(filename) {
-		utils.RespondError(c, 400, "invalid log filename", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, 400, "system.invalid_log_filename")
 		return
 	}
 
 	logPath := filepath.Join(h.resolveLogDir(), filepath.Base(filename))
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
-		utils.RespondError(c, 404, "log file not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, 404, "system.log_file_not_found")
 		return
 	}
 

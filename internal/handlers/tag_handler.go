@@ -40,7 +40,7 @@ func NewTagHandler(svc *service.TagService) *TagHandler {
 func (h *TagHandler) Create(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -57,10 +57,10 @@ func (h *TagHandler) Create(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, repository.ErrTagNameTaken) {
-			utils.RespondError(c, http.StatusConflict, err.Error(), utils.CodeInvalidInput)
+			utils.RespondLocalizedError(c, http.StatusConflict, "tag.name_taken")
 			return
 		}
-		utils.RespondInternalError(c, "failed to create tag", err)
+		utils.RespondLocalizedInternalError(c, "tag.create", err)
 		return
 	}
 
@@ -79,13 +79,13 @@ func (h *TagHandler) Create(c *gin.Context) {
 func (h *TagHandler) List(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	tags, err := h.svc.List(c.Request.Context(), userID)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list tags", err)
+		utils.RespondLocalizedInternalError(c, "tag.list", err)
 		return
 	}
 	utils.RespondSuccess(c, views.UserTagsView(tags, timezone.Get()))
@@ -103,23 +103,23 @@ func (h *TagHandler) List(c *gin.Context) {
 func (h *TagHandler) GetByID(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid tag id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "tag.invalid_id")
 		return
 	}
 
 	tag, err := h.svc.GetByID(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to get tag", err)
+		utils.RespondLocalizedInternalError(c, "tag.get", err)
 		return
 	}
 	if tag == nil {
-		utils.RespondError(c, http.StatusNotFound, "tag not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "tag.not_found")
 		return
 	}
 	utils.RespondSuccess(c, views.UserTagView(tag, timezone.Get()))
@@ -142,13 +142,13 @@ func (h *TagHandler) GetByID(c *gin.Context) {
 func (h *TagHandler) Update(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid tag id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "tag.invalid_id")
 		return
 	}
 
@@ -165,14 +165,14 @@ func (h *TagHandler) Update(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, repository.ErrTagNameTaken) {
-			utils.RespondError(c, http.StatusConflict, err.Error(), utils.CodeInvalidInput)
+			utils.RespondLocalizedError(c, http.StatusConflict, "tag.name_taken")
 			return
 		}
-		utils.RespondInternalError(c, "failed to update tag", err)
+		utils.RespondLocalizedInternalError(c, "tag.update", err)
 		return
 	}
 	if tag == nil {
-		utils.RespondError(c, http.StatusNotFound, "tag not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "tag.not_found")
 		return
 	}
 	utils.RespondSuccess(c, views.UserTagView(tag, timezone.Get()))
@@ -191,23 +191,23 @@ func (h *TagHandler) Update(c *gin.Context) {
 func (h *TagHandler) Delete(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid tag id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "tag.invalid_id")
 		return
 	}
 
 	deleted, tasksAffected, err := h.svc.Delete(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to delete tag", err)
+		utils.RespondLocalizedInternalError(c, "tag.delete", err)
 		return
 	}
 	if !deleted {
-		utils.RespondError(c, http.StatusNotFound, "tag not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "tag.not_found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{

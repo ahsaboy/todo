@@ -3,6 +3,8 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"todo/internal/i18n"
 )
 
 const RequestIDHeader = "X-Request-ID"
@@ -17,6 +19,10 @@ func RequestID() gin.HandlerFunc {
 		}
 		c.Set(RequestIDKey, id)
 		c.Header(RequestIDHeader, id)
+
+		// 设置语言（从Accept-Language header解析）
+		i18n.SetLang(c, i18n.AcceptLanguage(c.GetHeader("Accept-Language")))
+
 		c.Next()
 	}
 }

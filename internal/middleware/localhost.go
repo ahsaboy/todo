@@ -14,14 +14,14 @@ func LocalhostOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		host, _, err := net.SplitHostPort(c.Request.RemoteAddr)
 		if err != nil {
-			utils.RespondError(c, 403, "admin interface is localhost-only", utils.CodeUnauthorized)
+			utils.RespondLocalizedError(c, 403, "admin.localhost_only")
 			c.Abort()
 			return
 		}
 
 		ip := net.ParseIP(host)
 		if ip == nil {
-			utils.RespondError(c, 403, "admin interface is localhost-only", utils.CodeUnauthorized)
+			utils.RespondLocalizedError(c, 403, "admin.localhost_only")
 			c.Abort()
 			return
 		}
@@ -38,7 +38,7 @@ func LocalhostOnly() gin.HandlerFunc {
 			return
 		}
 
-		utils.RespondError(c, 403, "admin interface is localhost-only", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, 403, "admin.localhost_only")
 		c.Abort()
 	}
 }

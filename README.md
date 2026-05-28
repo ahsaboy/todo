@@ -24,6 +24,7 @@
 - 优雅退出
 - Docker Compose 部署
 - **管理后台**（localhost-only）：仪表盘、用户/任务/提醒管理、系统配置查看
+- **国际化**（i18n）：支持中英文错误消息本地化，通过 Accept-Language 头自动切换
 
 ## 快速开始
 
@@ -352,7 +353,13 @@ logging:
 # 管理后台配置（仅限 localhost 访问）
 admin:
   enabled: true
-  token_hash: ""  # 必填，生成方式：echo -n "your_token" | sha256sum | cut -d' ' -f1
+  username: admin    # 管理员用户名（首次启动时创建）
+  password: admin123 # 管理员密码（首次启动时创建）
+  email: ""
+
+# 国际化配置（错误消息本地化）
+i18n:
+  default_lang: zh-CN  # 默认语言: zh-CN(中文)、en(英文)
 ```
 
 说明：
@@ -362,6 +369,8 @@ admin:
 - 环境变量 `HOST` / `PORT` / `STATIC_FILES` / `CORS` 的优先级高于 `config.yaml`；CLI 参数仍高于环境变量。
 - 用户必须通过 `/api/v1/user/reminder-configs` 创建并启用自己的通知渠道。
 - `default_templates` 只提供模板参考，不会直接作为发送目标。
+- **管理后台认证**：首次启动时根据 `admin.username` 和 `admin.password` 自动创建管理员账号。后续登录使用用户名密码认证。
+- **国际化**：错误消息支持中英文自动切换，客户端通过 `Accept-Language` 头指定语言偏好，服务端自动回退到配置的默认语言。
 
 ### 日志配置
 
@@ -454,24 +463,14 @@ curl -X POST http://localhost:8080/mcp \
 ```yaml
 admin:
   enabled: true
-  token_hash: "<your-sha256-hash>"
+  username: admin      # 管理员用户名
+  password: admin123   # 管理员密码
+  email: ""            # 可选邮箱
 ```
 
-2. **生成 token hash**：
+**注意**：首次启动时会根据配置自动创建管理员账号。后续登录使用用户名密码认证。
 
-```bash
-# Linux/macOS
-echo -n "your_secure_token" | sha256sum | cut -d' ' -f1
-
-# Windows PowerShell
-[System.BitConverter]::ToString(
-  [System.Security.Cryptography.SHA256]::Create().ComputeHash(
-    [System.Text.Encoding]::UTF8.GetBytes("your_secure_token")
-  )
-).Replace("-","").ToLower()
-```
-
-3. **访问管理后台**：
+2. **访问管理后台**：
 
 ```
 http://localhost:8080/admin/login
@@ -480,9 +479,9 @@ http://localhost:8080/admin/login
 ### 安全特性
 
 - **仅限 localhost 访问**：所有 `/admin/api/*` 端点只能从服务器本机访问
-- **令牌认证**：使用 SHA-256 哈希存储，constant-time 比较防止时序攻击
+- **用户名密码认证**：首次启动时自动创建管理员账号，后续使用用户名密码登录
 - **会话管理**：令牌存储在浏览器 sessionStorage（非 localStorage）
-- **敏感信息隐藏**：系统配置接口自动隐藏 token_hash
+- **敏感信息隐藏**：系统配置接口自动隐藏敏感信息
 
 ### 功能模块
 
@@ -500,9 +499,9 @@ http://localhost:8080/admin/login
 管理 API 遵循 RESTful 规范，所有端点需要 `X-Admin-Token` 请求头：
 
 ```bash
-# 认证
+# 认证（用户名密码方式）
 POST /admin/api/auth/verify
-Body: {"token": "your_token"}
+Body: {"username": "admin", "password": "admin123"}
 
 # 获取系统统计
 GET /admin/api/stats
@@ -534,26 +533,38 @@ TODO/
 │   ├── config/config.go            # YAML 配置加载
 │   ├── logging/                    # 日志初始化、日志路径和保留清理
 │   ├── database/database.go        # SQLite 连接 + WAL 模式 + 自动建表
+│   ├── i18n/                       # 国际化模块（错误消息本地化）
+│   │   ├── i18n.go                 # 核心翻译 API（T/TL 函数）
+│   │   ├── messages.go             # 消息注册表（中文/英文）
+│   │   ├── lang.go                 # 语言检测和上下文管理
+│   │   └── i18n_test.go            # 单元测试
 │   ├── models/
 │   │   ├── task.go                 # 任务数据模型
 │   │   ├── user.go                 # 用户数据模型
 │   │   ├── api_key.go              # API Key 数据模型
-│   │   └── reminder_config.go      # 提醒配置数据模型
+│   │   ├── tag.go                  # 标签数据模型
+│   │   ├── reminder_config.go      # 提醒配置数据模型
+│   │   └── reminder_log.go         # 提醒日志数据模型
 │   ├── handlers/
 │   │   ├── auth_handler.go         # 认证 HTTP 处理（注册/登录/Key管理）
 │   │   ├── task_handler.go         # 任务 HTTP 处理
+│   │   ├── tag_handler.go          # 标签 CRUD HTTP 处理
 │   │   ├── reminder_config_handler.go  # 提醒配置 CRUD
+│   │   ├── reminder_log_handler.go # 提醒日志查询
+│   │   ├── system_log_handler.go   # 系统日志查询
 │   │   └── admin_handler.go        # 管理后台接口
 │   ├── repository/
 │   │   ├── logging.go              # repository 数据库操作日志辅助
 │   │   ├── user_repo.go            # 用户数据库操作
 │   │   ├── api_key_repo.go         # API Key 数据库操作
 │   │   ├── task_repo.go            # 任务数据库操作
+│   │   ├── tag_repo.go             # 标签数据库操作
 │   │   ├── reminder_config_repo.go # 提醒配置数据库操作
 │   │   └── reminder_log_repo.go    # 提醒日志数据库操作
 │   ├── service/
 │   │   ├── auth_service.go         # 认证逻辑
 │   │   ├── task_service.go         # 业务逻辑
+│   │   ├── tag_service.go          # 标签管理逻辑
 │   │   ├── reminder_service.go     # 后台提醒（按用户多渠道）
 │   │   ├── reminder_config_service.go  # 提醒配置管理
 │   │   └── reminder_log_service.go # 提醒日志管理
@@ -562,9 +573,13 @@ TODO/
 │   │   ├── admin_auth.go           # 管理后台认证中间件
 │   │   ├── admin_rate_limit.go     # 管理后台限流中间件
 │   │   └── localhost.go            # 本地访问限制中间件
-│   └── utils/
-│       ├── response.go             # 统一响应格式
-│       └── validator.go            # 参数校验
+│   ├── views/                      # 视图层（API 出参转换）
+│   │   └── views.go                # TaskView/UserResponseView 等视图函数
+│   ├── utils/
+│   │   ├── response.go             # 统一响应格式（含本地化响应）
+│   │   └── validator.go            # 参数校验
+│   └── timezone/                   # 时区处理模块
+│       └── timezone.go             # 时区解析、格式化、上下文管理
 ├── docs/                           # Swagger 文档（自动生成）
 ├── frontend/                       # Vue 前端源码
 │   ├── Dockerfile                  # 分离部署前端 nginx 镜像
@@ -584,6 +599,10 @@ TODO/
 ├── web/                            # Go embed 前端构建产物入口
 │   ├── embed.go                    # 使用 //go:embed all:dist
 │   └── dist/                       # make build 生成并复制的静态文件
+├── scripts/                        # 构建和部署脚本
+│   ├── docker-push.sh              # 多平台 Docker 镜像构建和推送（Linux/macOS）
+│   ├── docker-push.ps1             # 多平台 Docker 镜像构建和推送（Windows）
+│   └── buildkitd.toml              # BuildKit 守护进程配置
 ├── config.example.yaml             # 配置示例文件（敏感信息已隐藏）
 ├── Dockerfile                      # 单体镜像多阶段构建
 ├── docker-compose.yml              # 默认容器编排（直接使用 ghcr.io 单体镜像）

@@ -37,7 +37,7 @@ func NewReminderConfigHandler(svc service.ReminderConfigServiceInterface) *Remin
 func (h *ReminderConfigHandler) Create(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -49,7 +49,7 @@ func (h *ReminderConfigHandler) Create(c *gin.Context) {
 
 	cfg, err := h.svc.Create(c.Request.Context(), userID, req)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to create config", err)
+		utils.RespondLocalizedInternalError(c, "config.create", err)
 		return
 	}
 
@@ -68,13 +68,13 @@ func (h *ReminderConfigHandler) Create(c *gin.Context) {
 func (h *ReminderConfigHandler) List(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	configs, err := h.svc.List(c.Request.Context(), userID)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list configs", err)
+		utils.RespondLocalizedInternalError(c, "config.list", err)
 		return
 	}
 
@@ -93,23 +93,23 @@ func (h *ReminderConfigHandler) List(c *gin.Context) {
 func (h *ReminderConfigHandler) GetByID(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid config id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "config.invalid_id")
 		return
 	}
 
 	cfg, err := h.svc.GetByID(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to get config", err)
+		utils.RespondLocalizedInternalError(c, "config.get", err)
 		return
 	}
 	if cfg == nil {
-		utils.RespondError(c, http.StatusNotFound, "config not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "config.not_found")
 		return
 	}
 
@@ -131,13 +131,13 @@ func (h *ReminderConfigHandler) GetByID(c *gin.Context) {
 func (h *ReminderConfigHandler) Update(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid config id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "config.invalid_id")
 		return
 	}
 
@@ -149,11 +149,11 @@ func (h *ReminderConfigHandler) Update(c *gin.Context) {
 
 	cfg, err := h.svc.Update(c.Request.Context(), userID, id, req)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to update config", err)
+		utils.RespondLocalizedInternalError(c, "config.update", err)
 		return
 	}
 	if cfg == nil {
-		utils.RespondError(c, http.StatusNotFound, "config not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "config.not_found")
 		return
 	}
 
@@ -172,23 +172,23 @@ func (h *ReminderConfigHandler) Update(c *gin.Context) {
 func (h *ReminderConfigHandler) Delete(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid config id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "config.invalid_id")
 		return
 	}
 
 	deleted, err := h.svc.Delete(c.Request.Context(), userID, id)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to delete config", err)
+		utils.RespondLocalizedInternalError(c, "config.delete", err)
 		return
 	}
 	if !deleted {
-		utils.RespondError(c, http.StatusNotFound, "config not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "config.not_found")
 		return
 	}
 

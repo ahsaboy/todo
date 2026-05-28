@@ -4,9 +4,7 @@ bin/
 .gocache/
 
 # Database files
-data/*.db
-data/*.db-shm
-data/*.db-wal
+data/*
 
 # Node.js
 node_modules/
@@ -62,3 +60,7 @@ nul
 todo-app
 docs/
 CLAUDE.md
+
+# Scripts (contains registry secrets)
+scripts/docker-push.sh
+scripts/docker-push.ps1

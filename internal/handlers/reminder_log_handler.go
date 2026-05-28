@@ -24,7 +24,7 @@ func NewReminderLogHandler(svc service.ReminderLogServiceInterface) *ReminderLog
 func (h *ReminderLogHandler) List(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -36,7 +36,7 @@ func (h *ReminderLogHandler) List(c *gin.Context) {
 
 	logs, total, err := h.svc.List(c.Request.Context(), userID, page, limit)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list reminder logs", err)
+		utils.RespondLocalizedInternalError(c, "reminder_log.list", err)
 		return
 	}
 

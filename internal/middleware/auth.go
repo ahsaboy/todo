@@ -17,7 +17,7 @@ func AuthMiddleware(apiKeyRepo repository.APIKeyRepository) gin.HandlerFunc {
 		key := extractAPIKey(c)
 
 		if key == "" {
-			utils.RespondError(c, http.StatusUnauthorized, "missing API key (use Authorization: Bearer <key> or api-key: <key>)", utils.CodeUnauthorized)
+			utils.RespondLocalizedError(c, http.StatusUnauthorized, "auth.missing_api_key")
 			c.Abort()
 			return
 		}
@@ -25,7 +25,7 @@ func AuthMiddleware(apiKeyRepo repository.APIKeyRepository) gin.HandlerFunc {
 		hash := HashAPIKey(key)
 		userID, err := apiKeyRepo.ValidateKey(c.Request.Context(), hash)
 		if err != nil || userID <= 0 {
-			utils.RespondError(c, http.StatusUnauthorized, "invalid API key", utils.CodeUnauthorized)
+			utils.RespondLocalizedError(c, http.StatusUnauthorized, "auth.invalid_api_key")
 			c.Abort()
 			return
 		}

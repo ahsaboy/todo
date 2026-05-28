@@ -44,10 +44,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	user, apiKey, err := h.svc.Register(c.Request.Context(), req)
 	if err != nil {
 		if errors.Is(err, service.ErrUsernameTaken) {
-			utils.RespondError(c, http.StatusConflict, "username already taken", utils.CodeInvalidInput)
+			utils.RespondLocalizedError(c, http.StatusConflict, "auth.username_taken")
 			return
 		}
-		utils.RespondInternalError(c, "failed to register", err)
+		utils.RespondLocalizedInternalError(c, "auth.register", err)
 		return
 	}
 
@@ -78,7 +78,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	user, apiKey, err := h.svc.Login(c.Request.Context(), req)
 	if err != nil {
-		utils.RespondError(c, http.StatusUnauthorized, "invalid username or password", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "auth.invalid_credentials")
 		return
 	}
 
@@ -104,7 +104,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) GenerateAPIKey(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -116,7 +116,7 @@ func (h *AuthHandler) GenerateAPIKey(c *gin.Context) {
 
 	apiKey, err := h.svc.GenerateAPIKey(c.Request.Context(), userID, req.Name)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to generate key", err)
+		utils.RespondLocalizedInternalError(c, "auth.generate_key", err)
 		return
 	}
 
@@ -139,23 +139,23 @@ func (h *AuthHandler) GenerateAPIKey(c *gin.Context) {
 func (h *AuthHandler) RevokeAPIKey(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "invalid key id", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "apikey.invalid_id")
 		return
 	}
 
 	deleted, err := h.svc.RevokeAPIKey(c.Request.Context(), id, userID)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to revoke key", err)
+		utils.RespondLocalizedInternalError(c, "auth.revoke_key", err)
 		return
 	}
 	if !deleted {
-		utils.RespondError(c, http.StatusNotFound, "key not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "apikey.not_found")
 		return
 	}
 
@@ -174,13 +174,13 @@ func (h *AuthHandler) RevokeAPIKey(c *gin.Context) {
 func (h *AuthHandler) ListAPIKeys(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	keys, err := h.svc.ListAPIKeys(c.Request.Context(), userID)
 	if err != nil {
-		utils.RespondInternalError(c, "failed to list keys", err)
+		utils.RespondLocalizedInternalError(c, "auth.list_keys", err)
 		return
 	}
 
@@ -209,13 +209,13 @@ func (h *AuthHandler) ListAPIKeys(c *gin.Context) {
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	user, err := h.svc.GetUserByID(c.Request.Context(), userID)
 	if err != nil || user == nil {
-		utils.RespondError(c, http.StatusNotFound, "user not found", utils.CodeNotFound)
+		utils.RespondLocalizedError(c, http.StatusNotFound, "user.not_found")
 		return
 	}
 
@@ -237,7 +237,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -248,12 +248,12 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	if req.Email == nil {
-		utils.RespondError(c, http.StatusBadRequest, "no fields to update", utils.CodeInvalidInput)
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "profile.no_fields")
 		return
 	}
 
 	if err := h.svc.UpdateProfile(c.Request.Context(), userID, *req.Email); err != nil {
-		utils.RespondInternalError(c, "failed to update profile", err)
+		utils.RespondLocalizedInternalError(c, "user.update_profile", err)
 		return
 	}
 
@@ -276,7 +276,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", utils.CodeUnauthorized)
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -288,10 +288,10 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 	if err := h.svc.ChangePassword(c.Request.Context(), userID, req.OldPassword, req.NewPassword); err != nil {
 		if errors.Is(err, service.ErrInvalidOldPassword) {
-			utils.RespondError(c, http.StatusUnauthorized, "invalid old password", utils.CodeUnauthorized)
+			utils.RespondLocalizedError(c, http.StatusUnauthorized, "auth.invalid_old_password")
 			return
 		}
-		utils.RespondInternalError(c, "failed to change password", err)
+		utils.RespondLocalizedInternalError(c, "user.change_password", err)
 		return
 	}
 
