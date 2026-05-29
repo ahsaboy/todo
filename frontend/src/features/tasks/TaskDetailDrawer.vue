@@ -28,7 +28,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import type { Task } from '@/entities/task/model'
 import type { CreateTaskPayload, UpdateTaskPayload } from '@/entities/task/model'
 import TaskForm from './TaskForm.vue'
@@ -45,23 +44,7 @@ const emit = defineEmits<{
   delete: [id: number]
 }>()
 
-const hasChanges = ref(false)
-
-watch(
-  () => props.visible,
-  (val) => {
-    if (val) {
-      hasChanges.value = false
-    }
-  },
-)
-
 function handleClose() {
-  if (hasChanges.value) {
-    if (!confirm('确定要关闭吗？未保存的更改将丢失。')) {
-      return
-    }
-  }
   emit('update:visible', false)
 }
 

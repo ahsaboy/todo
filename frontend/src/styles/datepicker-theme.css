@@ -1,0 +1,88 @@
+/* vue-datepicker 主题覆盖 — 匹配项目 design tokens */
+
+/* ---- 布局 & 字体 ---- */
+:root {
+  --dp-font-family: var(--font-sans);
+  --dp-border-radius: 6px;
+  --dp-cell-border-radius: 8px;
+  --dp-menu-padding: 8px;
+  --dp-common-padding: 10px;
+  --dp-cell-size: 36px;
+  --dp-cell-padding: 4px;
+  --dp-input-padding: 8px 34px 8px 12px;
+  --dp-font-size: 14px;
+  --dp-time-font-size: 13px;
+}
+
+/* ---- 亮/暗主题统一映射到项目变量 ---- */
+.dp__theme_light,
+.dp__theme_dark {
+  --dp-background-color: var(--color-surface);
+  --dp-text-color: var(--color-text);
+  --dp-hover-color: var(--color-surface-muted);
+  --dp-hover-text-color: var(--color-text);
+  --dp-hover-icon-color: var(--color-text-muted);
+  --dp-primary-color: var(--color-primary);
+  --dp-primary-disabled-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+  --dp-primary-text-color: #ffffff;
+  --dp-secondary-color: var(--color-text-muted);
+  --dp-border-color: var(--color-border);
+  --dp-menu-border-color: var(--color-border);
+  --dp-border-color-hover: var(--color-primary);
+  --dp-border-color-focus: var(--color-primary);
+  --dp-disabled-color: var(--color-surface-muted);
+  --dp-disabled-color-text: var(--color-text-muted);
+  --dp-scroll-bar-background: var(--color-surface-muted);
+  --dp-scroll-bar-color: var(--color-text-muted);
+  --dp-success-color: var(--color-success);
+  --dp-success-color-disabled: color-mix(in srgb, var(--color-success) 40%, transparent);
+  --dp-icon-color: var(--color-text-muted);
+  --dp-danger-color: var(--color-danger);
+  --dp-marker-color: var(--color-danger);
+  --dp-tooltip-color: var(--color-surface);
+}
+
+/* 亮色高亮稍淡，暗色高亮稍浓 */
+.dp__theme_light {
+  --dp-highlight-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.dp__theme_dark {
+  --dp-highlight-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+/* ---- Input 对齐项目表单风格 ---- */
+.dp__input_wrap .dp__input {
+  padding: var(--dp-input-padding);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  transition: border-color 260ms ease, box-shadow 260ms ease;
+}
+
+.dp__input_wrap .dp__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.dp__input_wrap .dp__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ---- 菜单面板 ---- */
+.dp__menu {
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-panel);
+  border-radius: 10px;
+}
+
+/* ---- Action row 按钮 ---- */
+.dp__action_row .dp__action_buttons .dp__action_select,
+.dp__action_row .dp__action_buttons .dp__action_cancel {
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}

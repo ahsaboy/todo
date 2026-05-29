@@ -39,7 +39,7 @@
           <td class="col-priority">
             <PriorityTag :priority="task.priority" />
           </td>
-          <td class="col-due" :class="{ overdue: isOverdue(task) }">
+          <td class="col-due" :class="{ overdue: isOverdue(task.dueAt, task.completed) }">
             {{ formatDate(task.dueAt) }}
           </td>
           <td class="col-remind">
@@ -64,6 +64,7 @@
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import TagChip from '@/features/tags/TagChip.vue'
+import { formatDateTime as formatDate, isOverdue } from '@/shared/utils/date'
 
 defineProps<{
   tasks: Task[]
@@ -73,17 +74,6 @@ defineEmits<{
   toggle: [id: number]
   open: [task: Task]
 }>()
-
-function isOverdue(task: Task): boolean {
-  if (task.completed || !task.dueAt) return false
-  return new Date(task.dueAt) < new Date()
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '-'
-  const date = new Date(dateStr)
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
 
 function formatRepeat(type: string, interval: number): string {
   if (!type || type === 'none') return '-'

@@ -57,6 +57,7 @@ import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import TagChip from '@/features/tags/TagChip.vue'
 import CollapseTransition from '@/shared/ui/CollapseTransition.vue'
+import { formatDateRelative as formatDate } from '@/shared/utils/date'
 
 interface TaskGroup {
   label: string
@@ -79,26 +80,6 @@ function toggleGroup(label: string) {
   } else {
     collapsedGroups.value.add(label)
   }
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-
-  if (target.getTime() === today.getTime()) {
-    return '今天'
-  }
-
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  if (target.getTime() === tomorrow.getTime()) {
-    return '明天'
-  }
-
-  return `${date.getMonth() + 1}月${date.getDate()}日`
 }
 </script>
 

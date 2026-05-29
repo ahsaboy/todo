@@ -38,6 +38,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { User } from '@/entities/user/model'
+import { formatDateFull as formatDate } from '@/shared/utils/date'
 
 const props = defineProps<{
   user: User | null
@@ -56,12 +57,6 @@ watch(
     if (val) email.value = val.email
   },
 )
-
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return '-'
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
-}
 
 async function handleSubmit() {
   submitting.value = true

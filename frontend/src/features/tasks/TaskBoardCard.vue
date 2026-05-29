@@ -20,6 +20,7 @@
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import TagChip from '@/features/tags/TagChip.vue'
+import { formatDateShort as formatDate } from '@/shared/utils/date'
 
 defineProps<{
   task: Task
@@ -28,12 +29,6 @@ defineProps<{
 defineEmits<{
   click: [task: Task]
 }>()
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return `${date.getMonth() + 1}月${date.getDate()}日`
-}
 </script>
 
 <style scoped>

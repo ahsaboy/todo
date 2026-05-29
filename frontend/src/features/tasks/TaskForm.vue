@@ -36,19 +36,22 @@
       </div>
 
       <div class="form-group">
-        <label for="task-due-at">截止时间</label>
-        <input id="task-due-at" v-model="form.due_at" name="task_due_at" type="datetime-local" />
+        <label>截止时间</label>
+        <VueDatePicker
+          v-bind="datetimePickerProps"
+          v-model="form.due_at"
+          placeholder="选择截止时间"
+        />
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label for="task-remind-at">提醒时间</label>
-        <input
-          id="task-remind-at"
+        <label>提醒时间</label>
+        <VueDatePicker
+          v-bind="datetimePickerProps"
           v-model="form.remind_at"
-          name="task_remind_at"
-          type="datetime-local"
+          placeholder="选择提醒时间"
         />
       </div>
 
@@ -78,12 +81,11 @@
       </div>
 
       <div class="form-group">
-        <label for="task-repeat-end-date">重复结束日期</label>
-        <input
-          id="task-repeat-end-date"
+        <label>重复结束日期</label>
+        <VueDatePicker
+          v-bind="datePickerProps"
           v-model="form.repeat_end_date"
-          name="task_repeat_end_date"
-          type="date"
+          placeholder="选择结束日期"
         />
       </div>
     </div>
@@ -105,9 +107,35 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
 import type { CreateTaskPayload, Task, UpdateTaskPayload } from '@/entities/task/model'
+import { useThemeStore } from '@/app/stores/theme.store'
+import { isoToDateTimeLocal, isoToDateLocal, dateTimeLocalToISOString, dateToEndOfDayISOString } from '@/shared/utils/date'
 import TagPicker from '@/features/tags/TagPicker.vue'
+
+const themeStore = useThemeStore()
+
+// VueDatePicker 公共 props（截止时间 & 提醒时间用 datetime 模式）
+const datetimePickerProps = computed(() => ({
+  dark: themeStore.isDark,
+  'model-type': 'format' as const,
+  format: 'yyyy-MM-dd HH:mm',
+  locale: 'zh-CN',
+  'auto-apply': true,
+  clearable: true,
+  'time-picker-inline': true,
+  teleport: true,
+  config: { allowPreventDefault: true },
+}))
+
+// 仅日期模式
+const datePickerProps = computed(() => ({
+  ...datetimePickerProps.value,
+  format: 'yyyy-MM-dd',
+  'time-picker-inline': undefined,
+  'enable-time-picker': false,
+}))
 
 type TaskFormInitialData = Partial<CreateTaskPayload> &
   Partial<Pick<Task, 'dueAt' | 'remindAt' | 'repeatEndDate' | 'repeatInterval' | 'repeatType' | 'tags'>> & {
@@ -126,32 +154,6 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-// 将 datetime-local 值（本地时间）转为 ISO 8601 UTC
-function localDateTimeToISOString(value: string): string {
-  return new Date(value).toISOString()
-}
-
-// 将 ISO 8601 UTC 转为 datetime-local 本地时间字符串
-function isoToLocalDateTimeInputValue(iso: string): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-// 将 date 值转为 ISO 8601 UTC（当天 23:59:59）
-function dateToEndOfDayISOString(value: string): string {
-  return new Date(value + 'T23:59:59').toISOString()
-}
-
-// 将 ISO 8601 UTC 转为 date 输入的 YYYY-MM-DD 格式
-function isoToLocalDateInputValue(iso: string): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
 // 初始化表单：将后端 UTC RFC3339 转为本地输入格式
 // initialData 可能是 snake_case（CreateTaskPayload）或 camelCase（Task model）
 const d = props.initialData
@@ -159,11 +161,11 @@ const form = reactive<CreateTaskPayload>({
   title: d?.title || '',
   description: d?.description || undefined,
   priority: d?.priority || undefined,
-  due_at: (d?.due_at || d?.dueAt) ? isoToLocalDateTimeInputValue(d.due_at || d.dueAt) : undefined,
-  remind_at: (d?.remind_at || d?.remindAt) ? isoToLocalDateTimeInputValue(d.remind_at || d.remindAt) : undefined,
+  due_at: (d?.due_at || d?.dueAt) ? isoToDateTimeLocal(d.due_at || d.dueAt) : undefined,
+  remind_at: (d?.remind_at || d?.remindAt) ? isoToDateTimeLocal(d.remind_at || d.remindAt) : undefined,
   repeat_type: d?.repeat_type || d?.repeatType || 'none',
   repeat_interval: d?.repeat_interval || d?.repeatInterval || 1,
-  repeat_end_date: (d?.repeat_end_date || d?.repeatEndDate) ? isoToLocalDateInputValue(d.repeat_end_date || d.repeatEndDate) : undefined,
+  repeat_end_date: (d?.repeat_end_date || d?.repeatEndDate) ? isoToDateLocal(d.repeat_end_date || d.repeatEndDate) : undefined,
   tags: Array.isArray(d?.tags) ? [...d.tags] : [],
 })
 
@@ -199,10 +201,10 @@ async function handleSubmit() {
     const payload = { ...form }
     // 将 datetime-local 本地时间转为 RFC3339 UTC
     if (payload.due_at) {
-      payload.due_at = localDateTimeToISOString(payload.due_at)
+      payload.due_at = dateTimeLocalToISOString(payload.due_at)
     }
     if (payload.remind_at) {
-      payload.remind_at = localDateTimeToISOString(payload.remind_at)
+      payload.remind_at = dateTimeLocalToISOString(payload.remind_at)
     }
     if (payload.repeat_end_date) {
       payload.repeat_end_date = dateToEndOfDayISOString(payload.repeat_end_date)

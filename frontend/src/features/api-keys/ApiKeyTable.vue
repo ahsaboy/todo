@@ -54,6 +54,7 @@
 <script setup lang="ts">
 import type { ApiKeyInfo } from '@/entities/api-key/model'
 import { Ban } from 'lucide-vue-next'
+import { formatDateTime as formatDate } from '@/shared/utils/date'
 
 defineProps<{
   keys: ApiKeyInfo[]
@@ -65,13 +66,6 @@ defineEmits<{
 
 function getKeyPrefix(): string {
   return 'key_****'
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '-'
-  const date = new Date(dateStr)
-  if (Number.isNaN(date.getTime())) return dateStr
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 </script>
 

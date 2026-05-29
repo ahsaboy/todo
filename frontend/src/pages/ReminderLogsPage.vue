@@ -103,6 +103,7 @@ import { getReminderLogs } from '@/entities/reminder-config/api'
 import { toReminderLog } from '@/entities/reminder-config/mapper'
 import type { ReminderLog } from '@/entities/reminder-config/model'
 import type { PageMeta } from '@/shared/api/types'
+import { formatDateTimeFull as formatDate } from '@/shared/utils/date'
 
 const logs = ref<ReminderLog[]>([])
 const loading = ref(false)
@@ -137,15 +138,6 @@ async function fetchLogs() {
 async function changePage(nextPage: number) {
   page.value = nextPage
   await fetchLogs()
-}
-
-function formatDate(value: string) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 </script>
 

@@ -27,7 +27,7 @@
         <div v-if="task.tags && task.tags.length > 0" class="task-tags">
           <TagChip v-for="t in task.tags" :key="t" :name="t" />
         </div>
-        <div v-if="task.dueAt" class="task-due" :class="{ overdue: isOverdue(task) }">
+        <div v-if="task.dueAt" class="task-due" :class="{ overdue: isOverdue(task.dueAt, task.completed) }">
           {{ formatDue(task.dueAt) }}
         </div>
         <div v-if="task.focusDuration" class="task-focus">
@@ -42,6 +42,7 @@
 import type { Task } from '@/entities/task/model'
 import PriorityTag from '@/shared/ui/PriorityTag.vue'
 import TagChip from '@/features/tags/TagChip.vue'
+import { formatDueRelative as formatDue, isOverdue } from '@/shared/utils/date'
 
 defineProps<{
   tasks: Task[]
@@ -51,27 +52,6 @@ defineEmits<{
   toggle: [id: number]
   open: [task: Task]
 }>()
-
-function isOverdue(task: Task): boolean {
-  if (task.completed || !task.dueAt) return false
-  return new Date(task.dueAt) < new Date()
-}
-
-function formatDue(dateStr: string): string {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const isToday = date.toDateString() === now.toDateString()
-  const tomorrow = new Date(now)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const isTomorrow = date.toDateString() === tomorrow.toDateString()
-
-  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  const weekday = weekdays[date.getDay()]
-  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-  if (isToday) return `今天 ${time} · ${weekday}`
-  if (isTomorrow) return `明天 ${time} · ${weekday}`
-  return `${date.getMonth() + 1}月${date.getDate()}日 · ${weekday} ${time} `
-}
 </script>
 
 <style scoped>

@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
 import { adminApi } from '@/shared/api/admin-client'
+import { useThemeStore } from '@/app/stores/theme.store'
+import { isoToDateTimeLocal, dateTimeLocalToISOString } from '@/shared/utils/date'
 import type { PaginatedResponse } from '@/shared/api/types'
+
+const themeStore = useThemeStore()
 
 interface Task {
   id: number
@@ -93,7 +98,7 @@ function openEdit(task: Task) {
     title: task.title,
     description: task.description || '',
     priority: task.priority,
-    due_at: task.due_at ? task.due_at.replace('Z', '').slice(0, 16) : '',
+    due_at: task.due_at ? isoToDateTimeLocal(task.due_at) : '',
   }
   editDialog.value = { show: true, task, saving: false, err: '' }
 }
@@ -113,7 +118,7 @@ async function saveEdit() {
       priority: editForm.value.priority,
     }
     if (editForm.value.due_at) {
-      body.due_at = new Date(editForm.value.due_at).toISOString()
+      body.due_at = dateTimeLocalToISOString(editForm.value.due_at)
     } else {
       body.due_at = null
     }
@@ -232,7 +237,19 @@ const totalPages = () => Math.ceil(total.value / limit)
         </div>
         <div class="form-group">
           <label>截止时间</label>
-          <input v-model="editForm.due_at" type="datetime-local" class="form-input" />
+          <VueDatePicker
+            v-model="editForm.due_at"
+            :dark="themeStore.isDark"
+            model-type="format"
+            format="yyyy-MM-dd HH:mm"
+            locale="zh-CN"
+            auto-apply
+            clearable
+            time-picker-inline
+            placeholder="选择截止时间"
+            teleport
+            :config="{ allowPreventDefault: true }"
+          />
         </div>
         <div v-if="editDialog.err" class="error-message">{{ editDialog.err }}</div>
         <div class="modal-actions">

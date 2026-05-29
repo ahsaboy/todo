@@ -4,6 +4,8 @@
 @import './layout.css';
 @import './page.css';
 @import './auth.css';
+@import '@vuepic/vue-datepicker/dist/main.css';
+@import './datepicker-theme.css';
 
 * {
   box-sizing: border-box;
