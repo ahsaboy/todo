@@ -5,7 +5,7 @@
     <Transition name="sk-fade" mode="out-in">
       <ProfileSkeleton v-if="loading" key="skeleton" />
 
-      <template v-else key="content">
+      <div v-else key="content">
         <div class="form-section">
           <h3>基本信息</h3>
           <ProfileForm :user="user" @submit="handleProfileSubmit" />
@@ -15,7 +15,7 @@
           <h3>修改密码</h3>
           <PasswordForm @submit="handlePasswordSubmit" />
         </div>
-      </template>
+      </div>
     </Transition>
 
     <div v-if="message" class="message" :class="messageType">
@@ -83,6 +83,13 @@ async function handlePasswordSubmit(payload: ChangePasswordPayload) {
   flex-direction: column;
   gap: 24px;
   max-width: 640px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .profile-page {
+    padding-top: 20px;
+  }
 }
 
 .profile-page h2 {
@@ -95,6 +102,11 @@ async function handlePasswordSubmit(payload: ChangePasswordPayload) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.form-section:last-child {
+  margin-bottom: 0;
 }
 
 .form-section h3 {
