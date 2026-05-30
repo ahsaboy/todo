@@ -1,6 +1,9 @@
 <template>
   <div class="page">
-    <h2>今日任务</h2>
+    <div class="page-header">
+      <h2>今日任务</h2>
+      <button class="btn-secondary" type="button" @click="fetchTasks"><RefreshCw :size="14" /></button>
+    </div>
 
     <QuickCreateTask @create="handleQuickCreate" />
 
@@ -32,6 +35,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 import { useTasks } from '@/features/tasks/useTasks'
 import QuickCreateTask from '@/features/tasks/QuickCreateTask.vue'
 import TaskGroupedList from '@/features/tasks/TaskGroupedList.vue'
@@ -127,10 +131,3 @@ async function handleFocusConfirm(duration: number | null) {
   }
 }
 </script>
-
-<style scoped>
-.page h2 {
-  margin: 0;
-  font-size: 20px;
-}
-</style>

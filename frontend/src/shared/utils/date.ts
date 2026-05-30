@@ -4,6 +4,38 @@
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
+export function splitDateTimeLocal(value?: string | null): { date: string; time: string } {
+  if (!value) return { date: '', time: '' }
+  const [date = '', time = ''] = value.replace('T', ' ').split(' ')
+  return { date, time: time.slice(0, 5) }
+}
+
+export function combineDateTimeLocal(date: string, time = '00:00'): string {
+  return `${date} ${time || '00:00'}`
+}
+
+function parseDateTimeLocal(value: string): Date | null {
+  const { date, time } = splitDateTimeLocal(value)
+  if (!date) return null
+
+  const [year, month, day] = date.split('-').map(Number)
+  const [hour = 0, minute = 0] = time.split(':').map(Number)
+  if ([year, month, day, hour, minute].some(n => !Number.isFinite(n))) return null
+
+  const parsed = new Date(year, month - 1, day, hour, minute)
+  if (Number.isNaN(parsed.getTime())) return null
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day ||
+    parsed.getHours() !== hour ||
+    parsed.getMinutes() !== minute
+  ) {
+    return null
+  }
+  return parsed
+}
+
 /** ISO 8601 UTC → "YYYY-MM-DD HH:mm"（本地时间，用于 vue-datepicker） */
 export function isoToDateTimeLocal(iso: string): string {
   if (!iso) return ''
@@ -23,7 +55,8 @@ export function isoToDateLocal(iso: string): string {
 /** "YYYY-MM-DD HH:mm" 本地时间 → ISO 8601 UTC（提交 API 用） */
 export function dateTimeLocalToISOString(value: string): string {
   if (!value) return ''
-  const d = new Date(value)
+  const d = parseDateTimeLocal(value)
+  if (!d) return ''
   return Number.isNaN(d.getTime()) ? '' : d.toISOString()
 }
 

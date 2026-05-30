@@ -1,6 +1,9 @@
 <template>
   <div class="page">
-    <h2>即将到期</h2>
+    <div class="page-header">
+      <h2>即将到期</h2>
+      <button class="btn-secondary" type="button" @click="fetchTasks"><RefreshCw :size="14" /></button>
+    </div>
 
     <Transition name="sk-fade" mode="out-in">
       <TaskGroupedSkeleton v-if="loading" key="skeleton" />
@@ -30,6 +33,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 import { useTasks } from '@/features/tasks/useTasks'
 import TaskGroupedList from '@/features/tasks/TaskGroupedList.vue'
 import FocusDurationDialog from '@/features/tasks/FocusDurationDialog.vue'
@@ -129,10 +133,3 @@ async function handleFocusConfirm(duration: number | null) {
   }
 }
 </script>
-
-<style scoped>
-.page h2 {
-  margin: 0;
-  font-size: 20px;
-}
-</style>

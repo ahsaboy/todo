@@ -1,6 +1,9 @@
 <template>
   <div class="page">
-    <h2>看板</h2>
+    <div class="page-header">
+      <h2>看板</h2>
+      <button class="btn-secondary" type="button" @click="fetchTasks"><RefreshCw :size="14" /></button>
+    </div>
 
     <Transition name="sk-fade" mode="out-in">
       <TaskBoardSkeleton v-if="loading" key="skeleton" />
@@ -23,6 +26,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 import { useTasks } from '@/features/tasks/useTasks'
 import TaskBoard from '@/features/tasks/TaskBoard.vue'
 import TaskBoardSkeleton from '@/shared/ui/TaskBoardSkeleton.vue'
@@ -38,10 +42,3 @@ function openTask(_task: { id: number }) {
   void _task
 }
 </script>
-
-<style scoped>
-.page h2 {
-  margin: 0;
-  font-size: 20px;
-}
-</style>

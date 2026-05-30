@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { VueDatePicker } from '@vuepic/vue-datepicker'
 import { adminApi } from '@/shared/api/admin-client'
-import { useThemeStore } from '@/app/stores/theme.store'
 import { isoToDateTimeLocal, dateTimeLocalToISOString } from '@/shared/utils/date'
+import DateTimePicker from '@/shared/ui/DateTimePicker.vue'
 import type { PaginatedResponse } from '@/shared/api/types'
-
-const themeStore = useThemeStore()
 
 interface Task {
   id: number
@@ -237,18 +234,11 @@ const totalPages = () => Math.ceil(total.value / limit)
         </div>
         <div class="form-group">
           <label>截止时间</label>
-          <VueDatePicker
-            v-model="editForm.due_at"
-            :dark="themeStore.isDark"
-            model-type="format"
-            format="yyyy-MM-dd HH:mm"
-            locale="zh-CN"
-            auto-apply
-            clearable
-            time-picker-inline
-            placeholder="选择截止时间"
-            teleport
-            :config="{ allowPreventDefault: true }"
+          <DateTimePicker
+            :model-value="editForm.due_at"
+            placeholder="选择截止日期"
+            default-time="23:59"
+            @update:model-value="editForm.due_at = $event || ''"
           />
         </div>
         <div v-if="editDialog.err" class="error-message">{{ editDialog.err }}</div>

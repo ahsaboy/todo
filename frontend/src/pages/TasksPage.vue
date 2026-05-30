@@ -3,6 +3,7 @@
     <div class="page-header">
       <h2>全部任务</h2>
       <div class="header-actions">
+        <button class="btn-secondary" type="button" @click="fetchTasks"><RefreshCw :size="14" /></button>
         <!-- 桌面端按钮 -->
         <button class="btn-primary desktop-only" @click="openCreate">新建任务</button>
         <!-- 移动端筛选按钮 -->
@@ -81,7 +82,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Plus, SlidersHorizontal } from 'lucide-vue-next'
+import { Plus, RefreshCw, SlidersHorizontal } from 'lucide-vue-next'
 import { useTasks } from '@/features/tasks/useTasks'
 import { useMediaQuery } from '@/shared/composables/useMediaQuery'
 import TaskTable from '@/features/tasks/TaskTable.vue'

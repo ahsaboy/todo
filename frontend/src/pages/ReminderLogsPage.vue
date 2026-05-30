@@ -142,7 +142,6 @@ async function changePage(nextPage: number) {
 </script>
 
 <style scoped>
-.btn-secondary,
 .pager button {
   padding: 8px 14px;
   background: var(--color-surface);

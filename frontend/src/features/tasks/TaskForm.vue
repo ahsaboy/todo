@@ -37,10 +37,10 @@
 
       <div class="form-group">
         <label>截止时间</label>
-        <VueDatePicker
-          v-bind="datetimePickerProps"
+        <DateTimePicker
           v-model="form.due_at"
-          placeholder="选择截止时间"
+          placeholder="选择截止日期"
+          default-time="23:59"
         />
       </div>
     </div>
@@ -48,10 +48,10 @@
     <div class="form-row">
       <div class="form-group">
         <label>提醒时间</label>
-        <VueDatePicker
-          v-bind="datetimePickerProps"
+        <DateTimePicker
           v-model="form.remind_at"
-          placeholder="选择提醒时间"
+          placeholder="选择提醒日期"
+          default-time="09:00"
         />
       </div>
 
@@ -112,29 +112,23 @@ import { VueDatePicker } from '@vuepic/vue-datepicker'
 import type { CreateTaskPayload, Task, UpdateTaskPayload } from '@/entities/task/model'
 import { useThemeStore } from '@/app/stores/theme.store'
 import { isoToDateTimeLocal, isoToDateLocal, dateTimeLocalToISOString, dateToEndOfDayISOString } from '@/shared/utils/date'
+import { zhCN } from '@/shared/utils/date-locale'
 import TagPicker from '@/features/tags/TagPicker.vue'
+import DateTimePicker from '@/shared/ui/DateTimePicker.vue'
 
 const themeStore = useThemeStore()
 
-// VueDatePicker 公共 props（截止时间 & 提醒时间用 datetime 模式）
-const datetimePickerProps = computed(() => ({
+// 仅日期模式的 VueDatePicker props
+const datePickerProps = computed(() => ({
   dark: themeStore.isDark,
   'model-type': 'format' as const,
-  format: 'yyyy-MM-dd HH:mm',
-  locale: 'zh-CN',
+  format: 'yyyy-MM-dd',
+  locale: zhCN,
   'auto-apply': true,
   clearable: true,
-  'time-picker-inline': true,
+  'enable-time-picker': false,
   teleport: true,
   config: { allowPreventDefault: true },
-}))
-
-// 仅日期模式
-const datePickerProps = computed(() => ({
-  ...datetimePickerProps.value,
-  format: 'yyyy-MM-dd',
-  'time-picker-inline': undefined,
-  'enable-time-picker': false,
 }))
 
 type TaskFormInitialData = Partial<CreateTaskPayload> &

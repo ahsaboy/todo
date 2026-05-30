@@ -44,6 +44,28 @@
   cursor: pointer;
 }
 
+/* 次要按钮 */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition:
+    border-color var(--motion-duration-fast),
+    background-color var(--motion-duration-fast);
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-muted);
+}
+
 /* 主要按钮 */
 .btn-primary {
   padding: 8px 16px;
