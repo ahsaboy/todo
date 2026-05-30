@@ -1,32 +1,23 @@
 <template>
   <div class="task-filters">
     <div class="filter-group">
-      <label for="task-filter-status">状态</label>
-      <select
-        id="task-filter-status"
+      <label>状态</label>
+      <BaseSelect
         v-model="localFilters.status"
-        name="task_filter_status"
+        :options="statusOptions"
+        aria-label="状态"
         @change="applyFilters"
-      >
-        <option value="all">全部</option>
-        <option value="pending">待处理</option>
-        <option value="completed">已完成</option>
-      </select>
+      />
     </div>
 
     <div class="filter-group">
-      <label for="task-filter-priority">优先级</label>
-      <select
-        id="task-filter-priority"
+      <label>优先级</label>
+      <BaseSelect
         v-model="localFilters.priority"
-        name="task_filter_priority"
+        :options="priorityOptions"
+        aria-label="优先级"
         @change="applyFilters"
-      >
-        <option :value="undefined">全部</option>
-        <option :value="1">高</option>
-        <option :value="2">中</option>
-        <option :value="3">低</option>
-      </select>
+      />
     </div>
 
     <div class="filter-group tags">
@@ -52,6 +43,20 @@
 import { reactive } from 'vue'
 import type { TaskFilters } from './useTasks'
 import TagPicker from '@/features/tags/TagPicker.vue'
+import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
+
+const statusOptions: SelectOption<TaskFilters['status']>[] = [
+  { label: '全部', value: 'all' },
+  { label: '待处理', value: 'pending' },
+  { label: '已完成', value: 'completed' },
+]
+
+const priorityOptions: SelectOption<TaskFilters['priority']>[] = [
+  { label: '全部', value: undefined },
+  { label: '高', value: 1 },
+  { label: '中', value: 2 },
+  { label: '低', value: 3 },
+]
 
 const props = defineProps<{
   filters: TaskFilters

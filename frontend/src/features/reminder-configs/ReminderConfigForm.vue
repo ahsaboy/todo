@@ -13,50 +13,37 @@
     </div>
 
     <div class="form-group">
-      <label for="reminder-config-template">预置模板</label>
-      <select
-        id="reminder-config-template"
+      <label>预置模板</label>
+      <BaseSelect
         v-model="selectedTemplate"
-        name="reminder_config_template"
+        :options="templateSelectOptions"
         :disabled="loadingTemplates"
+        block
+        aria-label="预置模板"
         @change="applySelectedTemplate"
-      >
-        <option value="">自定义</option>
-        <option v-for="template in templateOptions" :key="template.name" :value="template.name">
-          {{ template.label }}
-        </option>
-      </select>
+      />
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label for="reminder-config-channel-type">渠道类型 *</label>
-        <select
-          id="reminder-config-channel-type"
+        <label>渠道类型 *</label>
+        <BaseSelect
           v-model="form.channel_type"
-          name="reminder_config_channel_type"
-          required
+          :options="channelTypeOptions"
+          block
+          aria-label="渠道类型"
           @change="handleChannelTypeChange"
-        >
-          <option value="webhook">Webhook</option>
-          <option value="feishu">飞书</option>
-          <option value="dingtalk">钉钉</option>
-          <option value="wecom">企业微信</option>
-          <option value="slack">Slack</option>
-        </select>
+        />
       </div>
 
       <div class="form-group">
-        <label for="reminder-config-webhook-method">请求方法</label>
-        <select
-          id="reminder-config-webhook-method"
+        <label>请求方法</label>
+        <BaseSelect
           v-model="form.webhook_method"
-          name="reminder_config_webhook_method"
-        >
-          <option value="POST">POST</option>
-          <option value="GET">GET</option>
-          <option value="PUT">PUT</option>
-        </select>
+          :options="methodOptions"
+          block
+          aria-label="请求方法"
+        />
       </div>
     </div>
 
@@ -164,6 +151,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { getReminderTemplates } from '@/entities/reminder-config/api'
 import JsonEditor from '@/components/JsonEditor.vue'
+import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
 import type {
   CreateReminderConfigPayload,
   UpdateReminderConfigPayload,
@@ -236,6 +224,25 @@ const templateOptions = computed(() =>
       name,
     })),
 )
+
+const templateSelectOptions = computed<SelectOption<string>[]>(() => [
+  { label: '自定义', value: '' },
+  ...templateOptions.value.map((t) => ({ label: t.label, value: t.name })),
+])
+
+const channelTypeOptions: SelectOption<ChannelType>[] = [
+  { label: 'Webhook', value: 'webhook' },
+  { label: '飞书', value: 'feishu' },
+  { label: '钉钉', value: 'dingtalk' },
+  { label: '企业微信', value: 'wecom' },
+  { label: 'Slack', value: 'slack' },
+]
+
+const methodOptions: SelectOption<WebhookMethod>[] = [
+  { label: 'POST', value: 'POST' },
+  { label: 'GET', value: 'GET' },
+  { label: 'PUT', value: 'PUT' },
+]
 
 onMounted(() => {
   loadTemplates()

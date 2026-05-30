@@ -1,17 +1,11 @@
 <template>
   <div class="task-sort">
-    <label class="sr-only" for="task-sort-field">排序字段</label>
-    <select
-      id="task-sort-field"
+    <BaseSelect
       v-model="localSort.field"
-      name="task_sort_field"
+      :options="fieldOptions"
+      aria-label="排序字段"
       @change="applySort"
-    >
-      <option value="created_at">创建时间</option>
-      <option value="due_at">截止时间</option>
-      <option value="priority">优先级</option>
-      <option value="title">标题</option>
-    </select>
+    />
 
     <button class="btn-order" type="button" @click="toggleOrder">
       {{ localSort.order === 'asc' ? '↑' : '↓' }}
@@ -22,6 +16,14 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import type { TaskSort } from './useTasks'
+import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
+
+const fieldOptions: SelectOption<TaskSort['field']>[] = [
+  { label: '创建时间', value: 'created_at' },
+  { label: '截止时间', value: 'due_at' },
+  { label: '优先级', value: 'priority' },
+  { label: '标题', value: 'title' },
+]
 
 const props = defineProps<{
   sort: TaskSort

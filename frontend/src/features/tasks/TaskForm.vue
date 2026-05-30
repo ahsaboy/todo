@@ -26,13 +26,14 @@
 
     <div class="form-row">
       <div class="form-group">
-        <label for="task-priority">优先级</label>
-        <select id="task-priority" v-model="form.priority" name="task_priority">
-          <option :value="undefined">未设置</option>
-          <option :value="1">高</option>
-          <option :value="2">中</option>
-          <option :value="3">低</option>
-        </select>
+        <label>优先级</label>
+        <BaseSelect
+          v-model="form.priority"
+          :options="priorityOptions"
+          placeholder="未设置"
+          block
+          aria-label="优先级"
+        />
       </div>
 
       <div class="form-group">
@@ -56,14 +57,13 @@
       </div>
 
       <div class="form-group">
-        <label for="task-repeat-type">重复类型</label>
-        <select id="task-repeat-type" v-model="form.repeat_type" name="task_repeat_type">
-          <option value="none">无</option>
-          <option value="daily">每天</option>
-          <option value="weekly">每周</option>
-          <option value="monthly">每月</option>
-          <option value="yearly">每年</option>
-        </select>
+        <label>重复类型</label>
+        <BaseSelect
+          v-model="form.repeat_type"
+          :options="repeatTypeOptions"
+          block
+          aria-label="重复类型"
+        />
       </div>
     </div>
 
@@ -115,8 +115,24 @@ import { isoToDateTimeLocal, isoToDateLocal, dateTimeLocalToISOString, dateToEnd
 import { zhCN } from '@/shared/utils/date-locale'
 import TagPicker from '@/features/tags/TagPicker.vue'
 import DateTimePicker from '@/shared/ui/DateTimePicker.vue'
+import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
 
 const themeStore = useThemeStore()
+
+const priorityOptions: SelectOption<CreateTaskPayload['priority']>[] = [
+  { label: '未设置', value: undefined },
+  { label: '高', value: 1 },
+  { label: '中', value: 2 },
+  { label: '低', value: 3 },
+]
+
+const repeatTypeOptions: SelectOption<CreateTaskPayload['repeat_type']>[] = [
+  { label: '无', value: 'none' },
+  { label: '每天', value: 'daily' },
+  { label: '每周', value: 'weekly' },
+  { label: '每月', value: 'monthly' },
+  { label: '每年', value: 'yearly' },
+]
 
 // 仅日期模式的 VueDatePicker props
 const datePickerProps = computed(() => ({
