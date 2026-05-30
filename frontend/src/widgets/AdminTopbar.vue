@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/app/stores/auth.store'
+import { useAdminAuthStore } from '@/app/stores/admin-auth.store'
 import { useThemeStore } from '@/app/stores/theme.store'
 import { useClickOutside } from '@/shared/composables/useClickOutside'
 import { revealThemeTransition } from '@/shared/utils/viewTransition'
-import { LogOut, Moon, PanelLeftClose, PanelLeftOpen, Sun, UserCircle } from 'lucide-vue-next'
+import { Home, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Sun } from 'lucide-vue-next'
 
 type SidebarToggleMode = 'desktop' | 'mobile' | null
 
@@ -23,7 +23,7 @@ defineEmits<{
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
+const adminAuthStore = useAdminAuthStore()
 const themeStore = useThemeStore()
 const isUserMenuOpen = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
@@ -35,20 +35,16 @@ function handleThemeToggle(event: MouseEvent) {
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
-    tasks: '任务中心',
-    'tasks-today': '今日任务',
-    'tasks-upcoming': '即将到期',
-    'tasks-board': '看板',
-    'reminder-configs': '提醒配置',
-    'reminder-logs': '提醒日志',
-    'api-keys': 'API Key',
-    profile: '个人资料',
+    'admin-dashboard': '仪表盘',
+    'admin-users': '用户管理',
+    'admin-tasks': '任务管理',
+    'admin-reminder-configs': '提醒配置',
+    'admin-reminder-logs': '提醒日志',
+    'admin-system-logs': '系统日志',
+    'admin-audit-logs': '操作日志',
+    'admin-config': '系统配置',
   }
-  return titles[route.name as string] || 'TODO'
-})
-
-const userInitial = computed(() => {
-  return authStore.user?.username?.charAt(0).toUpperCase() || '?'
+  return titles[route.name as string] || '后台管理'
 })
 
 const themeToggleLabel = computed(() => {
@@ -109,10 +105,15 @@ function handleBtnKeydown(e: KeyboardEvent) {
 
 useClickOutside(userMenuRef, closeUserMenuImmediate)
 
-async function handleLogout() {
+function goFrontend() {
   closeUserMenuImmediate()
-  authStore.logout()
-  await router.replace({ name: 'login' })
+  router.push('/')
+}
+
+function handleLogout() {
+  closeUserMenuImmediate()
+  adminAuthStore.logout()
+  router.push({ name: 'admin-login' })
 }
 </script>
 
@@ -156,13 +157,13 @@ async function handleLogout() {
         <button
           class="user-btn"
           type="button"
-          aria-label="用户菜单"
+          aria-label="管理员菜单"
           :aria-expanded="isUserMenuOpen"
           aria-haspopup="menu"
           @click="toggleUserMenu"
           @keydown="handleBtnKeydown"
         >
-          {{ userInitial }}
+          管
         </button>
         <Transition name="dropdown">
           <div
@@ -170,15 +171,15 @@ async function handleLogout() {
             class="user-dropdown"
             role="menu"
           >
-            <router-link
+            <button
               class="user-menu-item"
-              to="/profile"
+              type="button"
               role="menuitem"
-              @click="closeUserMenuImmediate"
+              @click="goFrontend"
             >
-              <UserCircle :size="16" />
-              <span>个人资料</span>
-            </router-link>
+              <Home :size="16" />
+              <span>返回前台</span>
+            </button>
             <button
               class="user-menu-item danger"
               type="button"
@@ -186,7 +187,7 @@ async function handleLogout() {
               @click="handleLogout"
             >
               <LogOut :size="16" />
-              <span>退出登录</span>
+              <span>退出管理</span>
             </button>
           </div>
         </Transition>
@@ -194,4 +195,3 @@ async function handleLogout() {
     </div>
   </header>
 </template>
-

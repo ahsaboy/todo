@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { adminApi } from '@/shared/api/admin-client'
+import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
 import type { PaginatedResponse } from '@/shared/api/types'
 
 interface ReminderLog {
@@ -26,6 +27,12 @@ const filterUserId = ref('')
 const filterStatus = ref('')
 const error = ref('')
 const isLoading = ref(false)
+
+const statusFilterOptions: SelectOption<string>[] = [
+  { label: '全部状态', value: '' },
+  { label: '已发送', value: 'sent' },
+  { label: '失败', value: 'failed' },
+]
 
 async function loadLogs() {
   isLoading.value = true
@@ -78,11 +85,12 @@ function statusClass(status: string): string {
         class="admin-search-input"
         style="max-width: 140px;"
       />
-      <select v-model="filterStatus" class="admin-search-input" style="max-width: 120px;">
-        <option value="">全部状态</option>
-        <option value="sent">已发送</option>
-        <option value="failed">失败</option>
-      </select>
+      <BaseSelect
+        v-model="filterStatus"
+        :options="statusFilterOptions"
+        aria-label="状态筛选"
+        style="width: 120px;"
+      />
       <button class="btn btn-primary" @click="handleFilter">筛选</button>
     </div>
 

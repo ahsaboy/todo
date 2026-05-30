@@ -83,16 +83,13 @@ const handleNavigate = (to: string) => {
     }"
   >
     <div class="sidebar-logo">
-      <span v-if="!isCollapsed">TODO</span>
-      <span v-else>T</span>
+      <span class="sidebar-logo__full">TODO</span>
+      <span class="sidebar-logo__mini" aria-hidden="true">T</span>
     </div>
 
     <nav class="sidebar-nav">
       <div class="nav-section">
-        <div
-          v-if="!isCollapsed"
-          class="nav-label"
-        >
+        <div class="nav-label">
           任务中心
         </div>
         <router-link
@@ -107,20 +104,14 @@ const handleNavigate = (to: string) => {
             class="nav-icon"
             :size="18"
           />
-          <span
-            v-if="!isCollapsed"
-            class="nav-text"
-          >
+          <span class="nav-text">
             {{ item.label }}
           </span>
         </router-link>
       </div>
 
       <div class="nav-section">
-        <div
-          v-if="!isCollapsed"
-          class="nav-label"
-        >
+        <div class="nav-label">
           配置
         </div>
         <router-link
@@ -135,10 +126,7 @@ const handleNavigate = (to: string) => {
             class="nav-icon"
             :size="18"
           />
-          <span
-            v-if="!isCollapsed"
-            class="nav-text"
-          >
+          <span class="nav-text">
             {{ item.label }}
           </span>
         </router-link>

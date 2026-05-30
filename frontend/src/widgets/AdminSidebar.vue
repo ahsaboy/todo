@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import {
   LayoutDashboard,
   Users,
@@ -6,21 +7,35 @@ import {
   BellRing,
   ScrollText,
   Settings,
-  LogOut,
   Terminal,
   ShieldCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
-import { useAdminAuthStore } from '@/app/stores/admin-auth.store'
 
-const router = useRouter()
-const adminAuthStore = useAdminAuthStore()
+type SidebarMode = 'desktop' | 'mobile'
 
 type NavItem = {
   to: string
   label: string
   icon: typeof LayoutDashboard
 }
+
+const props = withDefaults(defineProps<{
+  collapsed?: boolean
+  mode?: SidebarMode
+  showCollapseToggle?: boolean
+  closeOnNavigate?: boolean
+}>(), {
+  collapsed: false,
+  mode: 'desktop',
+})
+
+const emit = defineEmits<{
+  toggle: []
+  navigate: [to: string]
+  requestClose: [to: string]
+}>()
 
 const navItems: NavItem[] = [
   { to: '/admin/dashboard', label: '仪表盘', icon: LayoutDashboard },
@@ -33,24 +48,45 @@ const navItems: NavItem[] = [
   { to: '/admin/config', label: '系统配置', icon: Settings },
 ]
 
-function handleLogout() {
-  adminAuthStore.logout()
-  router.push({ name: 'admin-login' })
+const isDesktopMode = computed(() => props.mode === 'desktop')
+const isCollapsed = computed(() => isDesktopMode.value && props.collapsed)
+const shouldShowCollapseToggle = computed(() =>
+  props.showCollapseToggle ?? isDesktopMode.value,
+)
+
+const handleNavigate = (to: string) => {
+  emit('navigate', to)
+
+  if (props.closeOnNavigate) {
+    emit('requestClose', to)
+  }
 }
 </script>
 
 <template>
-  <aside class="app-sidebar">
+  <aside
+    class="app-sidebar"
+    :class="{
+      collapsed: isCollapsed,
+      'app-sidebar--mobile': !isDesktopMode,
+    }"
+  >
     <div class="sidebar-logo">
-      <span>后台管理</span>
+      <span class="sidebar-logo__full">后台管理</span>
+      <span class="sidebar-logo__mini" aria-hidden="true">管</span>
     </div>
+
     <nav class="sidebar-nav">
       <div class="nav-section">
+        <div class="nav-label">
+          管理
+        </div>
         <router-link
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
           class="nav-item"
+          @click="handleNavigate(item.to)"
         >
           <component
             :is="item.icon"
@@ -61,14 +97,24 @@ function handleLogout() {
         </router-link>
       </div>
     </nav>
-    <div class="sidebar-footer">
+
+    <div
+      v-if="shouldShowCollapseToggle"
+      class="sidebar-footer"
+    >
       <button
-        class="nav-item collapse-btn"
-        style="width: 100%; border: none; background: none; cursor: pointer; color: inherit;"
-        @click="handleLogout"
+        class="collapse-btn"
+        :aria-label="isCollapsed ? '展开侧边栏' : '折叠侧边栏'"
+        @click="emit('toggle')"
       >
-        <LogOut class="nav-icon" :size="18" />
-        <span class="nav-text">退出管理</span>
+        <PanelLeftOpen
+          v-if="isCollapsed"
+          :size="18"
+        />
+        <PanelLeftClose
+          v-else
+          :size="18"
+        />
       </button>
     </div>
   </aside>

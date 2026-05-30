@@ -5,7 +5,9 @@ export function resolveShellTransitionName() {
 }
 
 export function resolveShellKey(route: RouteLocationNormalizedLoaded) {
-  return route.meta.shell === 'app' ? 'app-shell' : route.fullPath
+  if (route.meta.shell === 'app') return 'app-shell'
+  if (route.meta.shell === 'admin') return 'admin-shell'
+  return route.fullPath
 }
 
 export function resolvePageTransitionName(route: RouteLocationNormalizedLoaded) {

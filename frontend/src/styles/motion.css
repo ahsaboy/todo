@@ -44,6 +44,38 @@
   transform: translateY(var(--motion-distance-xl)) scale(0.978);
 }
 
+/* 应用内页面切换：缩放淡入（新页 98%→100% 放大淡入，旧页纯淡出） */
+.route-page-enter-active {
+  will-change: opacity, transform;
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-standard),
+    transform var(--motion-duration-base) var(--motion-ease-emphasized);
+}
+
+.route-page-leave-active {
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.route-page-enter-from {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.route-page-leave-to {
+  opacity: 0;
+}
+
+/* 看板页：纯淡入淡出，避免整片卡片位移抖动 */
+.route-page-board-enter-active,
+.route-page-board-leave-active {
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.route-page-board-enter-from,
+.route-page-board-leave-to {
+  opacity: 0;
+}
+
 .overlay-motion-enter-active,
 .overlay-motion-leave-active,
 .overlay-motion-appear-active {
@@ -140,6 +172,29 @@
 .list-move-leave-active {
   position: absolute;
   width: 100%;
+}
+
+/* 主题切换的圆形揭示（View Transitions API）：
+   关闭默认的交叉淡入淡出，改由 JS 在 ::view-transition-new(root) 上做 clip-path 圆形展开。
+   新主题快照置于上层，从点击处揭示覆盖旧主题。 */
+::view-transition {
+  /* 这层覆盖整个视口的快照默认会拦截点击，设为 none 让点击穿透到真实 DOM，
+     避免动画进行中（约 450ms）其他按钮点不动；pointer-events 会继承给整棵快照树 */
+  pointer-events: none;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2147483646;
 }
 
 @media (prefers-reduced-motion: reduce) {

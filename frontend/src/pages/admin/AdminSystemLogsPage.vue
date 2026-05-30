@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Download, RefreshCw } from 'lucide-vue-next'
 import { adminApi } from '@/shared/api/admin-client'
+import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
 import type { ApiResponse } from '@/shared/api/types'
 
 interface LogFile {
@@ -153,6 +154,21 @@ function truncateMsg(msg: unknown): string {
   return msg.length > 120 ? msg.slice(0, 120) + '…' : msg
 }
 
+const fileOptions = computed<SelectOption<string>[]>(() =>
+  logFiles.value.map((f) => ({
+    label: `${f.date} (${formatSize(f.size_bytes)})`,
+    value: f.filename,
+  })),
+)
+
+const levelOptions: SelectOption<string>[] = [
+  { label: '全部级别', value: '' },
+  { label: 'debug', value: 'debug' },
+  { label: 'info', value: 'info' },
+  { label: 'warn', value: 'warn' },
+  { label: 'error', value: 'error' },
+]
+
 const totalPages = () => Math.ceil(total.value / limit)
 </script>
 
@@ -161,30 +177,20 @@ const totalPages = () => Math.ceil(total.value / limit)
     <h1 class="page-title">系统日志</h1>
 
     <div class="admin-toolbar">
-      <select
+      <BaseSelect
         v-model="selectedFile"
-        class="toolbar-select"
-      >
-        <option value="" disabled>选择日志文件</option>
-        <option
-          v-for="f in logFiles"
-          :key="f.filename"
-          :value="f.filename"
-        >
-          {{ f.date }} ({{ formatSize(f.size_bytes) }})
-        </option>
-      </select>
+        :options="fileOptions"
+        placeholder="选择日志文件"
+        aria-label="日志文件"
+        style="width: 200px;"
+      />
 
-      <select
+      <BaseSelect
         v-model="levelFilter"
-        class="toolbar-select toolbar-select--level"
-      >
-        <option value="">全部级别</option>
-        <option value="debug">debug</option>
-        <option value="info">info</option>
-        <option value="warn">warn</option>
-        <option value="error">error</option>
-      </select>
+        :options="levelOptions"
+        aria-label="日志级别"
+        style="width: 120px;"
+      />
 
       <label class="toolbar-check">
         <input
@@ -276,20 +282,6 @@ const totalPages = () => Math.ceil(total.value / limit)
 
 <style scoped>
 @import '@/widgets/admin-common.css';
-
-.toolbar-select {
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 0.85rem;
-  min-width: 160px;
-}
-
-.toolbar-select--level {
-  min-width: 100px;
-}
 
 .toolbar-check {
   display: flex;

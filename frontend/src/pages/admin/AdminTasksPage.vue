@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { adminApi } from '@/shared/api/admin-client'
 import { isoToDateTimeLocal, dateTimeLocalToISOString } from '@/shared/utils/date'
 import DateTimePicker from '@/shared/ui/DateTimePicker.vue'
+import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
 import type { PaginatedResponse } from '@/shared/api/types'
 
 interface Task {
@@ -41,6 +42,25 @@ const editDialog = ref<{ show: boolean; task: Task | null; saving: boolean; err:
 const editForm = ref({ title: '', description: '', priority: 2, due_at: '' })
 
 const priorityText: Record<number, string> = { 1: '高', 2: '中', 3: '低' }
+
+const statusFilterOptions: SelectOption<string>[] = [
+  { label: '全部状态', value: '' },
+  { label: '未完成', value: 'pending' },
+  { label: '已完成', value: 'completed' },
+]
+
+const priorityFilterOptions: SelectOption<string>[] = [
+  { label: '全部优先级', value: '' },
+  { label: '高', value: '1' },
+  { label: '中', value: '2' },
+  { label: '低', value: '3' },
+]
+
+const priorityEditOptions: SelectOption<number>[] = [
+  { label: '高', value: 1 },
+  { label: '中', value: 2 },
+  { label: '低', value: 3 },
+]
 
 async function loadTasks() {
   isLoading.value = true
@@ -144,17 +164,18 @@ const totalPages = () => Math.ceil(total.value / limit)
         class="admin-search-input"
         style="max-width: 140px;"
       />
-      <select v-model="filterStatus" class="admin-search-input" style="max-width: 120px;">
-        <option value="">全部状态</option>
-        <option value="pending">未完成</option>
-        <option value="completed">已完成</option>
-      </select>
-      <select v-model="filterPriority" class="admin-search-input" style="max-width: 120px;">
-        <option value="">全部优先级</option>
-        <option value="1">高</option>
-        <option value="2">中</option>
-        <option value="3">低</option>
-      </select>
+      <BaseSelect
+        v-model="filterStatus"
+        :options="statusFilterOptions"
+        aria-label="状态筛选"
+        style="width: 120px;"
+      />
+      <BaseSelect
+        v-model="filterPriority"
+        :options="priorityFilterOptions"
+        aria-label="优先级筛选"
+        style="width: 120px;"
+      />
       <button class="btn btn-primary" @click="handleFilter">筛选</button>
     </div>
 
@@ -226,11 +247,12 @@ const totalPages = () => Math.ceil(total.value / limit)
         </div>
         <div class="form-group">
           <label>优先级</label>
-          <select v-model.number="editForm.priority" class="form-input">
-            <option :value="1">高</option>
-            <option :value="2">中</option>
-            <option :value="3">低</option>
-          </select>
+          <BaseSelect
+            v-model="editForm.priority"
+            :options="priorityEditOptions"
+            block
+            aria-label="优先级"
+          />
         </div>
         <div class="form-group">
           <label>截止时间</label>
