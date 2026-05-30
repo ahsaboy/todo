@@ -7,6 +7,9 @@ ARG APP_VERSION
 ENV VITE_APP_VERSION=${APP_VERSION}
 ENV VITE_API_BASE_URL=/api/v1
 
+# 配置 npm 镜像源
+RUN npm config set registry https://registry.npmmirror.com
+
 WORKDIR /app
 
 COPY frontend/package.json frontend/package-lock.json* ./
@@ -39,6 +42,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -X main.version=
 
 # 运行阶段
 FROM alpine:3.19
+
+# 配置 Alpine 镜像源（解决网络问题）
+RUN echo "https://mirrors.aliyun.com/alpine/v3.19/main" > /etc/apk/repositories && \
+    echo "https://mirrors.aliyun.com/alpine/v3.19/community" >> /etc/apk/repositories
 
 RUN apk add --no-cache ca-certificates tzdata curl
 

@@ -1,0 +1,8 @@
+# registry mirrors config for BuildKit
+# 绕过 Docker Hub 直连限制，使用国内镜像
+
+[registry."docker.io"]
+  mirrors = ["docker.1ms.run", "docker.xuanyuan.me", "docker.m.daocloud.io"]
+
+[registry."ghcr.io"]
+  # ghcr.io 通常可直连，如需镜像可在此添加
