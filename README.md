@@ -9,22 +9,17 @@
 
 ## 功能特性
 
-- 用户注册/登录，个人 API Key 管理
+- 用户注册/登录，个人 API Key 管理（支持 `Authorization: Bearer`、`api-key`、`X-API-Key` 三种请求头）
 - 任务按用户隔离，每人只能看到自己的任务
-- 任务 CRUD（创建、查询、更新、删除）
-- 创建任务前必须先配置至少一个已启用的提醒渠道
-- 分页、排序、筛选、关键字搜索
-- 任务优先级（高/中/低）
-- 截止时间与提醒时间设定
-- 后台定时扫描，按用户多渠道推送提醒（飞书/钉钉/企业微信等）
+- 任务 CRUD、分页、排序、筛选、关键字搜索，支持优先级（高/中/低）与截止/提醒时间
+- 标签管理（颜色/图标/排序）、看板视图、专注计时
+- 设置了提醒时间的任务需配置至少一个已启用的提醒渠道
+- 后台定时扫描，按用户多渠道推送提醒（飞书/钉钉/企业微信/Gotify 等 webhook）
 - 重复任务（daily/weekly/monthly/yearly），完成时自动生成下一次
-- 支持 `Authorization: Bearer` 和 `api-key` 两种认证方式
-- 健康检查端点（Docker 健康探测）
-- Swagger API 文档
-- 优雅退出
-- Docker Compose 部署
-- **管理后台**（localhost-only）：仪表盘、用户/任务/提醒管理、系统配置查看
-- **国际化**（i18n）：支持中英文错误消息本地化，通过 Accept-Language 头自动切换
+- **MCP 服务器**：暴露 `/mcp` 端点，可被 LLM 客户端直接调用（12 个工具）
+- **管理后台**（localhost-only）：仪表盘、用户/任务/提醒管理、系统/操作日志、系统配置查看
+- **国际化**（i18n）：中英文错误消息本地化，通过 Accept-Language 头自动切换
+- 健康检查端点、Swagger API 文档、优雅退出、Docker Compose 部署
 
 ## 快速开始
 
@@ -36,13 +31,12 @@
 # 复制配置文件
 cp config.example.yaml config.yaml
 
-# 生成 admin token hash（用于管理后台）
-echo -n "your_secure_token" | sha256sum | cut -d' ' -f1
-
-# 编辑 config.yaml，填入 token_hash
+# 按需编辑 config.yaml（端口、时区、管理员账号、提醒模板等）
 ```
 
-**重要**：`config.yaml` 包含敏感信息（如 admin token hash），已被添加到 `.gitignore`，不会被 Git 跟踪。
+管理后台使用用户名/密码认证：在 `config.yaml` 的 `admin` 段填写 `username` / `password`，首次启动时会自动创建管理员账号。
+
+**重要**：`config.yaml` 包含敏感信息（如管理员密码），已被添加到 `.gitignore`，不会被 Git 跟踪。
 
 ### 本地运行
 
@@ -440,7 +434,6 @@ curl -X POST http://localhost:8080/mcp \
 非法值会被静默忽略,工具回落到全局配置(不返回 4xx,保证客户端健壮性)。
 
 > 数据库中可能存在旧格式(`YYYY-MM-DD HH:MM:SS`)的历史数据,读取路径兼容,但新写入数据统一为 UTC RFC3339。
-> 历史数据迁移可运行:`go run scripts/migrate_time_format.go -db data/tasks.db -dry-run`
 
 ## 业务约束
 
@@ -452,7 +445,6 @@ curl -X POST http://localhost:8080/mcp \
 
 <details>
 <summary>管理后台</summary>
-## 管理后台
 
 系统提供 localhost-only 的管理后台界面，用于系统管理和监控。
 
@@ -487,44 +479,58 @@ http://localhost:8080/admin/login
 
 | 模块 | 说明 |
 |------|------|
-| 仪表盘 | 系统统计信息（用户数、任务数、完成率、提醒配置/日志数） |
-| 用户管理 | 用户列表、搜索、删除、强制重置密码 |
-| 任务管理 | 所有用户任务列表、多条件筛选、删除 |
-| 提醒配置 | 所有用户的提醒渠道列表 |
+| 仪表盘 | 系统统计信息（用户数、任务数、完成率、提醒配置/日志数）与趋势 |
+| 用户管理 | 用户列表、搜索、删除、强制重置密码、切换管理员权限 |
+| 任务管理 | 所有用户任务列表、多条件筛选、编辑、切换完成、删除 |
+| 提醒配置 | 所有用户的提醒渠道列表、启停、删除 |
 | 提醒日志 | 提醒发送记录、状态、错误信息 |
+| 系统日志 | 按文件查看/下载服务端日志，可按级别筛选 |
+| 操作日志 | 管理员操作审计记录 |
 | 系统配置 | 当前系统配置查看（只读，隐藏敏感信息） |
 
 ### API 端点
 
-管理 API 遵循 RESTful 规范，所有端点需要 `X-Admin-Token` 请求头：
+所有 `/admin/api/*` 端点仅限 localhost 访问。除登录外均需 `Authorization: Bearer <api_key>`（管理员账号的 API Key）：
 
 ```bash
-# 认证（用户名密码方式）
-POST /admin/api/auth/verify
-Body: {"username": "admin", "password": "admin123"}
+# 登录（用户名密码），返回管理员 api_key
+POST /admin/api/auth/login
+Body: {"account": "admin", "password": "admin123"}
 
-# 获取系统统计
+# 统计
 GET /admin/api/stats
+GET /admin/api/stats/trends
 
 # 用户管理
-GET /admin/api/users?page=1&limit=20&search=<keyword>
-GET /admin/api/users/:id
+GET    /admin/api/users?page=1&limit=20&search=<keyword>
+GET    /admin/api/users/:id
 DELETE /admin/api/users/:id
-POST /admin/api/users/:id/reset-password
-Body: {"new_password": "new_password"}
+POST   /admin/api/users/:id/reset-password   Body: {"new_password": "..."}
+PATCH  /admin/api/users/:id/admin            # 切换管理员权限
 
 # 任务管理
-GET /admin/api/tasks?page=1&limit=20&user_id=<id>&status=<pending|completed>
+GET    /admin/api/tasks?page=1&limit=20&user_id=<id>&status=<pending|completed>&priority=<1|2|3>
+PATCH  /admin/api/tasks/:id/toggle
+PUT    /admin/api/tasks/:id
+DELETE /admin/api/tasks/:id
 
 # 提醒管理
-GET /admin/api/reminder-configs?page=1&limit=20
-GET /admin/api/reminder-logs?page=1&limit=20
+GET    /admin/api/reminder-configs?page=1&limit=20
+PATCH  /admin/api/reminder-configs/:id/toggle
+DELETE /admin/api/reminder-configs/:id
+GET    /admin/api/reminder-logs?page=1&limit=20
 
-# 系统配置
+# 系统配置 / 日志 / 审计
 GET /admin/api/config
+GET /admin/api/audit-logs?page=1&limit=20
+GET /admin/api/system-logs
+GET /admin/api/system-logs/:filename/entries?page=1&limit=50&level=<level>
+GET /admin/api/system-logs/:filename/download
 ```
 </details>
-## 项目结构
+
+<details>
+<summary>项目结构</summary>
 
 ```
 TODO/
@@ -543,8 +549,7 @@ TODO/
 │   │   ├── user.go                 # 用户数据模型
 │   │   ├── api_key.go              # API Key 数据模型
 │   │   ├── tag.go                  # 标签数据模型
-│   │   ├── reminder_config.go      # 提醒配置数据模型
-│   │   └── reminder_log.go         # 提醒日志数据模型
+│   │   └── reminder_config.go      # 提醒配置数据模型
 │   ├── handlers/
 │   │   ├── auth_handler.go         # 认证 HTTP 处理（注册/登录/Key管理）
 │   │   ├── task_handler.go         # 任务 HTTP 处理
@@ -560,7 +565,8 @@ TODO/
 │   │   ├── task_repo.go            # 任务数据库操作
 │   │   ├── tag_repo.go             # 标签数据库操作
 │   │   ├── reminder_config_repo.go # 提醒配置数据库操作
-│   │   └── reminder_log_repo.go    # 提醒日志数据库操作
+│   │   ├── reminder_log_repo.go    # 提醒日志数据库操作
+│   │   └── audit_log_repo.go       # 管理员操作审计日志
 │   ├── service/
 │   │   ├── auth_service.go         # 认证逻辑
 │   │   ├── task_service.go         # 业务逻辑
@@ -569,17 +575,29 @@ TODO/
 │   │   ├── reminder_config_service.go  # 提醒配置管理
 │   │   └── reminder_log_service.go # 提醒日志管理
 │   ├── middleware/
+│   │   ├── requestid.go            # 请求 ID 注入
 │   │   ├── auth.go                 # 认证中间件（Bearer/api-key/X-API-Key）
 │   │   ├── admin_auth.go           # 管理后台认证中间件
-│   │   ├── admin_rate_limit.go     # 管理后台限流中间件
-│   │   └── localhost.go            # 本地访问限制中间件
+│   │   ├── localhost.go            # 本地访问限制中间件
+│   │   ├── ratelimit.go            # API 限流中间件
+│   │   └── admin_rate_limit.go     # 管理后台限流中间件
+│   ├── mcp/                        # MCP 服务器（Streamable HTTP）
+│   │   ├── server.go               # MCP 服务注册与传输
+│   │   ├── auth.go                 # api-key 认证
+│   │   ├── context.go              # 请求上下文（时区/选项 Header）
+│   │   ├── tools_task.go           # 任务工具（6 个）
+│   │   ├── tools_reminder.go       # 提醒配置工具（5 个）
+│   │   ├── tools_user.go           # 用户信息工具（1 个）
+│   │   └── tools_helpers.go        # 工具公共辅助
 │   ├── views/                      # 视图层（API 出参转换）
 │   │   └── views.go                # TaskView/UserResponseView 等视图函数
 │   ├── utils/
 │   │   ├── response.go             # 统一响应格式（含本地化响应）
-│   │   └── validator.go            # 参数校验
-│   └── timezone/                   # 时区处理模块
-│       └── timezone.go             # 时区解析、格式化、上下文管理
+│   │   ├── validator.go            # 参数校验
+│   │   └── time.go                 # 时间解析工具
+│   ├── timezone/                   # 时区处理模块
+│   │   └── timezone.go             # 时区解析、格式化、上下文管理
+│   └── testutil/                   # 测试用 mock repo/service
 ├── docs/                           # Swagger 文档（自动生成）
 ├── frontend/                       # Vue 前端源码
 │   ├── Dockerfile                  # 分离部署前端 nginx 镜像
@@ -591,17 +609,20 @@ TODO/
 │   │   ├── AdminTasksPage.vue      # 任务管理
 │   │   ├── AdminReminderConfigsPage.vue  # 提醒配置
 │   │   ├── AdminReminderLogsPage.vue     # 提醒日志
+│   │   ├── AdminSystemLogsPage.vue       # 系统日志
+│   │   ├── AdminAuditLogsPage.vue        # 操作日志
 │   │   └── AdminConfigPage.vue     # 系统配置
 │   └── src/widgets/
-│       ├── AdminLayout.vue         # 管理后台布局
+│       ├── AdminLayout.vue         # 管理后台布局（折叠 + 移动端抽屉）
 │       ├── AdminSidebar.vue        # 管理后台侧边栏
+│       ├── AdminTopbar.vue         # 管理后台顶栏（主题切换 + 管理员菜单）
+│       ├── AdminMobileBottomNav.vue  # 管理后台移动端底部导航
 │       └── admin-common.css        # 管理后台公共样式
 ├── web/                            # Go embed 前端构建产物入口
 │   ├── embed.go                    # 使用 //go:embed all:dist
 │   └── dist/                       # make build 生成并复制的静态文件
 ├── scripts/                        # 构建和部署脚本
-│   ├── docker-push.sh              # 多平台 Docker 镜像构建和推送（Linux/macOS）
-│   ├── docker-push.ps1             # 多平台 Docker 镜像构建和推送（Windows）
+│   ├── check-api-paths.mjs         # 校验前端 API 路径与后端路由一致
 │   └── buildkitd.toml              # BuildKit 守护进程配置
 ├── config.example.yaml             # 配置示例文件（敏感信息已隐藏）
 ├── Dockerfile                      # 单体镜像多阶段构建
@@ -610,6 +631,7 @@ TODO/
 ```
 
 **注意**：`config.yaml` 包含敏感信息，已被 Git 忽略。首次运行前需要复制 `config.example.yaml`。
+</details>
 
 ## Makefile 命令
 
