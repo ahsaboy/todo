@@ -135,33 +135,123 @@ func (h *AdminHandler) generateAdminLoginKey(ctx context.Context, userID int64) 
 }
 
 type adminStats struct {
-	TotalUsers            int64 `json:"total_users"`
-	TotalTasks            int64 `json:"total_tasks"`
-	CompletedTasks        int64 `json:"completed_tasks"`
-	TotalReminderConfigs  int64 `json:"total_reminder_configs"`
-	TotalReminderLogs     int64 `json:"total_reminder_logs"`
+	TotalUsers            int64   `json:"total_users"`
+	TotalTasks            int64   `json:"total_tasks"`
+	CompletedTasks        int64   `json:"completed_tasks"`
+	TotalReminderConfigs  int64   `json:"total_reminder_configs"`
+	TotalReminderLogs     int64   `json:"total_reminder_logs"`
+	TodayNewTasks         int64   `json:"today_new_tasks"`
+	TodayNewUsers         int64   `json:"today_new_users"`
+	ActiveUsers7d         int64   `json:"active_users_7d"`
+	PriorityDist          []adminPriorityCount `json:"priority_dist"`
+	CompletionTrend       []adminDayCount      `json:"completion_trend"`
+	TopTags               []adminTagCount      `json:"top_tags"`
+}
+
+type adminPriorityCount struct {
+	Priority int   `json:"priority"`
+	Count    int64 `json:"count"`
+}
+
+type adminTagCount struct {
+	Tag   string `json:"tag"`
+	Count int64  `json:"count"`
 }
 
 func (h *AdminHandler) GetStats(c *gin.Context) {
+	ctx := c.Request.Context()
 	var stats adminStats
+
 	const statsQuery = `
 		SELECT
 			(SELECT COUNT(*) FROM users) AS total_users,
 			(SELECT COUNT(*) FROM tasks) AS total_tasks,
 			(SELECT COUNT(*) FROM tasks WHERE completed = 1) AS completed_tasks,
 			(SELECT COUNT(*) FROM user_reminder_configs) AS total_reminder_configs,
-			(SELECT COUNT(*) FROM reminder_logs) AS total_reminder_logs
+			(SELECT COUNT(*) FROM reminder_logs) AS total_reminder_logs,
+			(SELECT COUNT(*) FROM tasks WHERE DATE(created_at) = DATE('now')) AS today_new_tasks,
+			(SELECT COUNT(*) FROM users WHERE DATE(created_at) = DATE('now')) AS today_new_users,
+			(SELECT COUNT(DISTINCT user_id) FROM tasks WHERE created_at >= DATE('now', '-7 days')) AS active_users_7d
 	`
-	if err := h.db.QueryRowContext(c.Request.Context(), statsQuery).Scan(
+	if err := h.db.QueryRowContext(ctx, statsQuery).Scan(
 		&stats.TotalUsers,
 		&stats.TotalTasks,
 		&stats.CompletedTasks,
 		&stats.TotalReminderConfigs,
 		&stats.TotalReminderLogs,
+		&stats.TodayNewTasks,
+		&stats.TodayNewUsers,
+		&stats.ActiveUsers7d,
 	); err != nil {
 		utils.RespondLocalizedInternalError(c, "system.stats", err)
 		return
 	}
+
+	// 任务优先级分布
+	rows1, err := h.db.QueryContext(ctx, `SELECT COALESCE(priority, 0) as p, COUNT(*) FROM tasks GROUP BY p ORDER BY p`)
+	if err != nil {
+		utils.RespondLocalizedInternalError(c, "system.stats", err)
+		return
+	}
+	defer rows1.Close()
+	for rows1.Next() {
+		var pc adminPriorityCount
+		if err := rows1.Scan(&pc.Priority, &pc.Count); err == nil {
+			stats.PriorityDist = append(stats.PriorityDist, pc)
+		}
+	}
+	if err := rows1.Err(); err != nil {
+		utils.RespondLocalizedInternalError(c, "system.stats", err)
+		return
+	}
+
+	// 近7天每日完成任务数
+	rows2, err := h.db.QueryContext(ctx, `
+		SELECT DATE(updated_at) as day, COUNT(*) as cnt
+		FROM tasks
+		WHERE completed = 1 AND updated_at >= DATE('now', '-7 days')
+		GROUP BY day ORDER BY day`)
+	if err != nil {
+		utils.RespondLocalizedInternalError(c, "system.stats", err)
+		return
+	}
+	defer rows2.Close()
+	for rows2.Next() {
+		var dc adminDayCount
+		if err := rows2.Scan(&dc.Date, &dc.Count); err == nil {
+			stats.CompletionTrend = append(stats.CompletionTrend, dc)
+		}
+	}
+	if err := rows2.Err(); err != nil {
+		utils.RespondLocalizedInternalError(c, "system.stats", err)
+		return
+	}
+
+	// 热门标签 Top 8
+	rows3, err := h.db.QueryContext(ctx, `
+		SELECT tag, COUNT(*) as cnt
+		FROM (
+			SELECT json_each.value as tag
+			FROM tasks, json_each(tasks.tags)
+			WHERE tasks.tags IS NOT NULL AND tasks.tags != '[]'
+		)
+		GROUP BY tag ORDER BY cnt DESC LIMIT 8`)
+	if err != nil {
+		utils.RespondLocalizedInternalError(c, "system.stats", err)
+		return
+	}
+	defer rows3.Close()
+	for rows3.Next() {
+		var tc adminTagCount
+		if err := rows3.Scan(&tc.Tag, &tc.Count); err == nil {
+			stats.TopTags = append(stats.TopTags, tc)
+		}
+	}
+	if err := rows3.Err(); err != nil {
+		utils.RespondLocalizedInternalError(c, "system.stats", err)
+		return
+	}
+
 	utils.RespondSuccess(c, stats)
 }
 
@@ -198,6 +288,10 @@ func (h *AdminHandler) GetTrends(c *gin.Context) {
 			trends.TasksPerDay = append(trends.TasksPerDay, dc)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		utils.RespondLocalizedInternalError(c, "system.task_trends", err)
+		return
+	}
 
 	rows2, err := h.db.QueryContext(ctx, `
 		SELECT DATE(created_at) as day, COUNT(*) as cnt
@@ -215,6 +309,10 @@ func (h *AdminHandler) GetTrends(c *gin.Context) {
 			trends.UsersPerDay = append(trends.UsersPerDay, dc)
 		}
 	}
+	if err := rows2.Err(); err != nil {
+		utils.RespondLocalizedInternalError(c, "user.list", err)
+		return
+	}
 
 	rows3, err := h.db.QueryContext(ctx, `SELECT status, COUNT(*) FROM reminder_logs GROUP BY status`)
 	if err != nil {
@@ -228,6 +326,10 @@ func (h *AdminHandler) GetTrends(c *gin.Context) {
 		if err := rows3.Scan(&status, &count); err == nil {
 			trends.ReminderStatusDist[status] = count
 		}
+	}
+	if err := rows3.Err(); err != nil {
+		utils.RespondLocalizedInternalError(c, "system.reminder_status", err)
+		return
 	}
 
 	utils.RespondSuccess(c, trends)

@@ -34,6 +34,7 @@ html[data-theme='light'] {
   --color-orbit-active: var(--color-primary);
   --color-orbit-pending: var(--color-text-muted);
   --color-orbit-urgent: var(--color-danger);
+  --color-glow-primary: rgb(37 111 108 / 15%);
   --color-glow-success: rgb(26 127 55 / 18%);
   --color-glow-warning: rgb(183 110 0 / 18%);
   --color-glow-info: rgb(23 105 170 / 18%);
@@ -89,6 +90,7 @@ html[data-theme='dark'] {
   --color-orbit-active: var(--color-primary);
   --color-orbit-pending: var(--color-text-muted);
   --color-orbit-urgent: var(--color-danger);
+  --color-glow-primary: rgb(56 217 196 / 18%);
   --color-glow-success: rgb(46 232 137 / 20%);
   --color-glow-warning: rgb(255 184 77 / 22%);
   --color-glow-info: rgb(107 220 255 / 22%);

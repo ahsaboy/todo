@@ -242,52 +242,6 @@ const totalPages = () => Math.ceil(total.value / limit)
 <style scoped>
 @import '@/widgets/admin-common.css';
 
-.admin-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.admin-modal {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 1.5rem;
-  min-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.admin-modal h3 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.form-input {
-  padding: 0.4rem 0.7rem;
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
 .username-link {
   color: var(--color-primary);
   cursor: pointer;
@@ -298,12 +252,6 @@ const totalPages = () => Math.ceil(total.value / limit)
 
 .username-link:hover {
   text-decoration-style: solid;
-}
-
-.badge-muted {
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
 }
 
 .detail-grid {
