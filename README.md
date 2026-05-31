@@ -7,6 +7,12 @@
 
 一个轻量级的多用户 TODO 任务管理服务，基于 Go + Gin + SQLite，支持用户注册/登录、个人 API Key、多渠道提醒推送。
 
+## 界面预览
+
+![登录页](img/login.png)
+
+![主页面](img/main_page.png)
+
 ## 功能特性
 
 - 用户注册/登录，个人 API Key 管理（支持 `Authorization: Bearer`、`api-key`、`X-API-Key` 三种请求头）

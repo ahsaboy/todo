@@ -1,4 +1,10 @@
-.route-shell-stage,
+.route-shell-stage {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .route-page-stage {
   position: relative;
   width: 100%;
@@ -42,6 +48,42 @@
 .route-shell-appear-from .auth-card {
   opacity: 0;
   transform: translateY(var(--motion-distance-xl)) scale(0.978);
+}
+
+/* Brand panel entrance: slide in from left */
+.route-shell-enter-active .auth-brand,
+.route-shell-appear-active .auth-brand {
+  transition:
+    opacity var(--motion-duration-slow) var(--motion-ease-emphasized),
+    transform var(--motion-duration-slow) var(--motion-ease-emphasized);
+  transition-delay: 50ms;
+}
+
+.route-shell-enter-from .auth-brand,
+.route-shell-appear-from .auth-brand {
+  opacity: 0;
+  transform: translateX(calc(var(--motion-distance-xl) * -1));
+}
+
+/* 错误提示：从上方滑入淡出 */
+.error-slide-enter-active {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-emphasized);
+  will-change: opacity, transform;
+}
+
+.error-slide-leave-active {
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.error-slide-enter-from {
+  opacity: 0;
+  transform: translateY(calc(var(--motion-distance-sm) * -1));
+}
+
+.error-slide-leave-to {
+  opacity: 0;
 }
 
 /* 应用内页面切换：缩放淡入（新页 98%→100% 放大淡入，旧页纯淡出） */

@@ -65,6 +65,19 @@ html[data-theme='light'] {
   --toolbar-height: 48px;
   --bottom-nav-height: 56px;
   --content-padding: 24px;
+
+  /* Auth brand panel (always dark, not theme-dependent) */
+  --auth-brand-bg: #0b0b0f;
+  --auth-brand-bg-deep: #0e1018;
+  --auth-brand-glow-green: rgba(56, 217, 196, 0.08);
+  --auth-brand-glow-gold: rgba(240, 192, 64, 0.06);
+  --auth-brand-text: #edf7ff;
+  --auth-brand-text-muted: rgba(237, 247, 255, 0.5);
+  --auth-accent: #f0c040;
+  --auth-brand-green: #38d9c4;
+  --auth-orbit-color: rgba(240, 192, 64, 0.4);
+  --auth-orbit-ring: rgba(240, 192, 64, 0.12);
+  --auth-orbit-duration: 20s;
 }
 
 html[data-theme='light'] {
