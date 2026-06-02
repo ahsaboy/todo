@@ -6,6 +6,7 @@
 @import './auth.css';
 @import '@vuepic/vue-datepicker/dist/main.css';
 @import './datepicker-theme.css';
+@import '@/widgets/admin-common.css';
 
 * {
   box-sizing: border-box;
@@ -85,6 +86,18 @@ select {
   text-transform: uppercase;
 }
 
+/* 全局错误信息卡片(auth/admin/普通页统一风格)*/
+.error-message {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 22%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-glow-danger) 72%, transparent);
+  color: var(--color-danger);
+  font-size: 14px;
+  line-height: 20px;
+}
+
 /* 圆形勾选框 - Todoist 风格 */
 .checkbox-circle {
   --cb-size: 20px;
@@ -125,16 +138,7 @@ select {
   border-top: none;
   border-left: none;
   transform: rotate(45deg);
-  animation: checkmark var(--motion-duration-fast) ease-in-out;
-}
-
-@keyframes checkmark {
-  from {
-    transform: rotate(45deg) scale(0);
-  }
-  to {
-    transform: rotate(45deg) scale(1);
-  }
+  animation: checkmark var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .checkbox-circle:focus-visible {

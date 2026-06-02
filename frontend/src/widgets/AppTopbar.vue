@@ -5,7 +5,7 @@ import { useAuthStore } from '@/app/stores/auth.store'
 import { useThemeStore } from '@/app/stores/theme.store'
 import { useClickOutside } from '@/shared/composables/useClickOutside'
 import { revealThemeTransition } from '@/shared/utils/viewTransition'
-import { LogOut, Moon, PanelLeftClose, PanelLeftOpen, Sun, UserCircle } from 'lucide-vue-next'
+import { LogOut, Moon, PanelLeftClose, Sun, UserCircle } from 'lucide-vue-next'
 
 type SidebarToggleMode = 'desktop' | 'mobile' | null
 
@@ -126,12 +126,8 @@ async function handleLogout() {
       @click="$emit('toggleSidebar')"
     >
       <PanelLeftClose
-        v-if="isSidebarOpen"
         :size="18"
-      />
-      <PanelLeftOpen
-        v-else
-        :size="18"
+        :class="['sidebar-toggle__icon', { 'is-closed': !isSidebarOpen }]"
       />
     </button>
     <h1 class="page-title">{{ pageTitle }}</h1>

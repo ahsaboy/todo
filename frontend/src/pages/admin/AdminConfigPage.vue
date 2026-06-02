@@ -1,23 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { adminApi } from '@/shared/api/admin-client'
+import { useFetch } from '@/shared/composables/useFetch'
 import type { ApiResponse } from '@/shared/api/types'
 
-const configJson = ref('')
-const error = ref('')
-const isLoading = ref(true)
-const copied = ref(false)
-
-onMounted(async () => {
-  try {
-    const res = await adminApi.get<ApiResponse<unknown>>('/config')
-    configJson.value = JSON.stringify(res.data, null, 2)
-  } catch {
-    error.value = '加载系统配置失败'
-  } finally {
-    isLoading.value = false
-  }
+const { data: configData, isLoading, error } = useFetch({
+  fetcher: () => adminApi.get<ApiResponse<unknown>>('/config').then(r => r.data),
+  errorPrefix: '加载系统配置',
 })
+
+const configJson = computed(() => configData.value ? JSON.stringify(configData.value, null, 2) : '')
+const copied = ref(false)
 
 async function copyConfig() {
   try {
@@ -85,19 +78,4 @@ async function copyConfig() {
   color: var(--color-text);
   max-height: 70vh;
 }
-
-.btn {
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-.btn:hover { background: var(--color-surface-hover, rgba(0,0,0,0.07)); }
-.btn-sm { padding: 0.2rem 0.55rem; font-size: 0.8rem; }
-
-.error-message { color: var(--color-danger, #e55); font-size: 0.85rem; }
-.loading-hint { color: var(--color-text-muted, #888); margin-top: 2rem; }
 </style>

@@ -238,29 +238,3 @@
 ::view-transition-new(root) {
   z-index: 2147483646;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --motion-duration-fast: 1ms;
-    --motion-duration-base: 1ms;
-    --motion-duration-slow: 1ms;
-    --motion-distance-sm: 0px;
-    --motion-distance-md: 0px;
-    --motion-distance-lg: 0px;
-    --motion-distance-xl: 0px;
-    --motion-scale-soft: 1;
-  }
-
-  html:focus-within {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 1ms !important;
-  }
-}

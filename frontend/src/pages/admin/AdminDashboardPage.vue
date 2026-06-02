@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { adminApi } from '@/shared/api/admin-client'
+import { useFetch } from '@/shared/composables/useFetch'
 import type { ApiResponse } from '@/shared/api/types'
 import * as echarts from 'echarts/core'
 import { PieChart, LineChart, BarChart } from 'echarts/charts'
@@ -60,10 +61,19 @@ interface Trends {
   reminder_status_dist: Record<string, number>
 }
 
-const stats = ref<Stats | null>(null)
-const trends = ref<Trends | null>(null)
-const error = ref('')
-const loading = ref(true)
+const { data: dashboardData, error, isLoading: loading } = useFetch({
+  fetcher: async () => {
+    const [statsRes, trendsRes] = await Promise.all([
+      adminApi.get<ApiResponse<Stats>>('/stats'),
+      adminApi.get<ApiResponse<Trends>>('/stats/trends'),
+    ])
+    return { stats: statsRes.data, trends: trendsRes.data }
+  },
+  errorPrefix: '加载统计数据',
+})
+
+const stats = computed(() => dashboardData.value?.stats ?? null)
+const trends = computed(() => dashboardData.value?.trends ?? null)
 
 const completionChartRef = ref<HTMLDivElement | null>(null)
 const taskTrendChartRef = ref<HTMLDivElement | null>(null)
@@ -190,20 +200,10 @@ watch(() => themeStore.isDark, () => {
   }
 })
 
-onMounted(async () => {
-  try {
-    const [statsRes, trendsRes] = await Promise.all([
-      adminApi.get<ApiResponse<Stats>>('/stats'),
-      adminApi.get<ApiResponse<Trends>>('/stats/trends'),
-    ])
-    stats.value = statsRes.data
-    trends.value = trendsRes.data
+watch(dashboardData, async (data) => {
+  if (data) {
     await nextTick()
     initCharts()
-  } catch {
-    error.value = '加载统计数据失败'
-  } finally {
-    loading.value = false
   }
 })
 
@@ -380,7 +380,7 @@ function initUserTrendChart(): echarts.ECharts | null {
     <div v-if="error" class="error-message" style="margin-bottom: 1rem;">{{ error }}</div>
 
     <!-- 概览卡片 -->
-    <div v-if="stats" class="admin-stats-grid">
+    <div v-if="stats" class="admin-stats-grid motion-stagger">
       <div class="admin-stat-card">
         <div class="stat-icon icon-info">
           <Users :size="24" />
@@ -454,7 +454,7 @@ function initUserTrendChart(): echarts.ECharts | null {
 
     <!-- 图表区域 -->
     <template v-if="stats || trends">
-      <div class="admin-charts-grid">
+      <div class="admin-charts-grid motion-stagger">
         <div class="admin-chart-card">
           <h3 class="admin-chart-title">任务完成率</h3>
           <div ref="completionChartRef" class="admin-chart-container"></div>
@@ -494,6 +494,3 @@ function initUserTrendChart(): echarts.ECharts | null {
   </div>
 </template>
 
-<style scoped>
-@import '@/widgets/admin-common.css';
-</style>

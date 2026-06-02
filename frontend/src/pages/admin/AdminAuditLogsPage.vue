@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
 import { adminApi } from '@/shared/api/admin-client'
-import type { PaginatedResponse } from '@/shared/api/types'
+import { useCrudList } from '@/shared/composables/useCrudList'
+import PagePagination from '@/shared/ui/PagePagination.vue'
+import DataTable from '@/shared/ui/DataTable.vue'
+import type { DataTableConfig } from '@/shared/ui/data-table/types'
 
 interface AuditLog {
   id: number
@@ -14,33 +16,11 @@ interface AuditLog {
   created_at: string
 }
 
-const logs = ref<AuditLog[]>([])
-const total = ref(0)
-const page = ref(1)
-const limit = 20
-const error = ref('')
-const isLoading = ref(false)
-
-async function loadLogs() {
-  isLoading.value = true
-  error.value = ''
-  try {
-    const res = await adminApi.get<PaginatedResponse<AuditLog>>(
-      `/audit-logs?page=${page.value}&limit=${limit}`
-    )
-    logs.value = res.data
-    total.value = res.meta.total_items
-  } catch {
-    error.value = '加载操作日志失败'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-onMounted(loadLogs)
-watch(page, loadLogs)
-
-const totalPages = () => Math.ceil(total.value / limit)
+const { items, total, page, totalPages, isLoading, error, setPage } = useCrudList<AuditLog>({
+  client: adminApi,
+  buildEndpoint: ({ page, limit }) => `/audit-logs?page=${page}&limit=${limit}`,
+  errorPrefix: '加载操作日志',
+})
 
 const actionText: Record<string, string> = {
   delete_user: '删除用户',
@@ -60,76 +40,26 @@ const targetText: Record<string, string> = {
   reminder_config: '提醒配置',
 }
 
-function formatAction(action: string): string {
-  return actionText[action] || action
-}
-
-function formatTarget(type: string): string {
-  return targetText[type] || type
+const config: DataTableConfig<AuditLog> = {
+  columns: [
+    { key: 'id', label: 'ID', width: '60px' },
+    { key: 'admin_name', label: '管理员', formatter: (_, row) => row.admin_name || `管理员#${row.admin_user_id}` },
+    { key: 'action', label: '操作', cellClass: 'badge badge-primary', formatter: (v) => actionText[v] || v },
+    { key: 'target_type', label: '目标类型', formatter: (v) => targetText[v] || v },
+    { key: 'target_id', label: '目标 ID', formatter: (v) => v != null ? String(v) : '—' },
+    { key: 'detail', label: '详情', truncate: true, width: '200px', cellClass: 'text-truncate-muted', formatter: (v) => v || '—' },
+    { key: 'created_at', label: '时间' },
+  ],
+  emptyText: '暂无操作日志',
 }
 </script>
 
 <template>
   <div class="page-container">
     <h1 class="page-title">操作日志</h1>
-
     <div v-if="error" class="error-message">{{ error }}</div>
-
-    <div class="admin-table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>管理员</th>
-            <th>操作</th>
-            <th>目标类型</th>
-            <th>目标 ID</th>
-            <th>详情</th>
-            <th>时间</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="isLoading">
-            <td colspan="7" style="text-align:center; padding: 2rem;">加载中...</td>
-          </tr>
-          <tr v-else-if="!logs.length">
-            <td colspan="7" style="text-align:center; padding: 2rem; color: var(--color-text-muted);">暂无操作日志</td>
-          </tr>
-          <tr v-for="l in logs" :key="l.id">
-            <td>{{ l.id }}</td>
-            <td>{{ l.admin_name || '管理员#' + l.admin_user_id }}</td>
-            <td><span class="badge badge-action">{{ formatAction(l.action) }}</span></td>
-            <td>{{ formatTarget(l.target_type) }}</td>
-            <td>{{ l.target_id ?? '—' }}</td>
-            <td class="detail-cell" :title="l.detail">{{ l.detail || '—' }}</td>
-            <td>{{ l.created_at }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="admin-pagination">
-      <span>共 {{ total }} 条</span>
-      <button :disabled="page <= 1" class="btn btn-sm" @click="page--">上一页</button>
-      <span>{{ page }} / {{ totalPages() }}</span>
-      <button :disabled="page >= totalPages()" class="btn btn-sm" @click="page++">下一页</button>
-    </div>
+    <DataTable :config="config" :data="items" :is-loading="isLoading" />
+    <PagePagination :page="page" :total="total" :total-pages="totalPages" @update:page="setPage" />
   </div>
 </template>
 
-<style scoped>
-@import '@/widgets/admin-common.css';
-
-.badge-action {
-  background: var(--color-primary-bg, #e8f0fe);
-  color: var(--color-primary, #4a9eff);
-}
-.detail-cell {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--color-text-muted, #888);
-  font-size: 0.8rem;
-}
-</style>

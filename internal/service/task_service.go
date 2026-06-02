@@ -116,14 +116,14 @@ func (s *TaskService) ToggleComplete(ctx context.Context, userID, id int64, focu
 func (s *TaskService) buildNextOccurrence(t *models.Task) (*models.Task, error) {
 	var nextDue, nextRemind *string
 
-	if t.DueAt != nil {
+	if t.DueAt != nil && *t.DueAt != "" {
 		next, err := models.CalculateNextDueDate(*t.DueAt, t.RepeatType, t.RepeatInterval)
 		if err != nil {
 			return nil, fmt.Errorf("calculate next due_at: %w", err)
 		}
 		nextDue = &next
 	}
-	if t.RemindAt != nil {
+	if t.RemindAt != nil && *t.RemindAt != "" {
 		next, err := models.CalculateNextDueDate(*t.RemindAt, t.RepeatType, t.RepeatInterval)
 		if err != nil {
 			return nil, fmt.Errorf("calculate next remind_at: %w", err)

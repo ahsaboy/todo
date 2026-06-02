@@ -34,13 +34,13 @@
 .auth-brand::before {
   background: radial-gradient(ellipse at 30% 20%, var(--auth-brand-glow-green) 0%, transparent 50%);
   background-size: 200% 200%;
-  animation: gradient-drift 20s ease-in-out infinite alternate;
+  animation: gradient-drift 20s var(--motion-ease-standard) infinite alternate;
 }
 
 .auth-brand::after {
   background: radial-gradient(ellipse at 70% 80%, var(--auth-brand-glow-gold) 0%, transparent 50%);
   background-size: 200% 200%;
-  animation: gradient-drift 30s ease-in-out infinite alternate-reverse;
+  animation: gradient-drift 30s var(--motion-ease-standard) infinite alternate-reverse;
 }
 
 .auth-brand__content {
@@ -60,14 +60,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  box-shadow: 0 0 80px color-mix(in srgb, var(--auth-brand-green) 22%, transparent);
   animation: orbit-spin var(--auth-orbit-duration) linear infinite;
+  transition: box-shadow var(--motion-duration-slow) var(--motion-ease-emphasized);
+}
+
+.auth-brand__logo-orbit--interactive:hover {
+  box-shadow:
+    0 0 120px color-mix(in srgb, var(--auth-brand-green) 35%, transparent),
+    0 0 40px color-mix(in srgb, var(--auth-accent) 18%, transparent);
 }
 
 .auth-brand__logo {
   width: 96px;
   height: 96px;
-  filter: drop-shadow(0 0 20px color-mix(in srgb, var(--auth-brand-green) 25%, transparent));
+  filter: drop-shadow(0 0 20px color-mix(in srgb, var(--auth-brand-green) 30%, transparent));
   animation: orbit-spin var(--auth-orbit-duration) linear infinite reverse;
+  transition: transform var(--motion-duration-base) var(--motion-ease-emphasized);
+}
+
+.auth-brand__logo-orbit--interactive:hover .auth-brand__logo {
+  transform: scale(1.05);
 }
 
 /* Breathing glow via pseudo-element on orbit wrapper */
@@ -483,19 +497,6 @@
 .auth-card button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* ── Error message ──────────────────────────────────────── */
-
-.error-message {
-  margin: 0 0 16px;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--color-glow-danger) 72%, transparent);
-  color: var(--color-danger);
-  font-size: 14px;
-  line-height: 20px;
 }
 
 /* ── Bottom link ────────────────────────────────────────── */

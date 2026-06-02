@@ -83,7 +83,7 @@ function onHexInput(event: Event) {
   color: #fff;
   font-size: 14px;
   font-weight: 600;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .color-swatch:hover {

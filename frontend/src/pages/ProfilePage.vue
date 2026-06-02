@@ -2,21 +2,22 @@
   <div class="profile-page">
     <h2>个人资料</h2>
 
-    <Transition name="sk-fade" mode="out-in">
-      <ProfileSkeleton v-if="loading" key="skeleton" />
-
-      <div v-else key="content">
-        <div class="form-section">
-          <h3>基本信息</h3>
-          <ProfileForm :user="user" @submit="handleProfileSubmit" />
-        </div>
-
-        <div class="form-section">
-          <h3>修改密码</h3>
-          <PasswordForm @submit="handlePasswordSubmit" />
-        </div>
+    <PageShell
+      :loading="loading"
+      :error="loadError"
+      :skeleton="ProfileSkeleton"
+      :error-retry="loadProfile"
+    >
+      <div class="form-section">
+        <h3>基本信息</h3>
+        <ProfileForm :user="user" @submit="handleProfileSubmit" />
       </div>
-    </Transition>
+
+      <div class="form-section">
+        <h3>修改密码</h3>
+        <PasswordForm @submit="handlePasswordSubmit" />
+      </div>
+    </PageShell>
 
     <div v-if="message" class="message" :class="messageType">
       {{ message }}
@@ -25,36 +26,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { getProfile, updateProfile, changePassword } from '@/entities/user/api'
 import { toUser } from '@/entities/user/mapper'
 import type { User, ChangePasswordPayload } from '@/entities/user/model'
+import { useFetch } from '@/shared/composables/useFetch'
 import ProfileForm from '@/features/user/ProfileForm.vue'
 import PasswordForm from '@/features/user/PasswordForm.vue'
 import ProfileSkeleton from '@/shared/ui/ProfileSkeleton.vue'
+import PageShell from '@/shared/ui/PageShell.vue'
 
-const user = ref<User | null>(null)
-const loading = ref(true)
+const { data: user, isLoading: loading, error: loadError, load: loadProfile } = useFetch<User>({
+  fetcher: async () => {
+    const response = await getProfile()
+    return toUser(response.data)
+  },
+  errorPrefix: '加载用户信息',
+})
+
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
-
-onMounted(async () => {
-  try {
-    const response = await getProfile()
-    user.value = toUser(response.data)
-  } catch {
-    showMessage('加载用户信息失败', 'error')
-  } finally {
-    loading.value = false
-  }
-})
 
 function showMessage(msg: string, type: 'success' | 'error') {
   message.value = msg
   messageType.value = type
-  setTimeout(() => {
-    message.value = ''
-  }, 3000)
+  setTimeout(() => { message.value = '' }, 3000)
 }
 
 async function handleProfileSubmit(email: string) {
@@ -87,15 +83,10 @@ async function handlePasswordSubmit(payload: ChangePasswordPayload) {
 }
 
 @media (min-width: 1024px) {
-  .profile-page {
-    padding-top: 20px;
-  }
+  .profile-page { padding-top: 20px; }
 }
 
-.profile-page h2 {
-  margin: 0;
-  font-size: 20px;
-}
+.profile-page h2 { margin: 0; font-size: 20px; }
 
 .form-section {
   padding: 20px;
@@ -105,14 +96,8 @@ async function handlePasswordSubmit(payload: ChangePasswordPayload) {
   margin-bottom: 16px;
 }
 
-.form-section:last-child {
-  margin-bottom: 0;
-}
-
-.form-section h3 {
-  margin: 0 0 16px;
-  font-size: 16px;
-}
+.form-section:last-child { margin-bottom: 0; }
+.form-section h3 { margin: 0 0 16px; font-size: 16px; }
 
 .message {
   padding: 12px;

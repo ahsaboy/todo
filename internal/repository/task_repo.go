@@ -243,12 +243,20 @@ func (r *TaskRepo) Update(ctx context.Context, userID, id int64, req models.Upda
 		args = append(args, *req.Priority)
 	}
 	if req.DueAt != nil {
-		setClauses = append(setClauses, "due_at = ?")
-		args = append(args, *req.DueAt)
+		if *req.DueAt == "" {
+			setClauses = append(setClauses, "due_at = NULL")
+		} else {
+			setClauses = append(setClauses, "due_at = ?")
+			args = append(args, *req.DueAt)
+		}
 	}
 	if req.RemindAt != nil {
-		setClauses = append(setClauses, "remind_at = ?, reminder_sent = 0, reminder_sent_at = NULL")
-		args = append(args, *req.RemindAt)
+		if *req.RemindAt == "" {
+			setClauses = append(setClauses, "remind_at = NULL, reminder_sent = 0, reminder_sent_at = NULL")
+		} else {
+			setClauses = append(setClauses, "remind_at = ?, reminder_sent = 0, reminder_sent_at = NULL")
+			args = append(args, *req.RemindAt)
+		}
 	}
 	if req.RepeatType != nil {
 		setClauses = append(setClauses, "repeat_type = ?")
@@ -688,12 +696,20 @@ func (r *TaskRepo) AdminUpdate(ctx context.Context, id int64, req models.UpdateT
 		args = append(args, *req.Priority)
 	}
 	if req.DueAt != nil {
-		setClauses = append(setClauses, "due_at = ?")
-		args = append(args, *req.DueAt)
+		if *req.DueAt == "" {
+			setClauses = append(setClauses, "due_at = NULL")
+		} else {
+			setClauses = append(setClauses, "due_at = ?")
+			args = append(args, *req.DueAt)
+		}
 	}
 	if req.RemindAt != nil {
-		setClauses = append(setClauses, "remind_at = ?, reminder_sent = 0, reminder_sent_at = NULL")
-		args = append(args, *req.RemindAt)
+		if *req.RemindAt == "" {
+			setClauses = append(setClauses, "remind_at = NULL, reminder_sent = 0, reminder_sent_at = NULL")
+		} else {
+			setClauses = append(setClauses, "remind_at = ?, reminder_sent = 0, reminder_sent_at = NULL")
+			args = append(args, *req.RemindAt)
+		}
 	}
 	if req.RepeatType != nil {
 		setClauses = append(setClauses, "repeat_type = ?")

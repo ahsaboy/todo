@@ -1,84 +1,32 @@
-<template>
-  <div class="page">
-    <div class="page-header">
-      <h2>提醒配置</h2>
-      <button class="btn-primary" type="button" @click="openCreate">新增配置</button>
-    </div>
-
-    <Transition name="sk-fade" mode="out-in">
-      <TableSkeleton v-if="loading" key="skeleton" :columns="7" :col-widths="['120px', '90px', '60px', '80px', '100px', '200px', '100px']" />
-
-      <template v-else key="content">
-        <div v-if="error" class="page-error">
-          <p>{{ error }}</p>
-          <button type="button" @click="fetchConfigs">重试</button>
-        </div>
-
-        <div v-else-if="configs.length === 0" class="page-empty">
-          <p>暂无提醒配置</p>
-          <button class="btn-primary" type="button" @click="openCreate">创建第一个配置</button>
-        </div>
-
-        <ReminderConfigTable v-else :configs="configs" @edit="editConfig" @delete="handleDelete" />
-      </template>
-    </Transition>
-
-    <!-- 抽屉 -->
-    <TaskDetailDrawer
-      v-model:visible="drawerVisible"
-      :title="editingConfig ? '编辑配置' : '新增配置'"
-    >
-      <ReminderConfigForm
-        :initial-data="editingConfig ? toPayload(editingConfig) : undefined"
-        @submit="handleSubmit"
-        @cancel="drawerVisible = false"
-      />
-    </TaskDetailDrawer>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
+import { api } from '@/shared/api/client'
+import { useSimpleList } from '@/shared/composables/useSimpleList'
+import { toReminderConfig } from '@/entities/reminder-config/mapper'
 import {
-  getReminderConfigs,
   createReminderConfig,
   updateReminderConfig,
-  deleteReminderConfig,
 } from '@/entities/reminder-config/api'
-import { toReminderConfig } from '@/entities/reminder-config/mapper'
 import type {
   ReminderConfig,
   CreateReminderConfigPayload,
   UpdateReminderConfigPayload,
 } from '@/entities/reminder-config/model'
+import PageShell from '@/shared/ui/PageShell.vue'
+import TableSkeleton from '@/shared/ui/TableSkeleton.vue'
 import ReminderConfigTable from '@/features/reminder-configs/ReminderConfigTable.vue'
 import ReminderConfigForm from '@/features/reminder-configs/ReminderConfigForm.vue'
-import TableSkeleton from '@/shared/ui/TableSkeleton.vue'
 import TaskDetailDrawer from '@/features/tasks/TaskDetailDrawer.vue'
 
-const configs = ref<ReminderConfig[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
-const drawerVisible = ref(false)
-const editingConfig = ref<ReminderConfig | null>(null)
-
-onMounted(() => {
-  fetchConfigs()
+const list = useSimpleList<ReminderConfig>({
+  client: api,
+  endpoint: '/user/reminder-configs',
+  mapItem: toReminderConfig,
+  errorPrefix: '加载提醒配置',
 })
 
-async function fetchConfigs() {
-  loading.value = true
-  error.value = null
-  try {
-    const response = await getReminderConfigs()
-    const data = Array.isArray(response.data) ? response.data : []
-    configs.value = data.map(toReminderConfig)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '加载失败'
-  } finally {
-    loading.value = false
-  }
-}
+const drawerVisible = ref(false)
+const editingConfig = ref<ReminderConfig | null>(null)
 
 function openCreate() {
   editingConfig.value = null
@@ -111,12 +59,39 @@ async function handleSubmit(payload: CreateReminderConfigPayload | UpdateReminde
     await createReminderConfig(payload as CreateReminderConfigPayload)
   }
   drawerVisible.value = false
-  await fetchConfigs()
-}
-
-async function handleDelete(id: number) {
-  if (!confirm('确定要删除这个配置吗？')) return
-  await deleteReminderConfig(id)
-  await fetchConfigs()
+  await list.load()
 }
 </script>
+
+<template>
+  <div class="page">
+    <div class="page-header">
+      <h2>提醒配置</h2>
+      <button class="btn-primary" type="button" @click="openCreate">新增配置</button>
+    </div>
+
+    <PageShell
+      :loading="list.isLoading.value"
+      :error="list.error.value"
+      :empty="list.items.value.length === 0"
+      :skeleton="TableSkeleton"
+      empty-title="暂无提醒配置"
+      :empty-action="{ label: '创建第一个配置', onClick: openCreate }"
+      :error-retry="list.load"
+    >
+      <ReminderConfigTable
+        :configs="list.items.value"
+        @edit="editConfig"
+        @delete="(id) => list.deleteItem(`/user/reminder-configs/${id}`, '确定要删除这个配置吗？')"
+      />
+    </PageShell>
+
+    <TaskDetailDrawer v-model:visible="drawerVisible" :title="editingConfig ? '编辑配置' : '新增配置'">
+      <ReminderConfigForm
+        :initial-data="editingConfig ? toPayload(editingConfig) : undefined"
+        @submit="handleSubmit"
+        @cancel="drawerVisible = false"
+      />
+    </TaskDetailDrawer>
+  </div>
+</template>

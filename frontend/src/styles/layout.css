@@ -14,7 +14,9 @@
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   box-shadow: var(--shadow-panel);
-  transition: width var(--motion-duration-base) var(--motion-ease-standard);
+  transition:
+    width 380ms var(--motion-ease-emphasized),
+    box-shadow 380ms var(--motion-ease-standard);
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -22,6 +24,7 @@
 
 .app-sidebar.collapsed {
   width: var(--sidebar-collapsed-width);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .sidebar-logo {
@@ -39,7 +42,7 @@
 
 .sidebar-logo__full,
 .sidebar-logo__mini {
-  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+  transition: opacity 380ms var(--motion-ease-standard);
 }
 
 .sidebar-logo__mini {
@@ -81,15 +84,15 @@
   max-height: 24px;
   overflow: hidden;
   transition:
-    opacity var(--motion-duration-fast) var(--motion-ease-standard),
-    max-height var(--motion-duration-base) var(--motion-ease-standard),
-    margin-bottom var(--motion-duration-base) var(--motion-ease-standard);
+    opacity 380ms var(--motion-ease-standard),
+    max-height 380ms var(--motion-ease-standard),
+    margin-bottom 380ms var(--motion-ease-standard);
 }
 
 .app-sidebar.collapsed .nav-label {
-  margin-bottom: 0;
-  max-height: 0;
   opacity: 0;
+  max-height: 0;
+  margin-bottom: 0;
 }
 
 .nav-item {
@@ -104,12 +107,19 @@
   transition:
     background-color var(--motion-duration-fast),
     border-color var(--motion-duration-fast),
-    color var(--motion-duration-fast);
+    color var(--motion-duration-fast),
+    transform var(--motion-duration-fast) var(--motion-ease-emphasized);
+  will-change: transform;
 }
 
 .nav-item:hover {
   background: var(--color-surface-muted);
   border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+  transform: translateX(2px);
+}
+
+.app-sidebar.collapsed .nav-item:hover {
+  transform: scale(1.06);
 }
 
 .nav-item.router-link-active {
@@ -221,18 +231,16 @@
 
 .app-sidebar .nav-text {
   margin-left: 12px;
-  max-width: 160px;
   opacity: 1;
   transition:
-    opacity var(--motion-duration-fast) var(--motion-ease-standard),
-    max-width var(--motion-duration-base) var(--motion-ease-standard),
-    margin-left var(--motion-duration-base) var(--motion-ease-standard);
+    opacity 380ms var(--motion-ease-standard),
+    transform 380ms var(--motion-ease-emphasized);
 }
 
 .app-sidebar.collapsed .nav-text {
-  margin-left: 0;
-  max-width: 0;
   opacity: 0;
+  transform: translateX(-8px);
+  margin-left: 0;
 }
 
 .sidebar-footer {
@@ -270,6 +278,17 @@
   outline: none;
 }
 
+.collapse-btn__icon,
+.sidebar-toggle__icon {
+  display: inline-block;
+  transition: transform 380ms var(--motion-ease-emphasized);
+}
+
+.collapse-btn__icon.is-collapsed,
+.sidebar-toggle__icon.is-closed {
+  transform: rotate(180deg);
+}
+
 /* 主内容区 */
 .app-main {
   flex: 1;
@@ -278,7 +297,7 @@
   flex-direction: column;
   min-height: 100vh;
   min-width: 0;
-  transition: margin-left var(--motion-duration-base) var(--motion-ease-standard);
+  transition: margin-left 380ms var(--motion-ease-emphasized);
 }
 
 .app-sidebar.collapsed ~ .app-main {
@@ -680,7 +699,6 @@
   /* 平板强制收窄，文字/标题/logo 同步收起，避免溢出侧边栏 */
   .app-sidebar .nav-text {
     margin-left: 0;
-    max-width: 0;
     opacity: 0;
   }
 
@@ -696,17 +714,5 @@
 
   .app-sidebar .sidebar-logo__mini {
     opacity: 1;
-  }
-}
-
-/* 尊重系统“减少动态效果”偏好 */
-@media (prefers-reduced-motion: reduce) {
-  .app-sidebar,
-  .app-main,
-  .app-sidebar .nav-text,
-  .app-sidebar .nav-label,
-  .sidebar-logo__full,
-  .sidebar-logo__mini {
-    transition-duration: 0.01ms;
   }
 }

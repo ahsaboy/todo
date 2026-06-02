@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { User, Lock } from 'lucide-vue-next'
 import { useAdminAuthStore } from '@/app/stores/admin-auth.store'
 import { adminApi } from '@/shared/api/admin-client'
+import { useFormState } from '@/shared/composables/useFormState'
 import type { ApiResponse } from '@/shared/api/types'
 import AuthBrandPanel from '@/shared/ui/AuthBrandPanel.vue'
 
@@ -11,18 +11,12 @@ const router = useRouter()
 const route = useRoute()
 const adminAuthStore = useAdminAuthStore()
 
-const account = ref('')
-const password = ref('')
-const error = ref('')
-const isLoading = ref(false)
-
-async function handleSubmit() {
-  error.value = ''
-  isLoading.value = true
-  try {
+const { form, submitting: isLoading, error, handleSubmit } = useFormState({
+  initialData: { account: '', password: '' },
+  onSubmit: async (data) => {
     const res = await adminApi.post<ApiResponse<{ api_key: string }>>('/auth/login', {
-      account: account.value,
-      password: password.value,
+      account: data.account,
+      password: data.password,
     })
     adminAuthStore.setAuth(res.data.api_key)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
@@ -31,12 +25,8 @@ async function handleSubmit() {
     } else {
       router.push({ name: 'admin-dashboard' })
     }
-  } catch {
-    error.value = '用户名或密码错误'
-  } finally {
-    isLoading.value = false
-  }
-}
+  },
+})
 </script>
 
 <template>
@@ -56,7 +46,7 @@ async function handleSubmit() {
               <User class="input-icon" :size="18" :stroke-width="1.8" />
               <input
                 id="admin-account"
-                v-model="account"
+                v-model="form.account"
                 type="text"
                 required
                 autocomplete="username"
@@ -70,7 +60,7 @@ async function handleSubmit() {
               <Lock class="input-icon" :size="18" :stroke-width="1.8" />
               <input
                 id="admin-password"
-                v-model="password"
+                v-model="form.password"
                 type="password"
                 required
                 autocomplete="current-password"

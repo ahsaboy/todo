@@ -1,29 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { User, Lock } from 'lucide-vue-next'
 import { login } from '@/entities/auth/api'
 import { useAuthStore } from '@/app/stores/auth.store'
-import type { LoginPayload } from '@/entities/auth/model'
+import { useFormState } from '@/shared/composables/useFormState'
 import AuthBrandPanel from '@/shared/ui/AuthBrandPanel.vue'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-const payload = ref<LoginPayload>({
-  account: '',
-  password: '',
-})
-const error = ref('')
-const isLoading = ref(false)
-
-async function handleSubmit() {
-  error.value = ''
-  isLoading.value = true
-
-  try {
-    const response = await login(payload.value)
+const { form: payload, submitting: isLoading, error, handleSubmit } = useFormState({
+  initialData: { account: '', password: '' },
+  onSubmit: async (data) => {
+    const response = await login(data)
     authStore.setAuth(response.data.api_key, response.data.user)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
     if (redirect) {
@@ -31,12 +21,8 @@ async function handleSubmit() {
     } else {
       router.push({ name: 'tasks' })
     }
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '登录失败，请稍后重试'
-  } finally {
-    isLoading.value = false
-  }
-}
+  },
+})
 </script>
 
 <template>

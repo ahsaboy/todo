@@ -10,7 +10,6 @@ import {
   Terminal,
   ShieldCheck,
   PanelLeftClose,
-  PanelLeftOpen,
 } from 'lucide-vue-next'
 
 type SidebarMode = 'desktop' | 'mobile'
@@ -107,13 +106,9 @@ const handleNavigate = (to: string) => {
         :aria-label="isCollapsed ? '展开侧边栏' : '折叠侧边栏'"
         @click="emit('toggle')"
       >
-        <PanelLeftOpen
-          v-if="isCollapsed"
-          :size="18"
-        />
         <PanelLeftClose
-          v-else
           :size="18"
+          :class="['collapse-btn__icon', { 'is-collapsed': isCollapsed }]"
         />
       </button>
     </div>
