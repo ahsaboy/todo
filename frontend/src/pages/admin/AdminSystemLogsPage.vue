@@ -152,6 +152,11 @@ const config: DataTableConfig<LogEntryRow> = {
     { key: '_extraFields', label: '附加字段', width: '200px', component: ExtraFieldsCell, componentProps: (row) => ({ fields: row._extraFields }) },
   ],
   emptyText: selectedFile.value ? '暂无日志条目' : '请选择日志文件',
+  mobileCard: {
+    titleKey: 'msg',
+    subtitleKey: 'ts',
+    metaKeys: ['level', 'caller', '_extraFields'],
+  },
 }
 </script>
 

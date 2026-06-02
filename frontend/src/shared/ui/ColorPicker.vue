@@ -128,4 +128,10 @@ function onHexInput(event: Event) {
   border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
+
+@media (max-width: 767px) {
+  .preset-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 </style>

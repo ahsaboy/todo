@@ -236,4 +236,13 @@ async function copyConfig() {
 .mcp-footer { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .mcp-footer a { color: var(--color-info); text-decoration: none; }
 .mcp-footer a:hover { text-decoration: underline; }
+
+@media (max-width: 767px) {
+  .mcp-summary {
+    flex-wrap: wrap;
+  }
+  .mcp-summary-hint {
+    width: 100%;
+  }
+}
 </style>

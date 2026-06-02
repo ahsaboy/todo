@@ -51,6 +51,11 @@ const config: DataTableConfig<AuditLog> = {
     { key: 'created_at', label: '时间' },
   ],
   emptyText: '暂无操作日志',
+  mobileCard: {
+    titleKey: 'action',
+    subtitleKey: 'admin_name',
+    metaKeys: ['target_type', 'target_id', 'detail', 'created_at'],
+  },
 }
 </script>
 

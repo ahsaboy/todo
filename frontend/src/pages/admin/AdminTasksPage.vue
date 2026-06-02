@@ -125,6 +125,11 @@ const config: DataTableConfig<Task> = {
     },
   ],
   emptyText: '暂无任务',
+  mobileCard: {
+    titleKey: 'title',
+    subtitleKey: 'username',
+    metaKeys: ['priority', 'completed', 'due_at', 'focus_duration'],
+  },
 }
 </script>
 

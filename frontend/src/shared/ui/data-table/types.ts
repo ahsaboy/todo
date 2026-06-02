@@ -39,4 +39,10 @@ export interface DataTableConfig<T = unknown> {
   filterButtonText?: string
   emptyText?: string
   loadingText?: string
+  /** Mobile card layout config. If absent, all columns render as meta rows. */
+  mobileCard?: {
+    titleKey: keyof T & string
+    subtitleKey?: keyof T & string
+    metaKeys?: (keyof T & string)[]
+  }
 }

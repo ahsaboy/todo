@@ -56,6 +56,11 @@ const config: DataTableConfig<ReminderConfig> = {
     { id: 'delete', label: '删除', variant: 'danger', onClick: deleteConfig },
   ],
   emptyText: '暂无提醒配置',
+  mobileCard: {
+    titleKey: 'name',
+    subtitleKey: 'username',
+    metaKeys: ['channel_type', 'webhook_url', 'enabled', 'created_at'],
+  },
 }
 </script>
 

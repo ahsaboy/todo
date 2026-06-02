@@ -85,6 +85,9 @@ const userTrendChartRef = ref<HTMLDivElement | null>(null)
 
 const charts: echarts.ECharts[] = []
 
+const mqlMobile = window.matchMedia('(max-width: 767px)')
+let isMobile = mqlMobile.matches
+
 const priorityLabels: Record<number, string> = {
   0: '无', 1: '低', 2: '中', 3: '高', 4: '紧急'
 }
@@ -129,16 +132,22 @@ function buildTooltipTheme(c: ReturnType<typeof getThemeColors>) {
 
 function buildAxisDefaults(textMuted: string) {
   return {
-    grid: { top: 20, right: 20, bottom: 30, left: 50 },
-    xAxis: (dates: string[]) => ({
+    grid: isMobile
+      ? { top: 15, right: 10, bottom: 30, left: 35 }
+      : { top: 20, right: 20, bottom: 30, left: 50 },
+    xAxis: (dates: string[], rotate?: number) => ({
       type: 'category' as const,
       data: dates,
-      axisLabel: { color: textMuted }
+      axisLabel: {
+        color: textMuted,
+        fontSize: isMobile ? 10 : 12,
+        rotate: rotate ?? 0,
+      }
     }),
     yAxis: {
       type: 'value' as const,
       minInterval: 1,
-      axisLabel: { color: textMuted }
+      axisLabel: { color: textMuted, fontSize: isMobile ? 10 : 12 }
     }
   }
 }
@@ -149,8 +158,8 @@ function buildLineSeries(counts: number[], color: string) {
     data: counts,
     smooth: true,
     symbol: 'circle',
-    symbolSize: 8,
-    lineStyle: { width: 3, color },
+    symbolSize: isMobile ? 5 : 8,
+    lineStyle: { width: isMobile ? 2 : 3, color },
     itemStyle: { color },
     areaStyle: {
       color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -174,7 +183,7 @@ function buildBarSeries(counts: number[], palette: string | string[]) {
         borderRadius: [4, 4, 0, 0]
       }
     })),
-    barWidth: '50%'
+    barWidth: isMobile ? '60%' : '50%'
   }
 }
 
@@ -192,12 +201,19 @@ function safeInitChart(
 
 // -- Lifecycle --
 
+function reinitCharts() {
+  charts.forEach(c => c.dispose())
+  charts.length = 0
+  nextTick(() => initCharts())
+}
+
 watch(() => themeStore.isDark, () => {
-  if (stats.value) {
-    charts.forEach(c => c.dispose())
-    charts.length = 0
-    nextTick(() => initCharts())
-  }
+  if (stats.value) reinitCharts()
+})
+
+mqlMobile.addEventListener('change', (e) => {
+  isMobile = e.matches
+  if (stats.value || trends.value) reinitCharts()
 })
 
 watch(dashboardData, async (data) => {
@@ -210,6 +226,7 @@ watch(dashboardData, async (data) => {
 onUnmounted(() => {
   charts.forEach(chart => chart.dispose())
   window.removeEventListener('resize', handleResize)
+  mqlMobile.removeEventListener('change', () => {})
 })
 
 function initCharts() {
@@ -241,7 +258,7 @@ function initCompletionChart(): echarts.ECharts | null {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', ...buildTooltipTheme(tc) },
     series: [{
       type: 'pie',
-      radius: ['55%', '80%'],
+      radius: isMobile ? ['45%', '70%'] : ['55%', '80%'],
       avoidLabelOverlap: false,
       itemStyle: { borderRadius: 10, borderColor: tc.bg, borderWidth: 2 },
       label: {
@@ -249,8 +266,8 @@ function initCompletionChart(): echarts.ECharts | null {
         position: 'center',
         formatter: [`{a|${completionRate.value}%}`, '{b|完成率}'].join('\n'),
         rich: {
-          a: { fontSize: 28, fontWeight: 'bold', color: tc.text, lineHeight: 40 },
-          b: { fontSize: 12, color: tc.textMuted, lineHeight: 20 }
+          a: { fontSize: isMobile ? 22 : 28, fontWeight: 'bold', color: tc.text, lineHeight: isMobile ? 32 : 40 },
+          b: { fontSize: isMobile ? 11 : 12, color: tc.textMuted, lineHeight: 20 }
         }
       },
       data: [
@@ -269,7 +286,7 @@ function initTaskTrendChart(): echarts.ECharts | null {
   return safeInitChart(taskTrendChartRef.value, {
     tooltip: { trigger: 'axis', ...buildTooltipTheme(tc) },
     ...ax.grid,
-    xAxis: ax.xAxis(stats.value.completion_trend.map(d => d.date.slice(5))),
+    xAxis: ax.xAxis(stats.value.completion_trend.map(d => d.date.slice(5)), isMobile ? -45 : 0),
     yAxis: ax.yAxis,
     series: [buildLineSeries(stats.value.completion_trend.map(d => d.count), tc.success)]
   })
@@ -282,11 +299,11 @@ function initPriorityChart(): echarts.ECharts | null {
 
   return safeInitChart(priorityChartRef.value, {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', ...buildTooltipTheme(tc) },
-    legend: { bottom: 0, textStyle: { color: tc.textMuted } },
+    legend: { bottom: 0, textStyle: { color: tc.textMuted, fontSize: isMobile ? 10 : 12 } },
     series: [{
       type: 'pie',
-      radius: '60%',
-      center: ['50%', '45%'],
+      radius: isMobile ? '48%' : '60%',
+      center: ['50%', isMobile ? '42%' : '45%'],
       data: stats.value.priority_dist.map(p => ({
         name: priorityLabels[p.priority] || '未知',
         value: p.count,
@@ -305,12 +322,14 @@ function initTagChart(): echarts.ECharts | null {
 
   return safeInitChart(tagChartRef.value, {
     tooltip: { trigger: 'axis', ...buildTooltipTheme(tc) },
-    grid: { top: 10, right: 20, bottom: 60, left: 60 },
-    xAxis: ax.xAxis(stats.value.top_tags.map(t => t.tag)),
+    grid: isMobile
+      ? { top: 10, right: 10, bottom: 50, left: 35 }
+      : { top: 10, right: 20, bottom: 60, left: 60 },
+    xAxis: ax.xAxis(stats.value.top_tags.map(t => t.tag), isMobile ? -45 : 0),
     yAxis: ax.yAxis,
     series: [{
       ...buildBarSeries(stats.value.top_tags.map(t => t.count), palette),
-      barWidth: '40%'
+      barWidth: isMobile ? '55%' : '40%'
     }]
   })
 }
@@ -328,14 +347,14 @@ function initReminderStatusChart(): echarts.ECharts | null {
 
   return safeInitChart(reminderStatusChartRef.value, {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', ...buildTooltipTheme(tc) },
-    legend: { bottom: 0, textStyle: { color: tc.textMuted } },
+    legend: { bottom: 0, textStyle: { color: tc.textMuted, fontSize: isMobile ? 10 : 12 } },
     series: [{
       type: 'pie',
-      radius: ['40%', '70%'],
-      center: ['50%', '45%'],
+      radius: isMobile ? ['35%', '60%'] : ['40%', '70%'],
+      center: ['50%', isMobile ? '42%' : '45%'],
       avoidLabelOverlap: false,
       itemStyle: { borderRadius: 6, borderColor: tc.bg, borderWidth: 2 },
-      label: { show: true, formatter: '{b}\n{d}%', color: tc.text },
+      label: { show: true, formatter: isMobile ? '{d}%' : '{b}\n{d}%', color: tc.text, fontSize: isMobile ? 10 : 12 },
       data: Object.entries(trends.value.reminder_status_dist).map(([key, value]) => ({
         name: statusLabels[key] || key,
         value,
@@ -350,10 +369,17 @@ function initDailyTasksChart(): echarts.ECharts | null {
   const tc = getThemeColors()
   const ax = buildAxisDefaults(tc.textMuted)
 
+  const dates30 = trends.value.tasks_per_day.map(d => d.date.slice(5))
   return safeInitChart(dailyTasksChartRef.value, {
     tooltip: { trigger: 'axis', ...buildTooltipTheme(tc) },
     ...ax.grid,
-    xAxis: ax.xAxis(trends.value.tasks_per_day.map(d => d.date.slice(5))),
+    xAxis: {
+      ...ax.xAxis(dates30, isMobile ? -45 : 0),
+      axisLabel: {
+        ...ax.xAxis(dates30, isMobile ? -45 : 0).axisLabel,
+        interval: isMobile ? 4 : 0,
+      }
+    },
     yAxis: ax.yAxis,
     series: [buildBarSeries(trends.value.tasks_per_day.map(d => d.count), tc.info)]
   })
@@ -364,10 +390,17 @@ function initUserTrendChart(): echarts.ECharts | null {
   const tc = getThemeColors()
   const ax = buildAxisDefaults(tc.textMuted)
 
+  const userDates = trends.value.users_per_day.map(d => d.date.slice(5))
   return safeInitChart(userTrendChartRef.value, {
     tooltip: { trigger: 'axis', ...buildTooltipTheme(tc) },
     ...ax.grid,
-    xAxis: ax.xAxis(trends.value.users_per_day.map(d => d.date.slice(5))),
+    xAxis: {
+      ...ax.xAxis(userDates, isMobile ? -45 : 0),
+      axisLabel: {
+        ...ax.xAxis(userDates, isMobile ? -45 : 0).axisLabel,
+        interval: isMobile ? 4 : 0,
+      }
+    },
     yAxis: ax.yAxis,
     series: [buildLineSeries(trends.value.users_per_day.map(d => d.count), tc.primary)]
   })

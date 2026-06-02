@@ -277,6 +277,12 @@ async function handleSubmit() {
   gap: 16px;
 }
 
+@media (max-width: 767px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

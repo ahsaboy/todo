@@ -65,6 +65,11 @@ const config: DataTableConfig<ReminderLog> = {
     },
   ],
   emptyText: '暂无提醒日志',
+  mobileCard: {
+    titleKey: 'task_title',
+    subtitleKey: 'username',
+    metaKeys: ['channel_name', 'status', 'attempts', 'error_message', 'created_at'],
+  },
 }
 </script>
 

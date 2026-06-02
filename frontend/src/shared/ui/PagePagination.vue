@@ -75,4 +75,17 @@ function go(p: number) {
 .pagination-ellipsis {
   padding: 0 0.2rem;
 }
+
+@media (max-width: 767px) {
+  .page-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pagination-info {
+    width: 100%;
+    text-align: center;
+    margin-right: 0;
+  }
+}
 </style>

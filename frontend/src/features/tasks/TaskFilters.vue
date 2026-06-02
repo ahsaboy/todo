@@ -123,4 +123,18 @@ function applyFilters() {
 .filter-group.search input {
   width: 100%;
 }
+
+@media (max-width: 767px) {
+  .filter-group.tags {
+    min-width: 0;
+  }
+
+  .filter-group.tags :deep(.tag-picker) {
+    min-width: 0;
+  }
+
+  .filter-group.search {
+    min-width: 0;
+  }
+}
 </style>

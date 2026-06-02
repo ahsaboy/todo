@@ -107,6 +107,11 @@ const config: DataTableConfig<User> = {
   ],
   filterButtonText: '搜索',
   emptyText: '暂无用户',
+  mobileCard: {
+    titleKey: 'username',
+    subtitleKey: 'email',
+    metaKeys: ['is_admin', 'created_at'],
+  },
 }
 
 // 用户名点击打开详情（通过 DataTable 的 cellClass + 自定义事件处理）
