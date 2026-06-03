@@ -9,6 +9,7 @@ import IconPicker from '@/shared/ui/IconPicker.vue'
 import TagChip from '@/features/tags/TagChip.vue'
 import { useTagStore } from '@/entities/tag/store'
 import { useFormState } from '@/shared/composables/useFormState'
+import { useDragSort } from '@/shared/composables/useDragSort'
 import { CURATED_ICONS, DEFAULT_TAG_COLOR } from '@/shared/icons/curated'
 import type { Tag } from '@/entities/tag/model'
 
@@ -65,36 +66,20 @@ async function confirmDelete(tag: Tag) {
 }
 
 // 拖拽排序
-const draggedIndex = ref<number | null>(null)
-const dragOverIndex = ref<number | null>(null)
-
-function onDragStart(index: number, e: DragEvent) {
-  draggedIndex.value = index
-  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
-}
-
-function onDragOver(index: number) { dragOverIndex.value = index }
-
-async function onDrop(targetIndex: number) {
-  const from = draggedIndex.value
-  if (from === null || from === targetIndex) { onDragEnd(); return }
-  const list = [...store.tags]
-  const [moved] = list.splice(from, 1)
-  list.splice(targetIndex, 0, moved)
-  try {
-    for (let i = 0; i < list.length; i++) {
-      const t = list[i]
-      if (t.sortOrder !== i) await store.updateTag(t.id, { sort_order: i })
+const { draggedIndex, dragOverIndex, onDragStart, onDragOver, onDrop, onDragEnd } = useDragSort(
+  computed(() => store.tags),
+  async (newOrder) => {
+    try {
+      for (let i = 0; i < newOrder.length; i++) {
+        const t = newOrder[i]
+        if (t.sortOrder !== i) await store.updateTag(t.id, { sort_order: i })
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '排序保存失败,已回滚')
+      store.fetchTags(true)
     }
-  } catch (e) {
-    alert(e instanceof Error ? e.message : '排序保存失败,已回滚')
-    store.fetchTags(true)
-  } finally {
-    onDragEnd()
-  }
-}
-
-function onDragEnd() { draggedIndex.value = null; dragOverIndex.value = null }
+  },
+)
 
 onMounted(() => store.fetchTags())
 </script>

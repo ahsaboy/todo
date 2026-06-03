@@ -170,7 +170,6 @@ const config: DataTableConfig<Task> = {
         <DateTimePicker
           :model-value="editForm.form.due_at"
           placeholder="选择截止日期"
-          default-time="23:59"
           @update:model-value="editForm.form.due_at = $event || ''"
         />
       </div>

@@ -20,6 +20,7 @@ export interface ApiClient {
   put: <T>(endpoint: string, body?: unknown) => Promise<T>
   patch: <T>(endpoint: string, body?: unknown) => Promise<T>
   delete: <T>(endpoint: string) => Promise<T>
+  download: (endpoint: string) => Promise<Blob>
 }
 
 export function createApiClient(config: ApiClientConfig): ApiClient {
@@ -91,6 +92,21 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     }
   }
 
+  async function download(endpoint: string): Promise<Blob> {
+    const url = `${config.baseUrl}${endpoint}`
+    const headers: HeadersInit = {}
+    const token = getToken()
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const response = await fetch(url, { headers })
+    if (response.status === 401) {
+      if (!isAuthEndpoint(endpoint)) config.onUnauthorized(endpoint)
+      throw new ApiError({ message: config.sessionExpiredMessage ?? 'Unauthorized', code: 'UNAUTHORIZED', status: 401 })
+    }
+    if (!response.ok) throw new ApiError({ message: 'Download failed', code: 'INTERNAL_ERROR', status: response.status })
+    return response.blob()
+  }
+
   return {
     get: <T>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
     post: <T>(endpoint: string, body?: unknown) =>
@@ -109,5 +125,6 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
         body: body ? JSON.stringify(body) : undefined,
       }),
     delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
+    download,
   }
 }

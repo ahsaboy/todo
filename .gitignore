@@ -64,3 +64,5 @@ CLAUDE.md
 # Scripts (contains registry secrets)
 scripts/docker-push.sh
 scripts/docker-push.ps1
+
+.understand-anything

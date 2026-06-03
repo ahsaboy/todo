@@ -23,6 +23,6 @@ withDefaults(defineProps<{
     var(--color-surface-muted) 63%
   );
   background-size: 400% 100%;
-  animation: sk-shimmer 1.4s var(--motion-ease-standard) infinite;
+  animation: sk-shimmer var(--motion-duration-shimmer, 1.4s) var(--motion-ease-standard) infinite;
 }
 </style>

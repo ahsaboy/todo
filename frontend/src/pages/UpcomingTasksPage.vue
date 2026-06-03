@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { RefreshCw } from 'lucide-vue-next'
 import { useTasks } from '@/features/tasks/useTasks'
-import { useTaskToggle } from '@/features/tasks/useTaskToggle'
+import { useTaskGroupedPage } from '@/features/tasks/useTaskGroupedPage'
 import PageShell from '@/shared/ui/PageShell.vue'
 import TaskGroupedList from '@/features/tasks/TaskGroupedList.vue'
 import FocusDurationDialog from '@/features/tasks/FocusDurationDialog.vue'
@@ -10,8 +10,6 @@ import TaskGroupedSkeleton from '@/shared/ui/TaskGroupedSkeleton.vue'
 import type { Task } from '@/entities/task/model'
 
 const { tasks, loading, error, fetchTasks, toggleComplete } = useTasks()
-const { focusDialogVisible, focusDialogTaskTitle, handleToggle, handleFocusConfirm } =
-  useTaskToggle({ tasks, toggleComplete })
 
 const upcomingGroups = computed(() => {
   const now = new Date()
@@ -48,31 +46,31 @@ const upcomingGroups = computed(() => {
   ].filter((g) => g.tasks.length > 0)
 })
 
-onMounted(() => fetchTasks())
+const page = useTaskGroupedPage({ tasks, loading, error, fetchTasks, createTask: async () => {}, toggleComplete, groups: upcomingGroups })
 </script>
 
 <template>
   <div class="page">
     <div class="page-header">
       <h2>即将到期</h2>
-      <button class="btn-secondary" type="button" @click="fetchTasks"><RefreshCw :size="14" /></button>
+      <button class="btn-secondary" type="button" @click="page.fetchTasks"><RefreshCw :size="14" /></button>
     </div>
 
     <PageShell
-      :loading="loading"
-      :error="error"
+      :loading="page.loading.value"
+      :error="page.error.value"
       :empty="upcomingGroups.length === 0"
       :skeleton="TaskGroupedSkeleton"
       empty-title="暂无即将到期的任务"
-      :error-retry="fetchTasks"
+      :error-retry="page.fetchTasks"
     >
-      <TaskGroupedList :groups="upcomingGroups" @toggle="handleToggle" />
+      <TaskGroupedList :groups="upcomingGroups" @toggle="page.handleToggle" />
     </PageShell>
 
     <FocusDurationDialog
-      v-model:visible="focusDialogVisible"
-      :task-title="focusDialogTaskTitle"
-      @confirm="handleFocusConfirm"
+      v-model:visible="page.focusDialogVisible.value"
+      :task-title="page.focusDialogTaskTitle.value"
+      @confirm="page.handleFocusConfirm"
     />
   </div>
 </template>

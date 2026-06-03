@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { Download, RefreshCw } from 'lucide-vue-next'
-import { ADMIN_API_BASE_URL } from '@/shared/config/api'
 import { adminApi } from '@/shared/api/admin-client'
 import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
 import PagePagination from '@/shared/ui/PagePagination.vue'
@@ -11,30 +10,15 @@ import { useCrudList } from '@/shared/composables/useCrudList'
 import type { DataTableConfig } from '@/shared/ui/data-table/types'
 import type { ApiResponse } from '@/shared/api/types'
 import ExtraFieldsCell from '@/features/admin/ExtraFieldsCell.vue'
-
-interface LogFile {
-  filename: string
-  date: string
-  size_bytes: number
-}
-
-interface LogEntry {
-  ts: string
-  level: string
-  msg: string
-  caller?: string
-  [key: string]: unknown
-}
-
-interface LogEntryRow extends LogEntry {
-  _extraFields: [string, string][]
-}
+import {
+  type LogFile, type LogEntry, type LogEntryRow,
+  extraFieldEntries, formatSize, truncateMsg, levelBadgeClass,
+} from './utils/logFormatters'
 
 const selectedFile = ref('')
 const autoRefresh = ref(false)
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
-// 日志文件列表
 const { data: logFilesData } = useFetch<LogFile[]>({
   fetcher: () => adminApi.get<ApiResponse<LogFile[]>>('/system-logs').then(r => r.data || []),
   errorPrefix: '加载日志文件列表',
@@ -42,14 +26,12 @@ const { data: logFilesData } = useFetch<LogFile[]>({
 
 const logFiles = computed(() => logFilesData.value ?? [])
 
-// 自动选中第一个文件
 watch(logFiles, (files) => {
   if (files.length && !selectedFile.value) {
     selectedFile.value = files[0].filename
   }
 }, { immediate: true })
 
-// 日志条目（分页列表）
 const entries = useCrudList<LogEntryRow>({
   client: adminApi,
   autoLoad: false,
@@ -67,13 +49,11 @@ const entries = useCrudList<LogEntryRow>({
   errorPrefix: '加载日志条目',
 })
 
-// 文件切换时重置分页并加载
 watch(selectedFile, () => {
   entries.setPage(1)
   entries.load()
 })
 
-// 自动刷新
 watch(autoRefresh, (val) => {
   if (val) {
     refreshTimer = setInterval(() => entries.load(), 5000)
@@ -85,40 +65,18 @@ watch(autoRefresh, (val) => {
 
 onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
 
-function downloadLog() {
+async function downloadLog() {
   if (!selectedFile.value) return
-  const token = sessionStorage.getItem('admin_api_key')
-  const url = `${ADMIN_API_BASE_URL}/system-logs/${encodeURIComponent(selectedFile.value)}/download`
-  fetch(url, { headers: { 'Authorization': `Bearer ${token || ''}` } })
-    .then((r) => { if (!r.ok) throw new Error(); return r.blob() })
-    .then((blob) => {
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = selectedFile.value
-      a.click()
-      URL.revokeObjectURL(a.href)
-    })
-    .catch(() => { entries.error.value = '下载日志文件失败' })
-}
-
-function extraFieldEntries(entry: LogEntry): [string, string][] {
-  const reserved = new Set(['ts', 'level', 'msg', 'caller'])
-  const pairs: [string, string][] = []
-  for (const [k, v] of Object.entries(entry)) {
-    if (!reserved.has(k)) pairs.push([k, typeof v === 'string' ? v : JSON.stringify(v)])
+  try {
+    const blob = await adminApi.download(`/system-logs/${encodeURIComponent(selectedFile.value)}/download`)
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = selectedFile.value
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch {
+    entries.error.value = '下载日志文件失败'
   }
-  return pairs
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
-
-function truncateMsg(msg: unknown): string {
-  if (typeof msg !== 'string') return String(msg ?? '')
-  return msg.length > 120 ? msg.slice(0, 120) + '…' : msg
 }
 
 const fileOptions = computed<SelectOption<string>[]>(() =>
@@ -132,16 +90,6 @@ const levelOptions: SelectOption<string>[] = [
   { label: 'warn', value: 'warn' },
   { label: 'error', value: 'error' },
 ]
-
-function levelBadgeClass(row: LogEntryRow): string {
-  switch (row.level?.toLowerCase()) {
-    case 'debug': return 'badge badge-level-debug'
-    case 'info': return 'badge badge-level-info'
-    case 'warn': return 'badge badge-level-warn'
-    case 'error': return 'badge badge-level-error'
-    default: return 'badge'
-  }
-}
 
 const config: DataTableConfig<LogEntryRow> = {
   columns: [

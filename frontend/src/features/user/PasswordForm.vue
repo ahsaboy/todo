@@ -1,10 +1,10 @@
 <template>
-  <form class="password-form" @submit.prevent="handleSubmit">
+  <form class="password-form" @submit.prevent="state.handleSubmit">
     <div class="form-group">
       <label for="password-current">当前密码 *</label>
       <input
         id="password-current"
-        v-model="form.old_password"
+        v-model="state.form.old_password"
         name="current_password"
         type="password"
         required
@@ -16,7 +16,7 @@
       <label for="password-new">新密码 *</label>
       <input
         id="password-new"
-        v-model="form.new_password"
+        v-model="state.form.new_password"
         name="new_password"
         type="password"
         required
@@ -35,60 +35,41 @@
         required
         autocomplete="new-password"
       />
-      <span v-if="error" class="error-text">{{ error }}</span>
+      <span v-if="state.error.value" class="error-text">{{ state.error.value }}</span>
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn-primary" :disabled="submitting">
-        {{ submitting ? '修改中...' : '修改密码' }}
+      <button type="submit" class="btn-primary" :disabled="state.submitting.value">
+        {{ state.submitting.value ? '修改中...' : '修改密码' }}
       </button>
     </div>
   </form>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { ref } from 'vue'
+import { useFormState } from '@/shared/composables/useFormState'
 import type { ChangePasswordPayload } from '@/entities/user/model'
 
 const emit = defineEmits<{
   submit: [payload: ChangePasswordPayload]
 }>()
 
-const form = reactive<ChangePasswordPayload>({
-  old_password: '',
-  new_password: '',
-})
-
 const confirmPassword = ref('')
-const error = ref('')
-const submitting = ref(false)
 
-function validate(): boolean {
-  if (form.new_password !== confirmPassword.value) {
-    error.value = '两次输入的密码不一致'
-    return false
-  }
-  if (form.new_password.length < 6) {
-    error.value = '密码长度至少 6 位'
-    return false
-  }
-  error.value = ''
-  return true
-}
-
-async function handleSubmit() {
-  if (!validate()) return
-
-  submitting.value = true
-  try {
-    emit('submit', { ...form })
-    form.old_password = ''
-    form.new_password = ''
+const state = useFormState<ChangePasswordPayload & { _confirm?: string }>({
+  initialData: { old_password: '', new_password: '' },
+  validate: (data) => {
+    if (data.new_password !== confirmPassword.value) return '两次输入的密码不一致'
+    if (data.new_password.length < 6) return '密码长度至少 6 位'
+    return null
+  },
+  onSubmit: async (data) => {
+    emit('submit', { old_password: data.old_password, new_password: data.new_password })
+    state.reset()
     confirmPassword.value = ''
-  } finally {
-    submitting.value = false
-  }
-}
+  },
+})
 </script>
 
 <style scoped>

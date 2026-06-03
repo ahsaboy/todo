@@ -41,7 +41,6 @@
         <DateTimePicker
           v-model="form.due_at"
           placeholder="选择截止日期"
-          default-time="23:59"
         />
       </div>
     </div>
@@ -52,7 +51,6 @@
         <DateTimePicker
           v-model="form.remind_at"
           placeholder="选择提醒日期"
-          default-time="09:00"
         />
       </div>
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import BaseDialog from '@/shared/ui/BaseDialog.vue'
+import { useFormState } from '@/shared/composables/useFormState'
 import { createApiKey } from '@/entities/api-key/api'
 
 defineProps<{
@@ -12,24 +13,18 @@ const emit = defineEmits<{
   created: []
 }>()
 
-const name = ref('')
 const newKey = ref<string | null>(null)
-const loading = ref(false)
 
-async function handleCreate() {
-  loading.value = true
-  try {
-    const response = await createApiKey({ name: name.value || undefined })
+const state = useFormState({
+  initialData: { name: '' },
+  onSubmit: async (data) => {
+    const response = await createApiKey({ name: data.name || undefined })
     const generatedKey = response.data.api_key ?? response.data.key
     if (!generatedKey) throw new Error('接口未返回 API Key')
     newKey.value = generatedKey
     emit('created')
-  } catch (e) {
-    window.alert('创建失败：' + (e instanceof Error ? e.message : '未知错误'))
-  } finally {
-    loading.value = false
-  }
-}
+  },
+})
 
 async function copyKey() {
   if (!newKey.value) return
@@ -51,7 +46,7 @@ async function copyKey() {
 function handleClose() {
   if (newKey.value && !confirm('确定关闭吗？请确保已保存 Key。')) return
   newKey.value = null
-  name.value = ''
+  state.reset()
   emit('update:visible', false)
 }
 </script>
@@ -63,7 +58,7 @@ function handleClose() {
         <label for="key-name">名称（可选）</label>
         <input
           id="key-name"
-          v-model="name"
+          v-model="state.form.name"
           name="api_key_name"
           type="text"
           class="form-input"
@@ -71,8 +66,9 @@ function handleClose() {
           autocomplete="off"
         />
       </div>
-      <button class="btn btn-primary" type="button" :disabled="loading" @click="handleCreate" style="width:100%">
-        {{ loading ? '创建中...' : '创建' }}
+      <div v-if="state.error.value" class="error-message">{{ state.error.value }}</div>
+      <button class="btn btn-primary" type="button" :disabled="state.submitting.value" @click="state.handleSubmit" style="width:100%">
+        {{ state.submitting.value ? '创建中...' : '创建' }}
       </button>
     </div>
 
@@ -116,5 +112,11 @@ function handleClose() {
   flex: 1;
   word-break: break-all;
   font-size: 0.8rem;
+}
+
+.error-message {
+  color: var(--color-danger);
+  font-size: 13px;
+  margin-bottom: 8px;
 }
 </style>

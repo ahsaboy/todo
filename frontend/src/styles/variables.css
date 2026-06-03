@@ -49,6 +49,7 @@ html[data-theme='light'] {
   --motion-duration-fast: 180ms;
   --motion-duration-base: 280ms;
   --motion-duration-slow: 440ms;
+  --motion-duration-shimmer: 1.4s;
   --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-distance-sm: 12px;

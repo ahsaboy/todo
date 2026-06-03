@@ -120,7 +120,7 @@ const initialDate = normalizeDateParts([
   String(today.getMonth() + 1),
   String(today.getDate()),
 ])
-const initialTime = normalizeTimeParts(props.defaultTime.split(':'))
+const initialTime = normalizeTimeParts([String(today.getHours()), String(today.getMinutes())])
 
 const mobilePickerVisible = ref(false)
 const draftDate = ref<string[]>(initialDate)
@@ -133,12 +133,15 @@ const desktopFlow = {
 } satisfies Partial<FlowConfig>
 
 const desktopStartTime = computed<TimeModel>(() => {
-  const [hours, minutes] = normalizeTimeParts(props.defaultTime.split(':'))
-  return {
-    hours: Number(hours),
-    minutes: Number(minutes),
-    seconds: 0,
+  if (props.modelValue) {
+    const { time } = splitDateTimeLocal(props.modelValue)
+    if (time) {
+      const [h, m] = time.split(':').map(Number)
+      if (Number.isFinite(h) && Number.isFinite(m)) return { hours: h, minutes: m, seconds: 0 }
+    }
   }
+  const now = new Date()
+  return { hours: now.getHours(), minutes: now.getMinutes(), seconds: 0 }
 })
 
 function formatDateColumn(type: string, option: PickerOption): PickerOption {
@@ -187,11 +190,20 @@ function normalizeDateTimeValue(value: unknown): string {
   if (!value) return ''
   if (typeof value === 'string') {
     const { date, time } = splitDateTimeLocal(value)
-    return date ? combineDateTimeLocal(date, props.modelValue ? time || props.defaultTime : props.defaultTime) : ''
+    if (!date) return ''
+    if (time) return combineDateTimeLocal(date, time)
+    return combineDateTimeLocal(date, currentTime())
   }
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     const { date, time } = splitDateTimeLocal(formatDateTime(value))
-    return combineDateTimeLocal(date, props.modelValue ? time : props.defaultTime)
+    return combineDateTimeLocal(date, time || currentTime())
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const d = new Date(value)
+    if (!Number.isNaN(d.getTime())) {
+      const { date, time } = splitDateTimeLocal(formatDateTime(d))
+      return combineDateTimeLocal(date, time || currentTime())
+    }
   }
   return ''
 }
@@ -206,15 +218,20 @@ function resolvePickerSeed(): { date: string; time: string } {
   if (current.date) {
     return {
       date: current.date,
-      time: current.time || props.defaultTime,
+      time: current.time || currentTime(),
     }
   }
 
   const now = new Date()
   return {
     date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
-    time: props.defaultTime,
+    time: currentTime(),
   }
+}
+
+function currentTime(): string {
+  const now = new Date()
+  return `${pad(now.getHours())}:${pad(now.getMinutes())}`
 }
 
 function openMobilePicker() {

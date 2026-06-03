@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { RefreshCw } from 'lucide-vue-next'
 import { useTasks } from '@/features/tasks/useTasks'
-import { useTaskToggle } from '@/features/tasks/useTaskToggle'
+import { useTaskGroupedPage } from '@/features/tasks/useTaskGroupedPage'
 import PageShell from '@/shared/ui/PageShell.vue'
 import QuickCreateTask from '@/features/tasks/QuickCreateTask.vue'
 import TaskGroupedList from '@/features/tasks/TaskGroupedList.vue'
@@ -11,8 +11,6 @@ import TaskGroupedSkeleton from '@/shared/ui/TaskGroupedSkeleton.vue'
 import type { Task } from '@/entities/task/model'
 
 const { tasks, loading, error, fetchTasks, createTask, toggleComplete } = useTasks()
-const { focusDialogVisible, focusDialogTaskTitle, handleToggle, handleFocusConfirm } =
-  useTaskToggle({ tasks, toggleComplete })
 
 const todayGroups = computed(() => {
   const now = new Date()
@@ -44,33 +42,33 @@ const todayGroups = computed(() => {
   ].filter((g) => g.tasks.length > 0)
 })
 
-onMounted(() => fetchTasks())
+const page = useTaskGroupedPage({ tasks, loading, error, fetchTasks, createTask, toggleComplete, groups: todayGroups })
 </script>
 
 <template>
   <div class="page">
     <div class="page-header">
       <h2>今日任务</h2>
-      <button class="btn-secondary" type="button" @click="fetchTasks"><RefreshCw :size="14" /></button>
+      <button class="btn-secondary" type="button" @click="page.fetchTasks"><RefreshCw :size="14" /></button>
     </div>
 
-    <QuickCreateTask @create="(title) => createTask({ title })" />
+    <QuickCreateTask @create="(title) => page.createTask({ title })" />
 
     <PageShell
-      :loading="loading"
-      :error="error"
+      :loading="page.loading.value"
+      :error="page.error.value"
       :empty="todayGroups.length === 0"
       :skeleton="TaskGroupedSkeleton"
       empty-title="今日暂无任务"
-      :error-retry="fetchTasks"
+      :error-retry="page.fetchTasks"
     >
-      <TaskGroupedList :groups="todayGroups" @toggle="handleToggle" />
+      <TaskGroupedList :groups="todayGroups" @toggle="page.handleToggle" />
     </PageShell>
 
     <FocusDurationDialog
-      v-model:visible="focusDialogVisible"
-      :task-title="focusDialogTaskTitle"
-      @confirm="handleFocusConfirm"
+      v-model:visible="page.focusDialogVisible.value"
+      :task-title="page.focusDialogTaskTitle.value"
+      @confirm="page.handleFocusConfirm"
     />
   </div>
 </template>
