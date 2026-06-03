@@ -43,6 +43,8 @@ export interface DataTableConfig<T = unknown> {
   mobileCard?: {
     titleKey: keyof T & string
     subtitleKey?: keyof T & string
+    /** Column key to render as a badge in the card header (e.g. status) */
+    badgeKey?: keyof T & string
     metaKeys?: (keyof T & string)[]
   }
 }

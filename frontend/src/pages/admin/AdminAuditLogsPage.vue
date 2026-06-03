@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { adminApi } from '@/shared/api/admin-client'
+import { formatDateTime } from '@/shared/utils/date'
 import { useCrudList } from '@/shared/composables/useCrudList'
 import PagePagination from '@/shared/ui/PagePagination.vue'
 import DataTable from '@/shared/ui/DataTable.vue'
@@ -48,7 +49,7 @@ const config: DataTableConfig<AuditLog> = {
     { key: 'target_type', label: '目标类型', formatter: (v) => targetText[v] || v },
     { key: 'target_id', label: '目标 ID', formatter: (v) => v != null ? String(v) : '—' },
     { key: 'detail', label: '详情', truncate: true, width: '200px', cellClass: 'text-truncate-muted', formatter: (v) => v || '—' },
-    { key: 'created_at', label: '时间' },
+    { key: 'created_at', label: '时间', formatter: (v) => formatDateTime(v as string) },
   ],
   emptyText: '暂无操作日志',
   mobileCard: {

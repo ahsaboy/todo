@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { DataTableConfig } from './data-table/types'
 import { useMediaQuery } from '@/shared/composables/useMediaQuery'
+import BaseSelect from './BaseSelect.vue'
 
 const props = defineProps<{
   config: DataTableConfig<T>
@@ -59,12 +60,18 @@ const metaColumns = computed(() => {
   const exclude = new Set<string>()
   if (titleCol.value) exclude.add(titleCol.value.key)
   if (subtitleCol.value) exclude.add(subtitleCol.value.key)
+  if (badgeCol.value) exclude.add(badgeCol.value.key)
 
   const keys = props.config.mobileCard?.metaKeys
   if (keys) {
     return props.config.columns.filter(c => keys.includes(c.key))
   }
   return props.config.columns.filter(c => !exclude.has(c.key))
+})
+
+const badgeCol = computed(() => {
+  const key = props.config.mobileCard?.badgeKey
+  return key ? props.config.columns.find(c => c.key === key) : undefined
 })
 </script>
 
@@ -84,16 +91,14 @@ const metaColumns = computed(() => {
         @input="emit('filter-change', filter.id, ($event.target as HTMLInputElement).value)"
         @keyup.enter="emit('apply-filters')"
       />
-      <select
+      <BaseSelect
         v-else-if="filter.type === 'select'"
-        :value="filter.value"
-        class="admin-search-input toolbar-select"
-        @change="emit('filter-change', filter.id, ($event.target as HTMLSelectElement).value)"
-      >
-        <option v-for="opt in filter.options" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
+        :model-value="filter.value"
+        :options="filter.options ?? []"
+        :placeholder="filter.placeholder"
+        class="toolbar-select"
+        @update:model-value="emit('filter-change', filter.id, $event as string)"
+      />
     </template>
     <button class="btn btn-primary" @click="emit('apply-filters')">
       {{ config.filterButtonText ?? '筛选' }}
@@ -140,20 +145,25 @@ const metaColumns = computed(() => {
           <td
             v-for="col in config.columns"
             :key="col.key"
-            :class="[
-              getCellClass(row, col),
-              { 'text-truncate': col.truncate },
-            ]"
+            :class="{ 'text-truncate': col.truncate }"
             :title="col.truncate ? String(getCellValue(row, col.key) ?? '') : undefined"
             :style="col.truncate && col.width ? { maxWidth: col.width } : undefined"
           >
-            <component
-              :is="col.component"
-              v-if="col.component"
-              v-bind="col.componentProps?.(row) ?? {}"
-            />
+            <span v-if="getCellClass(row, col)" :class="getCellClass(row, col)">
+              <component
+                :is="col.component"
+                v-if="col.component"
+                v-bind="col.componentProps?.(row) ?? {}"
+              />
+              <template v-else>{{ formatCell(row, col) }}</template>
+            </span>
             <template v-else>
-              {{ formatCell(row, col) }}
+              <component
+                :is="col.component"
+                v-if="col.component"
+                v-bind="col.componentProps?.(row) ?? {}"
+              />
+              <template v-else>{{ formatCell(row, col) }}</template>
             </template>
           </td>
           <td v-if="config.actions?.length" class="action-cell">
@@ -188,13 +198,27 @@ const metaColumns = computed(() => {
     </div>
     <article v-for="(row, idx) in data" :key="idx" class="data-card">
       <div v-if="titleCol" class="data-card-header">
-        <div class="data-card-title">
-          <component
-            :is="titleCol.component"
-            v-if="titleCol.component"
-            v-bind="titleCol.componentProps?.(row) ?? {}"
-          />
-          <template v-else>{{ formatCell(row, titleCol) }}</template>
+        <div class="data-card-header-row">
+          <div class="data-card-title">
+            <component
+              :is="titleCol.component"
+              v-if="titleCol.component"
+              v-bind="titleCol.componentProps?.(row) ?? {}"
+            />
+            <template v-else>{{ formatCell(row, titleCol) }}</template>
+          </div>
+          <span
+            v-if="badgeCol"
+            class="data-card-badge"
+            :class="getCellClass(row, badgeCol)"
+          >
+            <component
+              :is="badgeCol.component"
+              v-if="badgeCol.component"
+              v-bind="badgeCol.componentProps?.(row) ?? {}"
+            />
+            <template v-else>{{ formatCell(row, badgeCol) }}</template>
+          </span>
         </div>
         <div v-if="subtitleCol" class="data-card-subtitle">
           <component
@@ -208,13 +232,23 @@ const metaColumns = computed(() => {
       <dl v-if="metaColumns.length" class="data-card-meta">
         <div v-for="col in metaColumns" :key="col.key" class="data-card-meta-row">
           <dt>{{ col.label }}</dt>
-          <dd :class="getCellClass(row, col)">
-            <component
-              :is="col.component"
-              v-if="col.component"
-              v-bind="col.componentProps?.(row) ?? {}"
-            />
-            <template v-else>{{ formatCell(row, col) }}</template>
+          <dd>
+            <span v-if="getCellClass(row, col)" :class="getCellClass(row, col)">
+              <component
+                :is="col.component"
+                v-if="col.component"
+                v-bind="col.componentProps?.(row) ?? {}"
+              />
+              <template v-else>{{ formatCell(row, col) }}</template>
+            </span>
+            <template v-else>
+              <component
+                :is="col.component"
+                v-if="col.component"
+                v-bind="col.componentProps?.(row) ?? {}"
+              />
+              <template v-else>{{ formatCell(row, col) }}</template>
+            </template>
           </dd>
         </div>
       </dl>
@@ -274,11 +308,26 @@ const metaColumns = computed(() => {
   gap: 4px;
 }
 
+.data-card-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .data-card-title {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--color-text);
   line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+}
+
+.data-card-badge {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .data-card-subtitle {

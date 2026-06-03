@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { adminApi } from '@/shared/api/admin-client'
+import { formatDateTime } from '@/shared/utils/date'
 import { useCrudList } from '@/shared/composables/useCrudList'
 import PagePagination from '@/shared/ui/PagePagination.vue'
 import DataTable from '@/shared/ui/DataTable.vue'
@@ -51,7 +52,7 @@ const config: DataTableConfig<ReminderLog> = {
     },
     { key: 'attempts', label: '重试次数' },
     { key: 'error_message', label: '错误信息', truncate: true, width: '200px', cellClass: 'text-truncate-muted', formatter: (v) => v || '—' },
-    { key: 'created_at', label: '时间' },
+    { key: 'created_at', label: '时间', formatter: (v) => formatDateTime(v as string) },
   ],
   filters: [
     { id: 'user_id', type: 'number', placeholder: '用户 ID 筛选', value: filters.value.user_id ?? '', width: 'narrow' },
@@ -68,7 +69,8 @@ const config: DataTableConfig<ReminderLog> = {
   mobileCard: {
     titleKey: 'task_title',
     subtitleKey: 'username',
-    metaKeys: ['channel_name', 'status', 'attempts', 'error_message', 'created_at'],
+    badgeKey: 'status',
+    metaKeys: ['channel_name', 'attempts', 'error_message', 'created_at'],
   },
 }
 </script>

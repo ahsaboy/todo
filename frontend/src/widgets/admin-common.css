@@ -53,8 +53,9 @@
 
 .admin-table {
   width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
   font-size: 0.9rem;
 }
 
@@ -74,18 +75,23 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
 }
 
 .admin-table tr:hover td {
-  background: var(--color-surface-hover, rgba(0, 0, 0, 0.03));
+  background: var(--color-surface-hover);
 }
 
 /* 操作按钮单元格 */
-.action-cell {
+.admin-table td.action-cell {
   display: flex;
   gap: 0.4rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* 分页 */
@@ -95,7 +101,7 @@
   gap: 0.75rem;
   margin-top: 1rem;
   font-size: 0.85rem;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
 }
 
 /* 按钮 */
@@ -437,26 +443,7 @@ textarea.form-input {
 }
 
 .toolbar-select {
-  width: 120px;
-  height: 36px;
-  padding: 0 0.65rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 0.85rem;
-  line-height: 1.2;
-  box-sizing: border-box;
-  cursor: pointer;
-  transition:
-    border-color var(--motion-duration-fast) var(--motion-ease-standard),
-    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
-}
-
-.toolbar-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: var(--focus-ring);
+  min-width: 120px;
 }
 
 @media (max-width: 767px) {

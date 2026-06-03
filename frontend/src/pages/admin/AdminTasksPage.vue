@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { adminApi } from '@/shared/api/admin-client'
-import { isoToDateTimeLocal, dateTimeLocalToISOString } from '@/shared/utils/date'
+import { isoToDateTimeLocal, dateTimeLocalToISOString, formatDateTime } from '@/shared/utils/date'
 import DateTimePicker from '@/shared/ui/DateTimePicker.vue'
 import BaseSelect, { type SelectOption } from '@/shared/ui/BaseSelect.vue'
 import { useCrudList } from '@/shared/composables/useCrudList'
@@ -96,7 +96,7 @@ const config: DataTableConfig<Task> = {
       cellClass: (row) => row.completed ? 'badge badge-done' : 'badge badge-pending',
       formatter: (v) => v ? '已完成' : '待办',
     },
-    { key: 'due_at', label: '截止时间', formatter: (v) => v || '—' },
+    { key: 'due_at', label: '截止时间', formatter: (v) => v ? formatDateTime(v as string) : '—' },
     { key: 'focus_duration', label: '专注', formatter: (v) => v ? `${v} min` : '—' },
   ],
   actions: [
@@ -128,7 +128,8 @@ const config: DataTableConfig<Task> = {
   mobileCard: {
     titleKey: 'title',
     subtitleKey: 'username',
-    metaKeys: ['priority', 'completed', 'due_at', 'focus_duration'],
+    badgeKey: 'completed',
+    metaKeys: ['priority', 'due_at', 'focus_duration'],
   },
 }
 </script>

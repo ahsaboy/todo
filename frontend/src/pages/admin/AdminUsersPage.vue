@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { adminApi } from '@/shared/api/admin-client'
+import { formatDateTime } from '@/shared/utils/date'
 import { useCrudList } from '@/shared/composables/useCrudList'
 import { useFormState } from '@/shared/composables/useFormState'
 import PagePagination from '@/shared/ui/PagePagination.vue'
@@ -89,7 +90,7 @@ const config: DataTableConfig<User> = {
       cellClass: (row) => row.is_admin ? 'badge badge-done' : 'badge badge-muted',
       formatter: (v) => v ? '管理员' : '普通用户',
     },
-    { key: 'created_at', label: '注册时间' },
+    { key: 'created_at', label: '注册时间', formatter: (v) => formatDateTime(v as string) },
   ],
   actions: [
     { id: 'reset', label: '重置密码', onClick: (row) => openReset(row.id) },
@@ -110,7 +111,8 @@ const config: DataTableConfig<User> = {
   mobileCard: {
     titleKey: 'username',
     subtitleKey: 'email',
-    metaKeys: ['is_admin', 'created_at'],
+    badgeKey: 'is_admin',
+    metaKeys: ['created_at'],
   },
 }
 
@@ -174,7 +176,7 @@ function handleTableClick(e: MouseEvent) {
           <div><span :class="detailUser.is_admin ? 'badge badge-done' : 'badge badge-muted'">{{ detailUser.is_admin ? '是' : '否' }}</span></div>
           <div class="detail-label">任务数</div><div>{{ detailUser.task_count }}</div>
           <div class="detail-label">API Key 数</div><div>{{ detailUser.api_key_count }}</div>
-          <div class="detail-label">注册时间</div><div>{{ detailUser.created_at }}</div>
+          <div class="detail-label">注册时间</div><div>{{ formatDateTime(detailUser.created_at) }}</div>
         </div>
       </template>
       <template #footer="{ close }">

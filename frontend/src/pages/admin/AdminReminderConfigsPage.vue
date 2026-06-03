@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { adminApi } from '@/shared/api/admin-client'
+import { formatDateTime } from '@/shared/utils/date'
 import { useCrudList } from '@/shared/composables/useCrudList'
 import PagePagination from '@/shared/ui/PagePagination.vue'
 import DataTable from '@/shared/ui/DataTable.vue'
@@ -49,7 +50,7 @@ const config: DataTableConfig<ReminderConfig> = {
       cellClass: (row) => row.enabled ? 'badge badge-done' : 'badge badge-muted',
       formatter: (v) => v ? '启用' : '禁用',
     },
-    { key: 'created_at', label: '创建时间' },
+    { key: 'created_at', label: '创建时间', formatter: (v) => formatDateTime(v as string) },
   ],
   actions: [
     { id: 'toggle', label: (row) => row.enabled ? '禁用' : '启用', onClick: toggleEnabled },
@@ -59,7 +60,8 @@ const config: DataTableConfig<ReminderConfig> = {
   mobileCard: {
     titleKey: 'name',
     subtitleKey: 'username',
-    metaKeys: ['channel_type', 'webhook_url', 'enabled', 'created_at'],
+    badgeKey: 'enabled',
+    metaKeys: ['channel_type', 'webhook_url', 'created_at'],
   },
 }
 </script>

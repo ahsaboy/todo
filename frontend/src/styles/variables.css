@@ -11,6 +11,7 @@ html[data-theme='light'] {
   --color-bg: #f7f8fa;
   --color-surface: #ffffff;
   --color-surface-muted: #f1f3f5;
+  --color-surface-hover: #f6f8fa;
   --color-border: #dfe3e8;
   --color-text: #1f2328;
   --color-text-muted: #687076;
@@ -110,6 +111,7 @@ html[data-theme='dark'] {
   --color-bg: #0b0b0f;
   --color-surface: #12131a;
   --color-surface-muted: #1a1d27;
+  --color-surface-hover: #1e2130;
   --color-border: #2b3240;
   --color-text: #edf7ff;
   --color-text-muted: #8d99a8;
