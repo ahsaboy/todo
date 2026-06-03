@@ -161,20 +161,10 @@ function applyFilters() {
 .btn-secondary {
   flex: 1;
   padding: 10px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--color-text);
 }
 
 .btn-primary {
   flex: 1;
   padding: 10px;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
 }
 </style>

@@ -58,7 +58,7 @@ select {
 .app-panel {
   width: min(100%, 560px);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   padding: 28px;
   box-shadow: var(--shadow-panel);
@@ -91,7 +91,7 @@ select {
   margin: 0 0 14px;
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--color-danger) 22%, transparent);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--color-glow-danger) 72%, transparent);
   color: var(--color-danger);
   font-size: 14px;
@@ -102,7 +102,7 @@ select {
 .checkbox-circle {
   --cb-size: 20px;
   --cb-border: var(--color-border);
-  --cb-checked: #4caf50;
+  --cb-checked: var(--color-success);
   flex-shrink: 0;
   position: relative;
   width: var(--cb-size);
@@ -144,4 +144,14 @@ select {
 .checkbox-circle:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+@keyframes checkmark {
+  from { transform: rotate(45deg) scale(0); }
+  to { transform: rotate(45deg) scale(1); }
+}
+
+@keyframes sk-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
 }

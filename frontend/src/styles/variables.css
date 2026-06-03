@@ -5,22 +5,9 @@ html[data-theme='light'] {
     background-color var(--motion-duration-base) var(--motion-ease-standard),
     color var(--motion-duration-base) var(--motion-ease-standard);
 
-  /*
-   * T00 theme contract
-   * mount: html[data-theme='light'] / html[data-theme='dark']
-   * initial theme order: localStorage -> prefers-color-scheme -> light
-   * semantic vars for follow-up tasks:
-   * --color-info
-   * --color-orbit-completed
-   * --color-orbit-active
-   * --color-orbit-pending
-   * --color-orbit-urgent
-   * --color-glow-success
-   * --color-glow-warning
-   * --color-glow-info
-   * --color-glow-danger
-   */
   --font-sans: 'Inter', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Noto Sans SC', monospace;
+  --van-base-font: var(--font-sans);
   --color-bg: #f7f8fa;
   --color-surface: #ffffff;
   --color-surface-muted: #f1f3f5;
@@ -49,6 +36,7 @@ html[data-theme='light'] {
   --motion-duration-fast: 180ms;
   --motion-duration-base: 280ms;
   --motion-duration-slow: 440ms;
+  --motion-duration-layout: 380ms;
   --motion-duration-shimmer: 1.4s;
   --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
@@ -72,6 +60,24 @@ html[data-theme='light'] {
   --bottom-nav-height: 56px;
   --content-padding: 24px;
 
+  /* 通用 token */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+  --text-3xl: 28px;
+  --opacity-disabled: 0.5;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  --color-btn-primary-text: #fff;
+
   /* Auth brand panel (always dark, not theme-dependent) */
   --auth-brand-bg: #0b0b0f;
   --auth-brand-bg-deep: #0e1018;
@@ -84,6 +90,16 @@ html[data-theme='light'] {
   --auth-orbit-color: rgba(240, 192, 64, 0.4);
   --auth-orbit-ring: rgba(240, 192, 64, 0.12);
   --auth-orbit-duration: 24s;
+}
+
+/* 字体切换（通过 data-font 属性）
+   data-theme 属性保证特异性 ≥ 0,0,2，覆盖 :root 主题块中的 --font-sans 定义 */
+html[data-font='mono'][data-theme] {
+  --font-sans: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Noto Sans SC', monospace;
+}
+
+html[data-font='serif'][data-theme] {
+  --font-sans: 'Source Serif 4', 'Noto Serif SC', '宋体', serif;
 }
 
 html[data-theme='light'] {

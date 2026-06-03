@@ -66,7 +66,7 @@ const config: DataTableConfig<ReminderConfig> = {
 
 <template>
   <div class="page-container">
-    <h1 class="page-title">提醒配置</h1>
+    <h1 class="admin-page-title">提醒配置</h1>
     <div v-if="error" class="error-message">{{ error }}</div>
     <DataTable :config="config" :data="items" :is-loading="isLoading" />
     <PagePagination :page="page" :total="total" :total-pages="totalPages" @update:page="setPage" />

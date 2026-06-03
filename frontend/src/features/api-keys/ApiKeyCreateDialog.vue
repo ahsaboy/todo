@@ -103,7 +103,7 @@ function handleClose() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--color-surface-muted, rgba(0,0,0,0.04));
+  background: var(--color-surface-muted);
   padding: 0.75rem;
   border-radius: 6px;
 }

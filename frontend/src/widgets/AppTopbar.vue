@@ -2,10 +2,9 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth.store'
-import { useThemeStore } from '@/app/stores/theme.store'
 import { useClickOutside } from '@/shared/composables/useClickOutside'
-import { revealThemeTransition } from '@/shared/utils/viewTransition'
-import { LogOut, Moon, PanelLeftClose, Sun, UserCircle } from 'lucide-vue-next'
+import AppearanceSettingsTrigger from '@/shared/ui/AppearanceSettingsTrigger.vue'
+import { LogOut, PanelLeftClose, UserCircle } from 'lucide-vue-next'
 
 type SidebarToggleMode = 'desktop' | 'mobile' | null
 
@@ -24,14 +23,9 @@ defineEmits<{
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const themeStore = useThemeStore()
 const isUserMenuOpen = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
 let closeTimer: ReturnType<typeof setTimeout> | null = null
-
-function handleThemeToggle(event: MouseEvent) {
-  revealThemeTransition(event, () => themeStore.toggleTheme())
-}
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
@@ -49,14 +43,6 @@ const pageTitle = computed(() => {
 
 const userInitial = computed(() => {
   return authStore.user?.username?.charAt(0).toUpperCase() || '?'
-})
-
-const themeToggleLabel = computed(() => {
-  return themeStore.isDark ? '切换到浅色主题' : '切换到深色主题'
-})
-
-const themeToggleIcon = computed(() => {
-  return themeStore.isDark ? Sun : Moon
 })
 
 const showSidebarToggle = computed(() => props.sidebarToggleMode !== null)
@@ -132,17 +118,7 @@ async function handleLogout() {
     </button>
     <h1 class="page-title">{{ pageTitle }}</h1>
     <div class="topbar-actions">
-      <button
-        class="btn-icon theme-toggle-btn"
-        type="button"
-        :aria-label="themeToggleLabel"
-        @click="handleThemeToggle"
-      >
-        <component
-          :is="themeToggleIcon"
-          :size="16"
-        />
-      </button>
+      <AppearanceSettingsTrigger />
       <div
         ref="userMenuRef"
         class="user-menu"

@@ -75,7 +75,7 @@ const config: DataTableConfig<ReminderLog> = {
 
 <template>
   <div class="page-container">
-    <h1 class="page-title">提醒日志</h1>
+    <h1 class="admin-page-title">提醒日志</h1>
     <div v-if="error" class="error-message">{{ error }}</div>
     <DataTable
       :config="config"

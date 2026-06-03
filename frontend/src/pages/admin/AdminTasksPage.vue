@@ -135,7 +135,7 @@ const config: DataTableConfig<Task> = {
 
 <template>
   <div class="page-container">
-    <h1 class="page-title">任务管理</h1>
+    <h1 class="admin-page-title">任务管理</h1>
     <div v-if="list.error.value" class="error-message">{{ list.error.value }}</div>
     <DataTable
       :config="config"

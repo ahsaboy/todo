@@ -429,41 +429,6 @@ async function handleSubmit() {
   gap: 16px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-group label {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.field-hint,
-.field-error {
-  margin: 0;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.field-hint {
-  color: var(--color-text-muted);
-}
-
-.field-error {
-  color: var(--color-danger);
-}
-
 .template-vars {
   display: flex;
   flex-wrap: wrap;
@@ -473,7 +438,7 @@ async function handleSubmit() {
 .template-var-clickable {
   padding: 4px 8px;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--color-primary) 8%, white);
   color: var(--color-primary);
   font-size: 12px;
@@ -484,7 +449,7 @@ async function handleSubmit() {
 
 .template-var-clickable:hover {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-btn-primary-text);
   border-color: var(--color-primary);
 }
 
@@ -499,47 +464,5 @@ async function handleSubmit() {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-@media (max-width: 767px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border);
-}
-
-.btn-secondary {
-  padding: 8px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

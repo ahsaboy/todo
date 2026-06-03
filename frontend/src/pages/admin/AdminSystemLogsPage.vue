@@ -110,7 +110,7 @@ const config: DataTableConfig<LogEntryRow> = {
 
 <template>
   <div class="page-container">
-    <h1 class="page-title">系统日志</h1>
+    <h1 class="admin-page-title">系统日志</h1>
 
     <div class="admin-toolbar">
       <BaseSelect

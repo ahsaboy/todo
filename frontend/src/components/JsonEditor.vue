@@ -411,7 +411,7 @@ defineExpose({ textareaRef, format })
 }
 
 .btn-format:disabled {
-  opacity: 0.5;
+  opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }
 
@@ -434,7 +434,7 @@ defineExpose({ textareaRef, format })
 
 .json-editor:focus-within .json-editor-container {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  box-shadow: var(--focus-ring);
 }
 
 .json-editor.is-disabled {

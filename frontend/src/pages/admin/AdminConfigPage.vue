@@ -26,7 +26,7 @@ async function copyConfig() {
 <template>
   <div class="page-container">
     <div class="config-header">
-      <h1 class="page-title">系统配置</h1>
+      <h1 class="admin-page-title">系统配置</h1>
       <button v-if="configJson" class="btn btn-sm" @click="copyConfig">
         {{ copied ? '已复制' : '复制' }}
       </button>
@@ -48,7 +48,7 @@ async function copyConfig() {
   margin-bottom: 0.25rem;
 }
 
-.config-header .page-title {
+.config-header .admin-page-title {
   margin: 0;
 }
 

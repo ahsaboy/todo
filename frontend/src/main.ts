@@ -5,6 +5,7 @@ import { setupRouterGuards } from '@/app/router/guards'
 import { setUnauthorizedHandler } from '@/shared/api/client'
 import { useAuthStore } from '@/app/stores/auth.store'
 import { useThemeStore } from '@/app/stores/theme.store'
+import { useFontStore } from '@/app/stores/font.store'
 import '@/styles/index.css'
 import App from './App.vue'
 
@@ -15,6 +16,7 @@ app.use(pinia)
 app.use(router)
 
 useThemeStore(pinia).initTheme()
+useFontStore(pinia).initFont()
 
 setupRouterGuards(router)
 

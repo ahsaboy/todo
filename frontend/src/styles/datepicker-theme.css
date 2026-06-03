@@ -65,7 +65,7 @@
 .dp__input_wrap .dp__input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  box-shadow: var(--focus-ring);
 }
 
 .dp__input_wrap .dp__input::placeholder {

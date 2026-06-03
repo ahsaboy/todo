@@ -200,7 +200,7 @@ function initUserTrendChart(): echarts.ECharts | null {
 
 <template>
   <div class="page-container">
-    <h1 class="page-title">仪表盘</h1>
+    <h1 class="admin-page-title">仪表盘</h1>
     <div v-if="error" class="error-message" style="margin-bottom: 1rem;">{{ error }}</div>
 
     <div v-if="stats" class="admin-stats-grid motion-stagger">

@@ -211,7 +211,7 @@ onMounted(() => store.fetchTags())
 }
 
 @media (max-width: 767px) {
-  .tag-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .tag-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 8%, transparent); }
   .drag-handle { display: none; }
   .tag-actions { gap: 8px; margin-left: auto; }
   .tag-actions .btn-link { padding: 8px 12px; font-size: 13px; font-weight: 500; border-radius: 8px; background: var(--color-surface); border: 1px solid var(--color-border); transition: background-color var(--motion-duration-fast) var(--motion-ease-standard), border-color var(--motion-duration-fast) var(--motion-ease-standard), color var(--motion-duration-fast) var(--motion-ease-standard); }

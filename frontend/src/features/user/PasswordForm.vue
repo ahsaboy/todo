@@ -80,45 +80,4 @@ const state = useFormState<ChangePasswordPayload & { _confirm?: string }>({
   max-width: 400px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-group label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.form-group input {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.error-text {
-  font-size: 12px;
-  color: var(--color-danger);
-}
-
-.form-actions {
-  padding-top: 8px;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 </style>

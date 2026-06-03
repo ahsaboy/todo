@@ -349,11 +349,11 @@ onBeforeUnmount(() => {
 
 .base-select__trigger.is-open {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  box-shadow: var(--focus-ring);
 }
 
 .base-select__trigger.is-disabled {
-  opacity: 0.55;
+  opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }
 

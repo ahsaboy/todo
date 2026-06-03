@@ -28,7 +28,7 @@ defineEmits<{
   height: 52px;
   border-radius: 50%;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-btn-primary-text);
   border: none;
   box-shadow: var(--shadow-panel);
   cursor: pointer;

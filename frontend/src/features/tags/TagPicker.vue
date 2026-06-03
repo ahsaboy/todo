@@ -233,7 +233,7 @@ watch(open, (v) => {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-text) 12%, transparent);
   display: flex;
   flex-direction: column;
   max-height: 280px;
