@@ -26,7 +26,7 @@ body {
     radial-gradient(circle at top right, var(--color-bg-radial-b), transparent 28%);
   background-attachment: fixed;
   color: var(--color-text);
-  font-family: var(--font-sans);
+  font-family: var(--font-sans) !important;
 }
 
 button,
