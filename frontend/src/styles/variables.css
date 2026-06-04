@@ -91,6 +91,8 @@ html[data-theme='light'] {
   --auth-orbit-color: rgba(240, 192, 64, 0.4);
   --auth-orbit-ring: rgba(240, 192, 64, 0.12);
   --auth-orbit-duration: 24s;
+  --auth-particle-color: var(--auth-brand-green);
+  --auth-particle-line-color: rgba(56, 217, 196, 0.12);
 }
 
 /* 字体切换（通过 data-font 属性）

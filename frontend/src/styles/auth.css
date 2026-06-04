@@ -15,32 +15,8 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at 30% 20%, var(--auth-brand-glow-green) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, var(--auth-brand-glow-gold) 0%, transparent 50%),
-    linear-gradient(135deg, var(--auth-brand-bg-deep) 0%, var(--auth-brand-bg) 50%, var(--color-surface) 100%);
-  background-size: 200% 200%, 200% 200%, 100% 100%;
+  background: var(--auth-brand-bg);
   color: var(--auth-brand-text);
-}
-
-.auth-brand::before,
-.auth-brand::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.auth-brand::before {
-  background: radial-gradient(ellipse at 30% 20%, var(--auth-brand-glow-green) 0%, transparent 50%);
-  background-size: 200% 200%;
-  animation: gradient-drift 20s var(--motion-ease-standard) infinite alternate;
-}
-
-.auth-brand::after {
-  background: radial-gradient(ellipse at 70% 80%, var(--auth-brand-glow-gold) 0%, transparent 50%);
-  background-size: 200% 200%;
-  animation: gradient-drift 30s var(--motion-ease-standard) infinite alternate-reverse;
 }
 
 .auth-brand__content {
@@ -49,113 +25,47 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
+  width: 100%;
+  height: 100%;
 }
 
-/* Logo + orbit container */
-.auth-brand__logo-orbit {
+/* Canvas particle network background */
+.auth-brand__canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Logo container with glow effect */
+.auth-brand__logo-wrap {
   position: relative;
-  width: 160px;
-  height: 160px;
+  width: 120px;
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  box-shadow: 0 0 80px color-mix(in srgb, var(--auth-brand-green) 22%, transparent);
-  animation: orbit-spin var(--auth-orbit-duration) linear infinite;
+  box-shadow: 0 0 60px color-mix(in srgb, var(--auth-brand-green) 25%, transparent);
   transition: box-shadow var(--motion-duration-slow) var(--motion-ease-emphasized);
 }
 
-.auth-brand__logo-orbit--interactive:hover {
+.auth-brand__logo-wrap:hover {
   box-shadow:
-    0 0 120px color-mix(in srgb, var(--auth-brand-green) 35%, transparent),
-    0 0 40px color-mix(in srgb, var(--auth-accent) 18%, transparent);
+    0 0 100px color-mix(in srgb, var(--auth-brand-green) 40%, transparent),
+    0 0 40px color-mix(in srgb, var(--auth-accent) 20%, transparent);
 }
 
 .auth-brand__logo {
-  width: 96px;
-  height: 96px;
+  width: 80px;
+  height: 80px;
   filter: drop-shadow(0 0 20px color-mix(in srgb, var(--auth-brand-green) 30%, transparent));
   transition: transform var(--motion-duration-base) var(--motion-ease-emphasized);
 }
 
-.auth-brand__logo-orbit--interactive:hover .auth-brand__logo {
-  animation: orbit-spin var(--auth-orbit-duration) linear infinite;
-  transform: scale(1.05);
-}
-
-/* Breathing glow via pseudo-element on orbit wrapper */
-.auth-brand__logo-orbit--enter::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 112px;
-  height: 112px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--auth-brand-green) 12%, transparent), transparent 70%);
-  opacity: 0.6;
-  pointer-events: none;
-  animation: glow-breathe 3s var(--motion-ease-standard) infinite;
-  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
-}
-
-/* Orbit ring: dashed circle + animated gold arc */
-.auth-brand__orbit-ring {
-  position: absolute;
-  inset: -24px;
-  border-radius: 50%;
-  border: 1.5px dashed var(--auth-orbit-ring);
-}
-
-.auth-brand__orbit-ring::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 120deg,
-    transparent 0deg,
-    var(--auth-orbit-color) 30deg,
-    color-mix(in srgb, var(--auth-accent) 10%, transparent) 60deg,
-    transparent 80deg,
-    transparent 360deg
-  );
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px));
-  animation: orbit-spin var(--auth-orbit-duration) linear infinite;
-}
-
-/* Orbit dots */
-.auth-brand__orbit-dot {
-  position: absolute;
-  border-radius: 50%;
-}
-
-.auth-brand__orbit-dot--1 {
-  width: 6px;
-  height: 6px;
-  top: 0;
-  left: 50%;
-  margin-left: -3px;
-  background: color-mix(in srgb, var(--auth-accent) 50%, transparent);
-}
-
-.auth-brand__orbit-dot--2 {
-  width: 4px;
-  height: 4px;
-  bottom: 20px;
-  right: 10px;
-  background: color-mix(in srgb, var(--auth-brand-green) 40%, transparent);
-}
-
-.auth-brand__orbit-dot--3 {
-  width: 3px;
-  height: 3px;
-  top: 30%;
-  left: 5px;
-  background: color-mix(in srgb, var(--auth-brand-green) 30%, transparent);
+.auth-brand__logo-wrap:hover .auth-brand__logo {
+  animation: logo-hover-spin 24s linear infinite;
 }
 
 /* Brand text */
@@ -172,65 +82,6 @@
   font-size: var(--text-lg);
   color: var(--auth-brand-text-muted);
   line-height: 24px;
-}
-
-/* Floating particles */
-.auth-brand__particles {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.auth-brand__particle {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.3;
-  animation: particle-float 6s var(--motion-ease-standard) infinite alternate;
-}
-
-.auth-brand__particle--1 {
-  width: 4px;
-  height: 4px;
-  background: var(--auth-brand-green);
-  top: 15%;
-  left: 20%;
-  animation-delay: 0s;
-}
-
-.auth-brand__particle--2 {
-  width: 3px;
-  height: 3px;
-  background: var(--auth-accent);
-  top: 70%;
-  right: 25%;
-  animation-delay: -2s;
-}
-
-.auth-brand__particle--3 {
-  width: 5px;
-  height: 5px;
-  background: color-mix(in srgb, var(--auth-brand-green) 25%, transparent);
-  top: 40%;
-  right: 15%;
-  animation-delay: -4s;
-}
-
-.auth-brand__particle--4 {
-  width: 3px;
-  height: 3px;
-  background: var(--auth-accent);
-  bottom: 20%;
-  left: 30%;
-  animation-delay: -1s;
-}
-
-.auth-brand__particle--5 {
-  width: 4px;
-  height: 4px;
-  background: color-mix(in srgb, var(--auth-brand-green) 20%, transparent);
-  top: 25%;
-  right: 35%;
-  animation-delay: -3s;
 }
 
 /* Mobile: compact header strip */
@@ -258,109 +109,17 @@
   /* entrance handled by shell transition; base orbit-spin runs continuously */
 }
 
-.auth-brand__orbit-ring--enter {
-  /* entrance handled by shell transition */
-}
-
-.auth-brand__orbit-dot--enter {
-  animation-name: counter-spin;
-  animation-duration: 8s;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-.auth-brand__orbit-dot--1.auth-brand__orbit-dot--enter {
-  animation-delay: 0s;
-}
-
-.auth-brand__orbit-dot--2.auth-brand__orbit-dot--enter {
-  animation-delay: -2.7s;
-}
-
-.auth-brand__orbit-dot--3.auth-brand__orbit-dot--enter {
-  animation-delay: -5.3s;
-}
-
-.auth-brand__logo--enter {
-  /* logo static by default; rotation starts on hover */
-}
-
-.auth-brand__title--enter {
-  /* entrance handled by shell transition */
-}
-
-.auth-brand__tagline--enter {
-  /* entrance handled by shell transition */
-}
-
 /* ── Keyframes ──────────────────────────────────────────── */
 
-@keyframes orbit-spin {
+@keyframes logo-hover-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes particle-float {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-12px);
-  }
-}
-
-@keyframes glow-breathe {
-  0%, 100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-@keyframes counter-spin {
-  to {
-    transform: rotate(-360deg);
-  }
-}
-
-@keyframes gradient-drift {
-  from {
-    background-position: 0% 0%;
-  }
-  to {
-    background-position: 100% 100%;
-  }
-}
-
-@keyframes motion-enter-brand {
-  from {
-    opacity: 0;
-    transform: scale(0.8) translateY(var(--motion-distance-sm));
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
 /* ── Reduced motion ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .auth-brand__logo-orbit,
-  .auth-brand__orbit-ring::after {
-    animation: none !important;
-  }
-
-  .auth-brand__orbit-dot--enter {
-    animation: none !important;
-  }
-
-  .auth-brand__particle {
-    animation: none !important;
-  }
-
-  .auth-brand__logo-orbit--enter::after {
+  .auth-brand__logo-wrap:hover .auth-brand__logo {
     animation: none !important;
   }
 }
