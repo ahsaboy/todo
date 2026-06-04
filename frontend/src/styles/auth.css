@@ -76,11 +76,11 @@
   width: 96px;
   height: 96px;
   filter: drop-shadow(0 0 20px color-mix(in srgb, var(--auth-brand-green) 30%, transparent));
-  animation: orbit-spin var(--auth-orbit-duration) linear infinite reverse;
   transition: transform var(--motion-duration-base) var(--motion-ease-emphasized);
 }
 
 .auth-brand__logo-orbit--interactive:hover .auth-brand__logo {
+  animation: orbit-spin var(--auth-orbit-duration) linear infinite;
   transform: scale(1.05);
 }
 
@@ -247,10 +247,6 @@
   cursor: default;
 }
 
-.auth-brand__logo-orbit--interactive:hover .auth-brand__logo--glow {
-  animation-play-state: paused;
-}
-
 .auth-brand__logo-orbit--interactive:hover::after {
   animation-play-state: paused;
   opacity: 0.85;
@@ -259,45 +255,42 @@
 /* ── Staggered entrance animations ───────────────────────── */
 
 .auth-brand__logo-orbit--enter {
-  animation:
-    motion-enter-brand var(--motion-duration-slow) var(--motion-ease-emphasized) 100ms backwards,
-    orbit-spin var(--auth-orbit-duration) linear infinite;
+  /* entrance handled by shell transition; base orbit-spin runs continuously */
 }
 
 .auth-brand__orbit-ring--enter {
-  animation: motion-enter-brand var(--motion-duration-slow) var(--motion-ease-emphasized) 200ms backwards;
+  /* entrance handled by shell transition */
 }
 
 .auth-brand__orbit-dot--enter {
-  animation:
-    motion-enter-brand var(--motion-duration-slow) var(--motion-ease-emphasized) 250ms backwards,
-    counter-spin 8s linear infinite;
+  animation-name: counter-spin;
+  animation-duration: 8s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
 .auth-brand__orbit-dot--1.auth-brand__orbit-dot--enter {
-  animation-delay: 250ms, 0s;
+  animation-delay: 0s;
 }
 
 .auth-brand__orbit-dot--2.auth-brand__orbit-dot--enter {
-  animation-delay: 300ms, -2.7s;
+  animation-delay: -2.7s;
 }
 
 .auth-brand__orbit-dot--3.auth-brand__orbit-dot--enter {
-  animation-delay: 350ms, -5.3s;
+  animation-delay: -5.3s;
 }
 
 .auth-brand__logo--enter {
-  animation:
-    motion-enter-brand var(--motion-duration-slow) var(--motion-ease-emphasized) 100ms backwards,
-    orbit-spin var(--auth-orbit-duration) linear infinite reverse;
+  /* logo static by default; rotation starts on hover */
 }
 
 .auth-brand__title--enter {
-  animation: motion-enter-brand 400ms var(--motion-ease-emphasized) 350ms backwards;
+  /* entrance handled by shell transition */
 }
 
 .auth-brand__tagline--enter {
-  animation: motion-enter-brand 400ms var(--motion-ease-emphasized) 500ms backwards;
+  /* entrance handled by shell transition */
 }
 
 /* ── Keyframes ──────────────────────────────────────────── */
@@ -349,6 +342,26 @@
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .auth-brand__logo-orbit,
+  .auth-brand__orbit-ring::after {
+    animation: none !important;
+  }
+
+  .auth-brand__orbit-dot--enter {
+    animation: none !important;
+  }
+
+  .auth-brand__particle {
+    animation: none !important;
+  }
+
+  .auth-brand__logo-orbit--enter::after {
+    animation: none !important;
   }
 }
 
