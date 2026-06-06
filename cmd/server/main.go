@@ -107,6 +107,32 @@ func main() {
 		os.Exit(1)
 	}
 
+	// 收集命令行显式设置的 flag → 锁定对应配置项(必须在任何 CLI 赋值之前)。
+	// 被锁定的项不会被数据库配置覆盖,保证命令行优先级最高。
+	lockedKeys := collectLockedKeys()
+
+	// 初始化数据库(提前到此:数据库配置需先连库才能读取并覆盖到 cfg)。
+	// 数据库路径只来自默认/配置文件/环境变量,绝不入库,避免循环依赖。
+	// 此时尚未建立 zap logger,初始化失败用 stderr 退出。
+	db, err := database.Init(cfg.Database.Path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "数据库初始化失败: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	// 读取数据库配置并覆盖到 cfg(优先级: 数据库 > 环境变量 > 配置文件)。
+	// 读取失败时降级为空,不阻断启动(配置回退到配置文件/环境变量)。
+	appConfigRepo := repository.NewAppConfigRepo(db)
+	appConfigSvc := service.NewAppConfigService(appConfigRepo)
+	var dbConfigSkipped []string
+	if dbValues, derr := appConfigRepo.LoadAll(context.Background()); derr != nil {
+		fmt.Fprintf(os.Stderr, "读取数据库配置失败,已忽略: %v\n", derr)
+	} else {
+		dbConfigSkipped = config.ApplyDBOverrides(cfg, dbValues, lockedKeys)
+	}
+
+	// 命令行 flag 覆盖(最后执行,优先级最高)。
 	if *port > 0 {
 		cfg.Server.Port = *port
 	}
@@ -150,6 +176,9 @@ func main() {
 		zap.Int("port", cfg.Server.Port),
 		zap.String("mode", cfg.Server.Mode),
 	)
+	if len(dbConfigSkipped) > 0 {
+		logger.Warn("部分数据库配置项无效已忽略", zap.Strings("keys", dbConfigSkipped))
+	}
 
 	// 初始化进程级时区(供 view 函数和提醒模板使用)。
 	// 失败时回退到 time.Local 并 warn,不阻断启动。
@@ -165,13 +194,6 @@ func main() {
 
 	docs.SwaggerInfo.Version = version
 
-	// 初始化数据库
-	db, err := database.Init(cfg.Database.Path)
-	if err != nil {
-		logger.Fatal("数据库初始化失败", zap.Error(err))
-	}
-	defer db.Close()
-
 	// 初始化各层
 	userRepo := repository.NewUserRepo(db)
 	apiKeyRepo := repository.NewAPIKeyRepo(db)
@@ -181,11 +203,12 @@ func main() {
 	taskRepo := repository.NewTaskRepo(db, time.Duration(cfg.Reminder.GracePeriodMinutes)*time.Minute)
 
 	authSvc := service.NewAuthService(userRepo, apiKeyRepo)
+	emailSvc := service.NewEmailService(db, cfg, logger)
 	reminderConfigSvc := service.NewReminderConfigService(reminderConfigRepo)
 	tagSvc := service.NewTagService(tagRepo)
 	taskSvc := service.NewTaskService(taskRepo, reminderConfigRepo, tagSvc)
 
-	authHandler := handlers.NewAuthHandler(authSvc)
+	authHandler := handlers.NewAuthHandler(authSvc, emailSvc)
 	reminderConfigHandler := handlers.NewReminderConfigHandler(reminderConfigSvc)
 	reminderLogSvc := service.NewReminderLogService(reminderLogRepo)
 	reminderLogHandler := handlers.NewReminderLogHandler(reminderLogSvc)
@@ -220,10 +243,8 @@ func main() {
 	r.Use(logging.AccessLogger(logger))
 	r.Use(logging.Recovery(logger))
 
-	// CORS
-	if cfg.CORS.Enabled {
-		r.Use(corsMiddleware(cfg.CORS.AllowedOrigins))
-	}
+	// CORS（始终注册,内部根据 cfg.CORS.Enabled 动态决定是否生效）
+	r.Use(corsMiddleware(cfg))
 
 	// 公开端点
 	r.GET("/api/v1/health", handlers.HealthCheck(db))
@@ -237,6 +258,10 @@ func main() {
 	{
 		auth.POST("/register", authHandler.Register)
 		auth.POST("/login", authHandler.Login)
+		auth.GET("/email-status", authHandler.EmailStatus)
+		auth.POST("/send-code", authHandler.SendCode)
+		auth.POST("/verify-code", authHandler.VerifyCode)
+		auth.POST("/reset-password", authHandler.ResetPassword)
 	}
 
 	// 需认证路由
@@ -290,8 +315,8 @@ func main() {
 	})
 	r.Any("/mcp", gin.WrapH(mcpHandler))
 
-	registerOptionalRoutes(r, logger, cfg.StaticFiles)
-	registerAdminRoutes(r, db, cfg, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, logger)
+	registerOptionalRoutes(r, logger, cfg.StaticFiles, cfg.Admin.Enabled)
+	registerAdminRoutes(r, db, cfg, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, appConfigSvc, reminderSvc, emailSvc, lockedKeys, logger)
 
 	// 启动 HTTP 服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -385,7 +410,7 @@ func applyEnvOverrides(cfg *config.Config) error {
 				cfg.CORS.AllowedOrigins = nil
 			}
 		} else {
-			origins := splitCommaSeparated(value)
+			origins := config.SplitCommaSeparated(value)
 			if len(origins) == 0 {
 				return fmt.Errorf("CORS 必须是布尔值或逗号分隔的来源列表, 当前值: %q", value)
 			}
@@ -395,6 +420,31 @@ func applyEnvOverrides(cfg *config.Config) error {
 	}
 
 	return nil
+}
+
+// collectLockedKeys 返回被命令行显式设置过的 flag 对应的配置项 key。
+// 这些项不会被数据库配置覆盖,保证命令行优先级最高。
+func collectLockedKeys() map[string]bool {
+	locked := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "port", "p":
+			locked["server.port"] = true
+		case "host":
+			locked["server.host"] = true
+		case "mode":
+			locked["server.mode"] = true
+		case "log-path":
+			locked["logging.path"] = true
+		case "log-max-days":
+			locked["logging.max_days"] = true
+		case "log-file-enabled", "log-file-disabled":
+			locked["logging.file_enabled"] = true
+		case "static-files-enabled", "static-files-disabled":
+			locked["static_files"] = true
+		}
+	})
+	return locked
 }
 
 func applyStaticFilesOverrides(cfg *config.Config, staticFilesEnabled bool, staticFilesDisabled bool) error {
@@ -425,37 +475,33 @@ func lookupEnvAny(keys ...string) (string, bool) {
 	return "", false
 }
 
-func splitCommaSeparated(value string) []string {
-	parts := strings.Split(value, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		out = append(out, part)
-	}
-	return out
-}
-
-func registerOptionalRoutes(r *gin.Engine, logger *zap.Logger, staticFilesEnabled bool) {
+func registerOptionalRoutes(r *gin.Engine, logger *zap.Logger, staticFilesEnabled, adminEnabled bool) {
 	if staticFilesEnabled {
 		r.GET("/docs/*any", func(c *gin.Context) {
 			httpSwagger.WrapHandler.ServeHTTP(c.Writer, c.Request)
 		})
+	}
+
+	// 前端 SPA(含管理后台界面)在 静态资源开启 或 管理后台启用 时都注册,
+	// 保证 admin.enabled 时管理后台界面始终可登录,不被 static_files 锁死。
+	if staticFilesEnabled || adminEnabled {
 		registerStaticRoutes(r, logger)
 		return
 	}
 
-	logger.Info("静态资源开关已关闭，跳过前端静态资源与 Swagger 路由注册")
+	logger.Info("静态资源与管理后台均关闭，跳过前端静态资源与 Swagger 路由注册")
 	r.NoRoute(func(c *gin.Context) {
 		writeAPINotFound(c)
 	})
 }
 
-func corsMiddleware(origins []string) gin.HandlerFunc {
+func corsMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if origin, ok := allowedCORSOrigin(c.GetHeader("Origin"), origins); ok {
+		if !cfg.CORS.Enabled {
+			c.Next()
+			return
+		}
+		if origin, ok := allowedCORSOrigin(c.GetHeader("Origin"), cfg.CORS.AllowedOrigins); ok {
 			c.Header("Access-Control-Allow-Origin", origin)
 			c.Header("Vary", "Origin")
 		}
@@ -502,6 +548,10 @@ func registerAdminRoutes(
 	taskRepo repository.TaskRepository,
 	reminderConfigRepo repository.ReminderConfigRepository,
 	reminderLogRepo repository.ReminderLogRepository,
+	appConfigSvc *service.AppConfigService,
+	reminderSvc *service.ReminderService,
+	emailSvc service.EmailServiceInterface,
+	lockedKeys map[string]bool,
 	logger *zap.Logger,
 ) {
 	if !cfg.Admin.Enabled {
@@ -509,7 +559,9 @@ func registerAdminRoutes(
 		return
 	}
 	auditLogRepo := repository.NewAuditLogRepo(db)
-	adminH := handlers.NewAdminHandler(db, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, auditLogRepo, cfg)
+	adminH := handlers.NewAdminHandler(db, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, auditLogRepo, cfg, appConfigSvc, reminderSvc, emailSvc, lockedKeys, func(lang string) {
+		i18n.SetDefaultLang(lang)
+	})
 	adm := r.Group("/admin/api")
 	adm.Use(middleware.LocalhostOnly())
 	adm.POST("/auth/login", middleware.AdminLoginRateLimit(10, time.Minute), adminH.AdminLogin)
@@ -531,6 +583,9 @@ func registerAdminRoutes(
 		authed.DELETE("/reminder-configs/:id", adminH.AdminDeleteReminderConfig)
 		authed.GET("/reminder-logs", adminH.ListAllReminderLogs)
 		authed.GET("/config", adminH.GetConfig)
+		authed.PUT("/config", adminH.UpdateConfig)
+		authed.DELETE("/config/*key", adminH.ResetConfig)
+		authed.POST("/config/test-email", adminH.TestEmail)
 		authed.GET("/audit-logs", adminH.ListAuditLogs)
 
 		systemLogH := handlers.NewSystemLogHandler(cfg)

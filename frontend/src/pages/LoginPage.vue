@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { User, Lock } from 'lucide-vue-next'
-import { login } from '@/entities/auth/api'
+import { login, getEmailStatus } from '@/entities/auth/api'
 import { useAuthStore } from '@/app/stores/auth.store'
 import { useFormState } from '@/shared/composables/useFormState'
 import AuthBrandPanel from '@/shared/ui/AuthBrandPanel.vue'
@@ -9,6 +10,17 @@ import AuthBrandPanel from '@/shared/ui/AuthBrandPanel.vue'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+
+const emailAvailable = ref(false)
+
+onMounted(async () => {
+  try {
+    const res = await getEmailStatus()
+    emailAvailable.value = res.data?.available ?? false
+  } catch {
+    emailAvailable.value = false
+  }
+})
 
 const { form: payload, submitting: isLoading, error, handleSubmit } = useFormState({
   initialData: { account: '', password: '' },
@@ -74,6 +86,9 @@ const { form: payload, submitting: isLoading, error, handleSubmit } = useFormSta
             {{ isLoading ? '正在登录...' : '登录' }}
           </button>
         </form>
+        <p v-if="emailAvailable" class="auth-link">
+          <router-link to="/forgot-password">忘记密码？</router-link>
+        </p>
         <p class="auth-link">
           还没有账号？<router-link to="/register">立即注册</router-link>
         </p>

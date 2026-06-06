@@ -67,6 +67,15 @@ logging:
   path: "./logs"
   max_days: 7
 
+email:
+  enabled: false
+  smtp_host: ""
+  smtp_port: 587
+  smtp_username: ""
+  smtp_password: ""
+  from_address: ""
+  from_name: "TODO 任务管理系统"
+
 rate_limit:
   enabled: false
   reqs_per_second: 10

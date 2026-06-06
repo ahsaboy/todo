@@ -28,6 +28,13 @@ func NewTaskRepo(db *sql.DB, gracePeriod time.Duration) *TaskRepo {
 	return &TaskRepo{db: db, gracePeriod: gracePeriod}
 }
 
+func (r *TaskRepo) SetGracePeriod(d time.Duration) {
+	if d <= 0 {
+		d = 10 * time.Minute
+	}
+	r.gracePeriod = d
+}
+
 // marshalTags 把 []string 序列化为 JSON 字符串,nil/空数组都写 "[]"。
 func marshalTags(tags []string) string {
 	if len(tags) == 0 {

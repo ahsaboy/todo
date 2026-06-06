@@ -88,3 +88,9 @@ type AuditLogRepository interface {
 	Create(ctx context.Context, adminUserID int64, action, targetType string, targetID *int64, detail string) error
 	ListAll(ctx context.Context, page, limit int) ([]AuditLog, int64, error)
 }
+
+type AppConfigRepository interface {
+	LoadAll(ctx context.Context) (map[string]string, error)
+	Upsert(ctx context.Context, key, value string, updatedBy int64) error
+	Delete(ctx context.Context, key string) error
+}

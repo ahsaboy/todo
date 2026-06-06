@@ -14,6 +14,7 @@ type RegisterRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=32"`
 	Password string `json:"password" binding:"required,min=6,max=72"`
 	Email    string `json:"email" binding:"omitempty,email"`
+	Code     string `json:"code,omitempty"`
 }
 
 type LoginRequest struct {

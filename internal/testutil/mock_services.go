@@ -39,14 +39,16 @@ func (m *MockTaskService) ToggleComplete(ctx context.Context, userID, id int64, 
 // ---- AuthServiceInterface mock ----
 
 type MockAuthService struct {
-	RegisterFn       func(ctx context.Context, req models.RegisterRequest) (*models.UserResponse, string, error)
-	LoginFn          func(ctx context.Context, req models.LoginRequest) (*models.UserResponse, string, error)
-	GenerateAPIKeyFn func(ctx context.Context, userID int64, name string) (string, error)
-	RevokeAPIKeyFn   func(ctx context.Context, id, userID int64) (bool, error)
-	UpdateProfileFn  func(ctx context.Context, userID int64, email string) error
-	ChangePasswordFn func(ctx context.Context, userID int64, oldPassword, newPassword string) error
-	GetUserByIDFn    func(ctx context.Context, id int64) (*models.User, error)
-	ListAPIKeysFn    func(ctx context.Context, userID int64) ([]models.APIKey, error)
+	RegisterFn         func(ctx context.Context, req models.RegisterRequest) (*models.UserResponse, string, error)
+	LoginFn            func(ctx context.Context, req models.LoginRequest) (*models.UserResponse, string, error)
+	GenerateAPIKeyFn   func(ctx context.Context, userID int64, name string) (string, error)
+	RevokeAPIKeyFn     func(ctx context.Context, id, userID int64) (bool, error)
+	UpdateProfileFn    func(ctx context.Context, userID int64, email string) error
+	ChangePasswordFn   func(ctx context.Context, userID int64, oldPassword, newPassword string) error
+	GetUserByIDFn      func(ctx context.Context, id int64) (*models.User, error)
+	GetUserByEmailFn   func(ctx context.Context, email string) (*models.User, error)
+	ResetPasswordFn    func(ctx context.Context, userID int64, newPassword string) error
+	ListAPIKeysFn      func(ctx context.Context, userID int64) ([]models.APIKey, error)
 }
 
 func (m *MockAuthService) Register(ctx context.Context, req models.RegisterRequest) (*models.UserResponse, string, error) {
@@ -69,6 +71,18 @@ func (m *MockAuthService) ChangePassword(ctx context.Context, userID int64, oldP
 }
 func (m *MockAuthService) GetUserByID(ctx context.Context, id int64) (*models.User, error) {
 	return m.GetUserByIDFn(ctx, id)
+}
+func (m *MockAuthService) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	if m.GetUserByEmailFn != nil {
+		return m.GetUserByEmailFn(ctx, email)
+	}
+	return nil, nil
+}
+func (m *MockAuthService) ResetPassword(ctx context.Context, userID int64, newPassword string) error {
+	if m.ResetPasswordFn != nil {
+		return m.ResetPasswordFn(ctx, userID, newPassword)
+	}
+	return nil
 }
 func (m *MockAuthService) ListAPIKeys(ctx context.Context, userID int64) ([]models.APIKey, error) {
 	return m.ListAPIKeysFn(ctx, userID)
@@ -112,4 +126,38 @@ type MockReminderLogService struct {
 
 func (m *MockReminderLogService) List(ctx context.Context, userID int64, page, limit int) ([]models.ReminderLog, int64, error) {
 	return m.ListFn(ctx, userID, page, limit)
+}
+
+// ---- EmailServiceInterface mock ----
+
+type MockEmailService struct {
+	IsEnabledFn              func() bool
+	SetEnabledFn             func(b bool)
+	SendVerificationCodeFn   func(ctx context.Context, email, purpose string) error
+	VerifyCodeFn             func(ctx context.Context, email, code, purpose string) error
+	TestConnectionFn         func(ctx context.Context) error
+}
+
+func (m *MockEmailService) IsEnabled() bool {
+	if m.IsEnabledFn != nil {
+		return m.IsEnabledFn()
+	}
+	return false
+}
+func (m *MockEmailService) SetEnabled(b bool) {
+	if m.SetEnabledFn != nil {
+		m.SetEnabledFn(b)
+	}
+}
+func (m *MockEmailService) SendVerificationCode(ctx context.Context, email, purpose string) error {
+	return m.SendVerificationCodeFn(ctx, email, purpose)
+}
+func (m *MockEmailService) VerifyCode(ctx context.Context, email, code, purpose string) error {
+	return m.VerifyCodeFn(ctx, email, code, purpose)
+}
+func (m *MockEmailService) TestConnection(ctx context.Context) error {
+	if m.TestConnectionFn != nil {
+		return m.TestConnectionFn(ctx)
+	}
+	return nil
 }

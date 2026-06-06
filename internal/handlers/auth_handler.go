@@ -16,11 +16,12 @@ import (
 )
 
 type AuthHandler struct {
-	svc service.AuthServiceInterface
+	svc     service.AuthServiceInterface
+	emailSvc service.EmailServiceInterface
 }
 
-func NewAuthHandler(svc service.AuthServiceInterface) *AuthHandler {
-	return &AuthHandler{svc: svc}
+func NewAuthHandler(svc service.AuthServiceInterface, emailSvc service.EmailServiceInterface) *AuthHandler {
+	return &AuthHandler{svc: svc, emailSvc: emailSvc}
 }
 
 // Register 用户注册
@@ -41,10 +42,30 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// 邮箱服务启用时，强制要求邮箱和验证码
+	if h.emailSvc != nil && h.emailSvc.IsEnabled() {
+		if req.Email == "" {
+			utils.RespondLocalizedError(c, http.StatusBadRequest, "email.required")
+			return
+		}
+		if req.Code == "" {
+			utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_required")
+			return
+		}
+		if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code, "register"); err != nil {
+			h.handleCodeError(c, err)
+			return
+		}
+	}
+
 	user, apiKey, err := h.svc.Register(c.Request.Context(), req)
 	if err != nil {
 		if errors.Is(err, service.ErrUsernameTaken) {
 			utils.RespondLocalizedError(c, http.StatusConflict, "auth.username_taken")
+			return
+		}
+		if errors.Is(err, service.ErrEmailAlreadyTaken) {
+			utils.RespondLocalizedError(c, http.StatusConflict, "auth.email_taken")
 			return
 		}
 		utils.RespondLocalizedInternalError(c, "auth.register", err)
@@ -296,4 +317,127 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "password changed"})
+}
+
+// EmailStatus 返回邮箱服务是否可用
+func (h *AuthHandler) EmailStatus(c *gin.Context) {
+	available := h.emailSvc != nil && h.emailSvc.IsEnabled()
+	utils.RespondSuccess(c, gin.H{"available": available})
+}
+
+// SendCode 发送邮箱验证码
+func (h *AuthHandler) SendCode(c *gin.Context) {
+	var req models.SendCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
+		return
+	}
+
+	if h.emailSvc == nil || !h.emailSvc.IsEnabled() {
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.not_configured")
+		return
+	}
+
+	// 注册时检查邮箱是否已被占用
+	if req.Purpose == "register" {
+		existing, err := h.svc.GetUserByEmail(c.Request.Context(), req.Email)
+		if err != nil {
+			utils.RespondLocalizedInternalError(c, "email.send_code", err)
+			return
+		}
+		if existing != nil {
+			utils.RespondLocalizedError(c, http.StatusConflict, "auth.email_taken")
+			return
+		}
+	}
+
+	if err := h.emailSvc.SendVerificationCode(c.Request.Context(), req.Email, req.Purpose); err != nil {
+		if errors.Is(err, service.ErrCodeCooldown) {
+			utils.RespondLocalizedError(c, http.StatusTooManyRequests, "email.code_cooldown")
+			return
+		}
+		if errors.Is(err, service.ErrEmailNotConfigured) {
+			utils.RespondLocalizedError(c, http.StatusBadRequest, "email.not_configured")
+			return
+		}
+		utils.RespondLocalizedInternalError(c, "email.send_code", err)
+		return
+	}
+
+	utils.RespondSuccess(c, gin.H{"sent": true})
+}
+
+// VerifyCode 验证邮箱验证码
+func (h *AuthHandler) VerifyCode(c *gin.Context) {
+	var req models.VerifyCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
+		return
+	}
+
+	if h.emailSvc == nil || !h.emailSvc.IsEnabled() {
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.not_configured")
+		return
+	}
+
+	if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code, req.Purpose); err != nil {
+		h.handleCodeError(c, err)
+		return
+	}
+
+	utils.RespondSuccess(c, gin.H{"verified": true})
+}
+
+// ResetPassword 通过邮箱验证码重置密码
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req models.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
+		return
+	}
+
+	if h.emailSvc == nil || !h.emailSvc.IsEnabled() {
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.not_configured")
+		return
+	}
+
+	// 验证码校验
+	if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code, "reset_password"); err != nil {
+		h.handleCodeError(c, err)
+		return
+	}
+
+	// 查找用户（防止枚举，这里查不到也返回成功）
+	user, err := h.svc.GetUserByEmail(c.Request.Context(), req.Email)
+	if err != nil {
+		utils.RespondLocalizedInternalError(c, "user.reset_password", err)
+		return
+	}
+	if user == nil {
+		utils.RespondSuccess(c, gin.H{"reset": true})
+		return
+	}
+
+	if err := h.svc.ResetPassword(c.Request.Context(), user.ID, req.Password); err != nil {
+		utils.RespondLocalizedInternalError(c, "user.reset_password", err)
+		return
+	}
+
+	utils.RespondSuccess(c, gin.H{"reset": true})
+}
+
+// handleCodeError 将验证码相关错误映射为本地化 HTTP 响应
+func (h *AuthHandler) handleCodeError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, service.ErrCodeNotFound):
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_not_found")
+	case errors.Is(err, service.ErrCodeExpired):
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_expired")
+	case errors.Is(err, service.ErrCodeAttemptsExceeded):
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_attempts_exceeded")
+	case errors.Is(err, service.ErrCodeInvalid):
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_invalid")
+	default:
+		utils.RespondLocalizedInternalError(c, "email.verify_code", err)
+	}
 }

@@ -177,7 +177,7 @@ func TestCORSMiddlewareUsesMatchingRequestOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	r.Use(corsMiddleware([]string{"https://admin.example.com", "https://app.example.com"}))
+	r.Use(corsMiddleware(&config.Config{CORS: config.CORSConfig{Enabled: true, AllowedOrigins: []string{"https://admin.example.com", "https://app.example.com"}}}))
 	r.GET("/ping", func(c *gin.Context) {
 		c.Status(http.StatusNoContent)
 	})
@@ -200,7 +200,7 @@ func TestCORSMiddlewareOmitsUnmatchedOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	r.Use(corsMiddleware([]string{"https://app.example.com"}))
+	r.Use(corsMiddleware(&config.Config{CORS: config.CORSConfig{Enabled: true, AllowedOrigins: []string{"https://app.example.com"}}}))
 	r.GET("/ping", func(c *gin.Context) {
 		c.Status(http.StatusNoContent)
 	})
@@ -220,7 +220,7 @@ func TestRegisterOptionalRoutesWithStaticFilesDisabled(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	registerOptionalRoutes(r, zap.NewNop(), false)
+	registerOptionalRoutes(r, zap.NewNop(), false, false)
 
 	docReq := httptest.NewRequest(http.MethodGet, "/docs/index.html", nil)
 	docRec := httptest.NewRecorder()
@@ -244,7 +244,7 @@ func TestRegisterOptionalRoutesWithStaticFilesEnabled(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	registerOptionalRoutes(r, zap.NewNop(), true)
+	registerOptionalRoutes(r, zap.NewNop(), true, false)
 
 	docReq := httptest.NewRequest(http.MethodGet, "/docs/index.html", nil)
 	docRec := httptest.NewRecorder()

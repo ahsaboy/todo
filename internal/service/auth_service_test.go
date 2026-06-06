@@ -25,6 +25,7 @@ func bcryptHash(t *testing.T, password string) string {
 func TestAuthService_Register_Success(t *testing.T) {
 	userRepo := &testutil.MockUserRepository{
 		GetByUsernameFn: func(_ context.Context, _ string) (*models.User, error) { return nil, nil },
+		GetByEmailFn:   func(_ context.Context, _ string) (*models.User, error) { return nil, nil },
 		CreateFn: func(_ context.Context, username, email, _ string) (*models.User, error) {
 			return &models.User{ID: 1, Username: username, Email: email}, nil
 		},
@@ -37,7 +38,7 @@ func TestAuthService_Register_Success(t *testing.T) {
 	svc := service.NewAuthService(userRepo, apiKeyRepo)
 
 	resp, key, err := svc.Register(context.Background(), models.RegisterRequest{
-		Username: "alice", Password: "password123",
+		Username: "alice", Email: "alice@example.com", Password: "password123",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -59,7 +60,7 @@ func TestAuthService_Register_UsernameTaken_PreCheck(t *testing.T) {
 	svc := service.NewAuthService(userRepo, &testutil.MockAPIKeyRepository{})
 
 	_, _, err := svc.Register(context.Background(), models.RegisterRequest{
-		Username: "alice", Password: "password123",
+		Username: "alice", Email: "alice@example.com", Password: "password123",
 	})
 	if !errors.Is(err, service.ErrUsernameTaken) {
 		t.Errorf("expected ErrUsernameTaken, got %v", err)
@@ -69,6 +70,7 @@ func TestAuthService_Register_UsernameTaken_PreCheck(t *testing.T) {
 func TestAuthService_Register_UsernameTaken_DBConflict(t *testing.T) {
 	userRepo := &testutil.MockUserRepository{
 		GetByUsernameFn: func(_ context.Context, _ string) (*models.User, error) { return nil, nil },
+		GetByEmailFn:   func(_ context.Context, _ string) (*models.User, error) { return nil, nil },
 		CreateFn: func(_ context.Context, _, _, _ string) (*models.User, error) {
 			return nil, repository.ErrUsernameTaken
 		},
@@ -76,7 +78,7 @@ func TestAuthService_Register_UsernameTaken_DBConflict(t *testing.T) {
 	svc := service.NewAuthService(userRepo, &testutil.MockAPIKeyRepository{})
 
 	_, _, err := svc.Register(context.Background(), models.RegisterRequest{
-		Username: "alice", Password: "password123",
+		Username: "alice", Email: "alice@example.com", Password: "password123",
 	})
 	if !errors.Is(err, service.ErrUsernameTaken) {
 		t.Errorf("expected ErrUsernameTaken, got %v", err)

@@ -23,7 +23,17 @@ type AuthServiceInterface interface {
 	UpdateProfile(ctx context.Context, userID int64, email string) error
 	ChangePassword(ctx context.Context, userID int64, oldPassword, newPassword string) error
 	GetUserByID(ctx context.Context, id int64) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	ResetPassword(ctx context.Context, userID int64, newPassword string) error
 	ListAPIKeys(ctx context.Context, userID int64) ([]models.APIKey, error)
+}
+
+type EmailServiceInterface interface {
+	IsEnabled() bool
+	SetEnabled(b bool)
+	SendVerificationCode(ctx context.Context, email, purpose string) error
+	VerifyCode(ctx context.Context, email, code, purpose string) error
+	TestConnection(ctx context.Context) error
 }
 
 type ReminderConfigServiceInterface interface {

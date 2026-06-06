@@ -150,6 +150,44 @@ var messages = map[string]map[string]string{
 		"en":    "No fields to update",
 		"zh-CN": "没有需要更新的字段",
 	},
+
+	// --- 邮箱验证 ---
+	"email.not_configured": {
+		"en":    "Email service is not configured",
+		"zh-CN": "邮箱服务未配置",
+	},
+	"email.required": {
+		"en":    "Email is required",
+		"zh-CN": "邮箱为必填项",
+	},
+	"email.code_required": {
+		"en":    "Verification code is required",
+		"zh-CN": "请输入验证码",
+	},
+	"email.code_cooldown": {
+		"en":    "Please wait 60 seconds before requesting another code",
+		"zh-CN": "请等待60秒后再请求验证码",
+	},
+	"email.code_invalid": {
+		"en":    "Invalid verification code",
+		"zh-CN": "验证码错误",
+	},
+	"email.code_expired": {
+		"en":    "Verification code has expired",
+		"zh-CN": "验证码已过期",
+	},
+	"email.code_attempts_exceeded": {
+		"en":    "Too many verification attempts, please request a new code",
+		"zh-CN": "验证次数过多，请重新获取验证码",
+	},
+	"email.code_not_found": {
+		"en":    "No valid verification code found, please request a new one",
+		"zh-CN": "未找到有效验证码，请重新获取",
+	},
+	"auth.email_taken": {
+		"en":    "Email is already registered",
+		"zh-CN": "该邮箱已被注册",
+	},
 }
 
 // internalMessages 包含技术错误消息（存储在日志和API响应的error字段）
@@ -323,6 +361,20 @@ var internalMessages = map[string]map[string]string{
 	"reminder_log.list": {
 		"en":    "Failed to list reminder logs",
 		"zh-CN": "获取提醒日志失败",
+	},
+
+	// --- 邮箱服务 ---
+	"email.send_code": {
+		"en":    "Failed to send verification code",
+		"zh-CN": "发送验证码失败",
+	},
+	"email.verify_code": {
+		"en":    "Failed to verify code",
+		"zh-CN": "验证验证码失败",
+	},
+	"email.test_connection": {
+		"en":    "Failed to test email connection",
+		"zh-CN": "测试邮箱连接失败",
 	},
 
 	// --- 系统统计 ---

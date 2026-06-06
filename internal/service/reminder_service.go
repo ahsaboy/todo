@@ -24,10 +24,10 @@ type ReminderService struct {
 	logRepo      repository.ReminderLogRepository
 	logger       *zap.Logger
 	client       *http.Client
-	enabled      bool
+	enabled      atomic.Bool
 	scanInterval time.Duration
 	defaultTmpl  atomic.Pointer[template.Template]
-	workerCount  int
+	workerCount  atomic.Int64
 }
 
 func NewReminderService(
@@ -57,32 +57,28 @@ func NewReminderService(
 		workerCount = 5
 	}
 
-	var defaultTmplPtr atomic.Pointer[template.Template]
-	defaultTmplPtr.Store(tmpl)
-
-	return &ReminderService{
+	svc := &ReminderService{
 		taskRepo:     taskRepo,
 		configRepo:   configRepo,
 		logRepo:      logRepo,
 		logger:       logger,
 		client:       &http.Client{Timeout: timeout},
-		enabled:      cfg.Enabled,
 		scanInterval: scanInterval,
-		defaultTmpl:  defaultTmplPtr,
-		workerCount:  workerCount,
-	}, nil
+	}
+	svc.workerCount.Store(int64(workerCount))
+	svc.defaultTmpl.Store(tmpl)
+	svc.enabled.Store(cfg.Enabled)
+	return svc, nil
 }
 
 func (s *ReminderService) Start(ctx context.Context) {
-	if !s.enabled {
-		s.logger.Info("reminder service disabled")
-		return
-	}
-
 	ticker := time.NewTicker(s.scanInterval)
 	defer ticker.Stop()
 
-	s.logger.Info("reminder service started", zap.Duration("interval", s.scanInterval))
+	s.logger.Info("reminder service loop started",
+		zap.Duration("interval", s.scanInterval),
+		zap.Bool("enabled", s.enabled.Load()),
+	)
 
 	for {
 		select {
@@ -90,9 +86,16 @@ func (s *ReminderService) Start(ctx context.Context) {
 			s.logger.Info("reminder service stopped")
 			return
 		case <-ticker.C:
-			s.processReminders(ctx)
+			if s.enabled.Load() {
+				s.processReminders(ctx)
+			}
 		}
 	}
+}
+
+// SetEnabled 热切换提醒服务开关。Start 的循环始终运行,仅在每次 tick 时检查此开关。
+func (s *ReminderService) SetEnabled(v bool) {
+	s.enabled.Store(v)
 }
 
 func (s *ReminderService) processReminders(ctx context.Context) {
@@ -102,7 +105,7 @@ func (s *ReminderService) processReminders(ctx context.Context) {
 		return
 	}
 
-	sem := make(chan struct{}, s.workerCount)
+	sem := make(chan struct{}, int(s.workerCount.Load()))
 	var wg sync.WaitGroup
 
 	for i := range tasks {
@@ -311,4 +314,11 @@ func (s *ReminderService) UpdateTemplate(tmplStr string) error {
 	}
 	s.defaultTmpl.Store(tmpl)
 	return nil
+}
+
+func (s *ReminderService) SetWorkerCount(n int) {
+	if n <= 0 {
+		n = 5
+	}
+	s.workerCount.Store(int64(n))
 }

@@ -79,20 +79,20 @@ html[data-theme='light'] {
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
   --color-btn-primary-text: #fff;
 
-  /* Auth brand panel (always dark, not theme-dependent) */
-  --auth-brand-bg: #0b0b0f;
-  --auth-brand-bg-deep: #0e1018;
-  --auth-brand-glow-green: rgba(56, 217, 196, 0.08);
-  --auth-brand-glow-gold: rgba(240, 192, 64, 0.06);
+  /* Auth brand panel (light theme) */
+  --auth-brand-bg: linear-gradient(135deg, #1f5f5c 0%, #256f6c 50%, #1a7f37 100%);
+  --auth-brand-bg-deep: linear-gradient(135deg, #194f4c 0%, #1f5f5c 50%, #166f30 100%);
+  --auth-brand-glow-green: rgba(255, 255, 255, 0.15);
+  --auth-brand-glow-gold: rgba(255, 210, 85, 0.1);
   --auth-brand-text: #edf7ff;
-  --auth-brand-text-muted: rgba(237, 247, 255, 0.5);
-  --auth-accent: #f0c040;
-  --auth-brand-green: #38d9c4;
-  --auth-orbit-color: rgba(240, 192, 64, 0.4);
-  --auth-orbit-ring: rgba(240, 192, 64, 0.12);
+  --auth-brand-text-muted: rgba(237, 247, 255, 0.8);
+  --auth-accent: #ffd255;
+  --auth-brand-green: #edf7ff;
+  --auth-orbit-color: rgba(255, 210, 85, 0.6);
+  --auth-orbit-ring: rgba(255, 210, 85, 0.2);
   --auth-orbit-duration: 24s;
-  --auth-particle-color: var(--auth-brand-green);
-  --auth-particle-line-color: rgba(56, 217, 196, 0.12);
+  --auth-particle-color: #edf7ff;
+  --auth-particle-line-color: rgba(237, 247, 255, 0.25);
 }
 
 /* 字体切换（通过 data-font 属性）
@@ -137,4 +137,19 @@ html[data-theme='dark'] {
   --shadow-panel: 0 20px 48px rgb(0 0 0 / 36%);
   --shadow-glow-primary: 0 0 0 1px rgb(56 217 196 / 18%), 0 16px 36px rgb(56 217 196 / 12%);
   color-scheme: dark;
+
+  /* Auth brand panel (dark theme) */
+  --auth-brand-bg: #0b0b0f;
+  --auth-brand-bg-deep: #0e1018;
+  --auth-brand-glow-green: rgba(56, 217, 196, 0.12);
+  --auth-brand-glow-gold: rgba(240, 192, 64, 0.08);
+  --auth-brand-text: #edf7ff;
+  --auth-brand-text-muted: rgba(237, 247, 255, 0.5);
+  --auth-accent: #f0c040;
+  --auth-brand-green: #38d9c4;
+  --auth-orbit-color: rgba(240, 192, 64, 0.4);
+  --auth-orbit-ring: rgba(240, 192, 64, 0.12);
+  --auth-orbit-duration: 24s;
+  --auth-particle-color: #38d9c4;
+  --auth-particle-line-color: rgba(56, 217, 196, 0.18);
 }

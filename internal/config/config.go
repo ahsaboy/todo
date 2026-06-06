@@ -19,6 +19,7 @@ type Config struct {
 	RateLimit   RateLimitConfig `yaml:"rate_limit"`
 	Admin       AdminConfig     `yaml:"admin"`
 	StaticFiles bool            `yaml:"static_files"`
+	Email       EmailConfig     `yaml:"email"`
 	I18n        I18nConfig      `yaml:"i18n"`
 }
 
@@ -84,6 +85,16 @@ type LoggingConfig struct {
 	MaxDays     int    `yaml:"max_days"`
 }
 
+type EmailConfig struct {
+	Enabled      bool   `yaml:"enabled"`
+	SMTPHost     string `yaml:"smtp_host"`
+	SMTPPort     int    `yaml:"smtp_port"`
+	SMTPUsername string `yaml:"smtp_username"`
+	SMTPPassword string `yaml:"smtp_password"`
+	FromAddress  string `yaml:"from_address"`
+	FromName     string `yaml:"from_name"`
+}
+
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -121,6 +132,10 @@ func Load(path string) (*Config, error) {
 			Enabled: false,
 		},
 		StaticFiles: true,
+		Email: EmailConfig{
+			SMTPPort: 587,
+			FromName: "TODO 任务管理系统",
+		},
 	}
 
 	var raw struct {

@@ -108,6 +108,26 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS app_config (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL,
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_by INTEGER,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS email_verification_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    purpose TEXT NOT NULL CHECK(purpose IN ('register', 'reset_password')),
+    attempts INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL DEFAULT 5,
+    used INTEGER NOT NULL DEFAULT 0,
+    expires_at TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
 `
 
 const indexes = `
@@ -129,6 +149,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_reminder_logs_task_config
     ON reminder_logs(task_id, reminder_config_id)
     WHERE reminder_config_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ev_codes_email_purpose ON email_verification_codes(email, purpose);
+CREATE INDEX IF NOT EXISTS idx_ev_codes_expires_at ON email_verification_codes(expires_at);
 `
 
 func Init(dbPath string) (*sql.DB, error) {

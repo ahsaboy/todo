@@ -117,7 +117,10 @@ func (m *MockUserRepository) GetByUsername(ctx context.Context, username string)
 	return m.GetByUsernameFn(ctx, username)
 }
 func (m *MockUserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
-	return m.GetByEmailFn(ctx, email)
+	if m.GetByEmailFn != nil {
+		return m.GetByEmailFn(ctx, email)
+	}
+	return nil, nil
 }
 func (m *MockUserRepository) UpdateProfile(ctx context.Context, id int64, email string) error {
 	return m.UpdateProfileFn(ctx, id, email)

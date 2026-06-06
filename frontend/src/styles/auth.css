@@ -237,7 +237,7 @@
 
 /* ── Submit button ──────────────────────────────────────── */
 
-.auth-card button {
+.auth-card > form > button[type="submit"] {
   width: 100%;
   min-height: 46px;
   padding: 0 16px;
@@ -255,18 +255,18 @@
     box-shadow var(--motion-duration-fast);
 }
 
-.auth-card button:hover:not(:disabled) {
+.auth-card > form > button[type="submit"]:hover:not(:disabled) {
   background: var(--color-primary-hover);
   box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 24%, transparent);
   transform: translateY(-1px);
 }
 
-.auth-card button:active:not(:disabled) {
+.auth-card > form > button[type="submit"]:active:not(:disabled) {
   transform: translateY(0) scale(var(--motion-scale-soft));
   box-shadow: none;
 }
 
-.auth-card button:disabled {
+.auth-card > form > button[type="submit"]:disabled {
   opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }

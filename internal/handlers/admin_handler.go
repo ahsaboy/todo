@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -20,6 +21,7 @@ import (
 	"todo/internal/middleware"
 	"todo/internal/models"
 	"todo/internal/repository"
+	"todo/internal/service"
 	"todo/internal/timezone"
 	"todo/internal/utils"
 	"todo/internal/views"
@@ -34,6 +36,16 @@ type AdminHandler struct {
 	reminderLogRepo    repository.ReminderLogRepository
 	auditLogRepo       repository.AuditLogRepository
 	cfg                *config.Config
+	appConfigSvc       *service.AppConfigService
+	reminderSvc        *service.ReminderService
+	emailSvc           service.EmailServiceInterface
+	lockedKeys         map[string]bool
+	applyI18n          func(string)
+}
+
+// gracePeriodSetter 是支持运行时更新宽限期的 TaskRepo 子集接口。
+type gracePeriodSetter interface {
+	SetGracePeriod(d time.Duration)
 }
 
 func NewAdminHandler(
@@ -45,6 +57,11 @@ func NewAdminHandler(
 	reminderLogRepo repository.ReminderLogRepository,
 	auditLogRepo repository.AuditLogRepository,
 	cfg *config.Config,
+	appConfigSvc *service.AppConfigService,
+	reminderSvc *service.ReminderService,
+	emailSvc service.EmailServiceInterface,
+	lockedKeys map[string]bool,
+	applyI18n func(string),
 ) *AdminHandler {
 	return &AdminHandler{
 		db:                 db,
@@ -55,6 +72,11 @@ func NewAdminHandler(
 		reminderLogRepo:    reminderLogRepo,
 		auditLogRepo:       auditLogRepo,
 		cfg:                cfg,
+		appConfigSvc:       appConfigSvc,
+		reminderSvc:        reminderSvc,
+		emailSvc:           emailSvc,
+		lockedKeys:         lockedKeys,
+		applyI18n:          applyI18n,
 	}
 }
 
@@ -669,21 +691,226 @@ func (h *AdminHandler) ListAllReminderLogs(c *gin.Context) {
 	utils.RespondPaginated(c, adminReminderLogsView(logs, usernames), page, limit, total)
 }
 
+type configFieldView struct {
+	Key       string   `json:"key"`
+	Label     string   `json:"label"`
+	Type      string   `json:"type"`
+	Enum      []string `json:"enum,omitempty"`
+	Editable  bool     `json:"editable"`
+	HotReload bool     `json:"hot_reload"`
+	Value     any      `json:"value"`
+	Source    string   `json:"source"` // cli | db | config
+}
+
+type configGroupView struct {
+	Group  string            `json:"group"`
+	Fields []configFieldView `json:"fields"`
+}
+
 func (h *AdminHandler) GetConfig(c *gin.Context) {
-	safe := *h.cfg
-	safe.Admin.TokenHash = ""
-	safe.Admin.Password = ""
-	b, err := json.MarshalIndent(safe, "", "  ")
+	dbValues, err := h.appConfigSvc.LoadAll(c.Request.Context())
 	if err != nil {
-		utils.RespondLocalizedInternalError(c, "system.serialize", err)
+		dbValues = map[string]string{}
+	}
+	utils.RespondSuccess(c, gin.H{"groups": h.buildConfigView(dbValues)})
+}
+
+// buildConfigView 遍历注册表按分组聚合;有 DB 覆盖且未被 CLI 锁定时显示 DB 待生效值,密码脱敏。
+func (h *AdminHandler) buildConfigView(dbValues map[string]string) []configGroupView {
+	groups := []configGroupView{}
+	idx := map[string]int{}
+	for i := range config.Registry {
+		spec := &config.Registry[i]
+		value := spec.Get(h.cfg)
+		_, inDB := dbValues[spec.Key]
+		if inDB && spec.Editable && !h.lockedKeys[spec.Key] {
+			var dbv any
+			if json.Unmarshal([]byte(dbValues[spec.Key]), &dbv) == nil {
+				value = dbv
+			}
+		}
+		if spec.Key == "admin.password" || spec.Key == "email.smtp_password" {
+			value = "***"
+		}
+		source := "config"
+		if h.lockedKeys[spec.Key] {
+			source = "cli"
+		} else if inDB && spec.Editable {
+			source = "db"
+		}
+		field := configFieldView{
+			Key:       spec.Key,
+			Label:     spec.Label,
+			Type:      string(spec.Type),
+			Enum:      spec.Enum,
+			Editable:  spec.Editable,
+			HotReload: spec.HotReload,
+			Value:     value,
+			Source:    source,
+		}
+		gi, ok := idx[spec.Group]
+		if !ok {
+			groups = append(groups, configGroupView{Group: spec.Group})
+			gi = len(groups) - 1
+			idx[spec.Group] = gi
+		}
+		groups[gi].Fields = append(groups[gi].Fields, field)
+	}
+	return groups
+}
+
+type updateConfigRequest struct {
+	Updates []struct {
+		Key   string `json:"key" binding:"required"`
+		Value any    `json:"value"`
+	} `json:"updates" binding:"required"`
+}
+
+func (h *AdminHandler) UpdateConfig(c *gin.Context) {
+	var req updateConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
 		return
 	}
-	var configMap map[string]any
-	if err := json.Unmarshal(b, &configMap); err != nil {
-		utils.RespondLocalizedInternalError(c, "system.deserialize", err)
+	adminID := c.GetInt64("user_id")
+	byKey := config.RegistryByKey()
+	updated := make([]string, 0, len(req.Updates))
+	restartRequired := false
+	for _, u := range req.Updates {
+		if err := h.appConfigSvc.Set(c.Request.Context(), u.Key, u.Value, adminID); err != nil {
+			switch {
+			case errors.Is(err, service.ErrConfigKeyUnknown):
+				utils.RespondError(c, http.StatusBadRequest, "未知配置项: "+u.Key, utils.CodeInvalidInput)
+			case errors.Is(err, service.ErrConfigKeyLocked):
+				utils.RespondError(c, http.StatusBadRequest, "配置项只读: "+u.Key, utils.CodeInvalidInput)
+			case errors.Is(err, service.ErrConfigValueInvalid):
+				utils.RespondError(c, http.StatusBadRequest, "配置值无效: "+u.Key, utils.CodeInvalidInput)
+			default:
+				utils.RespondInternalError(c, "更新配置失败", err)
+			}
+			return
+		}
+		updated = append(updated, u.Key)
+		if spec := byKey[u.Key]; spec != nil && spec.HotReload {
+			h.applyHotReload(u.Key, u.Value)
+		} else {
+			restartRequired = true
+		}
+	}
+	if len(updated) > 0 {
+		h.addAuditLog(c, "config.update", "app_config", nil, strings.Join(updated, ","))
+	}
+	utils.RespondSuccess(c, gin.H{"restart_required": restartRequired, "updated": updated})
+}
+
+func (h *AdminHandler) ResetConfig(c *gin.Context) {
+	key := strings.TrimPrefix(c.Param("key"), "/")
+	if key == "" {
+		utils.RespondError(c, http.StatusBadRequest, "缺少配置 key", utils.CodeInvalidInput)
 		return
 	}
-	utils.RespondSuccess(c, configMap)
+	adminID := c.GetInt64("user_id")
+	if err := h.appConfigSvc.Reset(c.Request.Context(), key, adminID); err != nil {
+		switch {
+		case errors.Is(err, service.ErrConfigKeyUnknown):
+			utils.RespondError(c, http.StatusBadRequest, "未知配置项: "+key, utils.CodeInvalidInput)
+		case errors.Is(err, service.ErrConfigKeyLocked):
+			utils.RespondError(c, http.StatusBadRequest, "配置项只读: "+key, utils.CodeInvalidInput)
+		default:
+			utils.RespondInternalError(c, "重置配置失败", err)
+		}
+		return
+	}
+	h.addAuditLog(c, "config.reset", "app_config", nil, key)
+	utils.RespondSuccess(c, gin.H{"restart_required": true})
+}
+
+// TestEmail 测试 SMTP 邮箱连接。
+// 注意：h.cfg 的字段在并发请求下可能存在短暂竞态（与 reminder.enabled 等同），
+// 但 admin 端点仅限 localhost 低频访问，可接受。
+func (h *AdminHandler) TestEmail(c *gin.Context) {
+	if h.emailSvc == nil {
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.not_configured")
+		return
+	}
+	if err := h.emailSvc.TestConnection(c.Request.Context()); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), "EMAIL_TEST_FAILED")
+		return
+	}
+	h.addAuditLog(c, "config.test_email", "app_config", nil, "email")
+	utils.RespondSuccess(c, gin.H{"ok": true, "message": "SMTP 连接测试成功"})
+}
+
+// applyHotReload 对热生效项立即应用到运行中的系统,并同步内存 cfg 供 GetConfig 显示。
+func (h *AdminHandler) applyHotReload(key string, value any) {
+	switch key {
+	case "i18n.default_lang":
+		if s, ok := value.(string); ok && h.applyI18n != nil {
+			h.applyI18n(s)
+			h.cfg.I18n.DefaultLang = s
+		}
+	case "reminder.enabled":
+		if b, ok := value.(bool); ok && h.reminderSvc != nil {
+			h.reminderSvc.SetEnabled(b)
+			h.cfg.Reminder.Enabled = b
+		}
+	case "email.enabled":
+		if b, ok := value.(bool); ok {
+			h.cfg.Email.Enabled = b
+			if h.emailSvc != nil {
+				h.emailSvc.SetEnabled(b)
+			}
+		}
+	case "email.smtp_host":
+		if s, ok := value.(string); ok {
+			h.cfg.Email.SMTPHost = s
+		}
+	case "email.smtp_port":
+		if n, ok := value.(float64); ok {
+			h.cfg.Email.SMTPPort = int(n)
+		}
+	case "email.smtp_username":
+		if s, ok := value.(string); ok {
+			h.cfg.Email.SMTPUsername = s
+		}
+	case "email.smtp_password":
+		if s, ok := value.(string); ok {
+			h.cfg.Email.SMTPPassword = s
+		}
+	case "email.from_address":
+		if s, ok := value.(string); ok {
+			h.cfg.Email.FromAddress = s
+		}
+	case "email.from_name":
+		if s, ok := value.(string); ok {
+			h.cfg.Email.FromName = s
+		}
+	case "server.timezone":
+		if s, ok := value.(string); ok {
+			h.cfg.Server.Timezone = s
+			loc, err := utils.ResolveTimezone(s)
+			if err == nil {
+				timezone.Init(loc)
+			}
+		}
+	case "reminder.worker_count":
+		if n, ok := value.(float64); ok && h.reminderSvc != nil {
+			h.cfg.Reminder.WorkerCount = int(n)
+			h.reminderSvc.SetWorkerCount(int(n))
+		}
+	case "reminder.grace_period_minutes":
+		if n, ok := value.(float64); ok {
+			h.cfg.Reminder.GracePeriodMinutes = int(n)
+			if setter, ok := h.taskRepo.(gracePeriodSetter); ok {
+				setter.SetGracePeriod(time.Duration(int(n)) * time.Minute)
+			}
+		}
+	case "reminder.webhook_body_template":
+		if s, ok := value.(string); ok && h.reminderSvc != nil {
+			h.cfg.Reminder.WebhookBodyTemplate = s
+			h.reminderSvc.UpdateTemplate(s)
+		}
+	}
 }
 
 // lookupUsernames returns a userID → username map for the given IDs in one query.

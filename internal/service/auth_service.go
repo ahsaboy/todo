@@ -37,6 +37,17 @@ func (s *AuthService) Register(ctx context.Context, req models.RegisterRequest) 
 		return nil, "", ErrUsernameTaken
 	}
 
+	// 检查邮箱是否已被注册（仅在提供了邮箱时）
+	if req.Email != "" {
+		existingByEmail, err := s.userRepo.GetByEmail(ctx, req.Email)
+		if err != nil {
+			return nil, "", fmt.Errorf("check email: %w", err)
+		}
+		if existingByEmail != nil {
+			return nil, "", ErrEmailAlreadyTaken
+		}
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 14)
 	if err != nil {
 		return nil, "", fmt.Errorf("hash password: %w", err)
@@ -153,4 +164,16 @@ func (s *AuthService) GetUserByID(ctx context.Context, id int64) (*models.User, 
 
 func (s *AuthService) ListAPIKeys(ctx context.Context, userID int64) ([]models.APIKey, error) {
 	return s.apiKeyRepo.GetByUserID(ctx, userID)
+}
+
+func (s *AuthService) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	return s.userRepo.GetByEmail(ctx, email)
+}
+
+func (s *AuthService) ResetPassword(ctx context.Context, userID int64, newPassword string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 14)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+	return s.userRepo.UpdatePassword(ctx, userID, string(hash))
 }
