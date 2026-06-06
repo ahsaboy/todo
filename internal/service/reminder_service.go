@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"text/template"
 	"time"
 
@@ -25,7 +26,7 @@ type ReminderService struct {
 	client       *http.Client
 	enabled      bool
 	scanInterval time.Duration
-	defaultTmpl  *template.Template
+	defaultTmpl  atomic.Pointer[template.Template]
 	workerCount  int
 }
 
@@ -56,6 +57,9 @@ func NewReminderService(
 		workerCount = 5
 	}
 
+	var defaultTmplPtr atomic.Pointer[template.Template]
+	defaultTmplPtr.Store(tmpl)
+
 	return &ReminderService{
 		taskRepo:     taskRepo,
 		configRepo:   configRepo,
@@ -64,7 +68,7 @@ func NewReminderService(
 		client:       &http.Client{Timeout: timeout},
 		enabled:      cfg.Enabled,
 		scanInterval: scanInterval,
-		defaultTmpl:  tmpl,
+		defaultTmpl:  defaultTmplPtr,
 		workerCount:  workerCount,
 	}, nil
 }
@@ -215,7 +219,7 @@ func (s *ReminderService) deliveryConfigs(ctx context.Context, userID int64) ([]
 }
 
 func (s *ReminderService) sendToChannel(ctx context.Context, task *models.Task, cfg *models.UserReminderConfig) (int, error) {
-	tmpl := s.defaultTmpl
+	tmpl := s.defaultTmpl.Load()
 	if cfg.WebhookBodyTemplate != "" {
 		var err error
 		tmpl, err = template.New("webhook").Parse(cfg.WebhookBodyTemplate)
@@ -305,6 +309,6 @@ func (s *ReminderService) UpdateTemplate(tmplStr string) error {
 	if err != nil {
 		return err
 	}
-	s.defaultTmpl = tmpl
+	s.defaultTmpl.Store(tmpl)
 	return nil
 }

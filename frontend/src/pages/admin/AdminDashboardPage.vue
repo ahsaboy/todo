@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { adminApi } from '@/shared/api/admin-client'
 import { useFetch } from '@/shared/composables/useFetch'
 import type { ApiResponse } from '@/shared/api/types'
@@ -65,7 +65,10 @@ const { isMobile, reinitCharts, initCharts } = useECharts(
 )
 
 watch(dashboardData, async (data) => {
-  if (data) initCharts()
+  if (data) {
+    await nextTick()
+    initCharts()
+  }
 })
 
 // -- Chart inits --

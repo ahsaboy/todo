@@ -1,5 +1,5 @@
 <template>
-  <TransitionGroup tag="div" name="list-move" class="task-card-list">
+  <TransitionGroup tag="div" name="list-move" class="task-card-list" appear>
     <div
       v-for="task in tasks"
       :key="task.id"
@@ -73,15 +73,46 @@ defineEmits<{
   border-radius: 8px;
   min-width: 0;
   cursor: pointer;
-  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard), border-color var(--motion-duration-fast) var(--motion-ease-standard);
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
-.task-card:hover {
-  background-color: var(--color-surface-muted);
+@media (hover: hover) {
+  .task-card:hover {
+    background-color: var(--color-surface-muted);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-panel);
+  }
+}
+
+@media (hover: none) {
+  .task-card:active {
+    transform: scale(0.985);
+    background-color: var(--color-surface-muted);
+  }
 }
 
 .task-card.completed {
   opacity: 0.6;
+  animation: completion-pulse var(--motion-duration-base) var(--motion-ease-emphasized);
+}
+
+@keyframes completion-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 40%, transparent);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-success) 0%, transparent);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 0%, transparent);
+    transform: scale(1);
+  }
 }
 
 .task-body {

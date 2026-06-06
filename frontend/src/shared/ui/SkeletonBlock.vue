@@ -17,7 +17,7 @@ withDefaults(defineProps<{
 <style scoped>
 .sk-block {
   background: linear-gradient(
-    90deg,
+    135deg,
     var(--color-surface-muted) 25%,
     var(--color-border) 37%,
     var(--color-surface-muted) 63%
