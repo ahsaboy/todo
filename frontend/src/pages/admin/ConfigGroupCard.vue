@@ -55,17 +55,6 @@ function enumOptions(f: ConfigField): SelectOption<string>[] {
   return f.enum.map((v) => ({ label: v, value: v }))
 }
 
-function sourceBadge(source: string): { text: string; cls: string } {
-  switch (source) {
-    case 'cli':
-      return { text: '命令行', cls: 'badge-warning' }
-    case 'db':
-      return { text: '数据库', cls: 'badge-primary' }
-    default:
-      return { text: '配置文件', cls: 'badge-muted' }
-  }
-}
-
 function formatValue(v: unknown): string {
   if (v === null || v === undefined || v === '') return '—'
   if (typeof v === 'boolean') return v ? '是' : '否'
@@ -165,7 +154,6 @@ function isWideField(f: ConfigField): boolean {
         <div class="config-row__info">
           <span class="config-row__label">{{ f.label }}</span>
           <span class="config-row__meta">
-            <span v-if="f.source !== 'config'" class="badge badge-xs" :class="sourceBadge(f.source).cls">{{ sourceBadge(f.source).text }}</span>
             <span v-if="!f.hotReload" class="badge badge-xs badge-info">重启</span>
             <button
               v-if="f.source === 'db'"

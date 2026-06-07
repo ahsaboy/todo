@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth.store'
 import { useClickOutside } from '@/shared/composables/useClickOutside'
 import AppearanceSettingsTrigger from '@/shared/ui/AppearanceSettingsTrigger.vue'
+import UserAvatar from '@/shared/ui/UserAvatar.vue'
 import { LogOut, PanelLeftClose, UserCircle } from 'lucide-vue-next'
 
 type SidebarToggleMode = 'desktop' | 'mobile' | null
@@ -39,10 +40,6 @@ const pageTitle = computed(() => {
     profile: '个人资料',
   }
   return titles[route.name as string] || 'TODO'
-})
-
-const userInitial = computed(() => {
-  return authStore.user?.username?.charAt(0).toUpperCase() || '?'
 })
 
 const showSidebarToggle = computed(() => props.sidebarToggleMode !== null)
@@ -134,7 +131,7 @@ async function handleLogout() {
           @click="toggleUserMenu"
           @keydown="handleBtnKeydown"
         >
-          {{ userInitial }}
+          <UserAvatar :avatar-url="authStore.user?.avatarUrl" :username="authStore.user?.username" size="sm" />
         </button>
         <Transition name="dropdown">
           <div

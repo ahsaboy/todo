@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { User, UserDto } from '@/entities/user/model'
+import type { User, UserDto, ProfileResponse } from '@/entities/user/model'
 import { toUser } from '@/entities/user/mapper'
 import { api } from '@/shared/api/client'
 import type { ApiResponse } from '@/shared/api/types'
@@ -17,6 +17,11 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('api_key', key)
   }
 
+  function setOAuthAuth(key: string) {
+    apiKey.value = key
+    localStorage.setItem('api_key', key)
+  }
+
   function logout() {
     apiKey.value = null
     user.value = null
@@ -25,8 +30,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchProfile() {
     try {
-      const response = await api.get<ApiResponse<UserDto>>('/user/profile')
-      user.value = toUser(response.data)
+      const response = await api.get<ApiResponse<ProfileResponse>>('/user/profile')
+      user.value = toUser(response.data.user)
     } catch {
       logout()
     }
@@ -37,6 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
     apiKey,
     isAuthenticated,
     setAuth,
+    setOAuthAuth,
     logout,
     fetchProfile,
   }

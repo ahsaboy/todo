@@ -1,6 +1,6 @@
 import { api } from '@/shared/api/client'
 import type { ApiResponse } from '@/shared/api/types'
-import type { LoginPayload, RegisterPayload, AuthResponse, SendCodePayload, VerifyCodePayload, ResetPasswordPayload } from './model'
+import type { LoginPayload, RegisterPayload, AuthResponse, SendCodePayload, VerifyCodePayload, ResetPasswordPayload, OAuthProvider } from './model'
 
 export function login(payload: LoginPayload) {
   return api.post<ApiResponse<AuthResponse>>('/auth/login', payload)
@@ -24,4 +24,8 @@ export function verifyCode(payload: VerifyCodePayload) {
 
 export function resetPassword(payload: ResetPasswordPayload) {
   return api.post<ApiResponse<{ reset: boolean }>>('/auth/reset-password', payload)
+}
+
+export function getOAuthProviders() {
+  return api.get<ApiResponse<OAuthProvider[]>>('/auth/oauth/providers')
 }

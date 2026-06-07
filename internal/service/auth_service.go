@@ -87,6 +87,11 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest) (*mode
 		return nil, "", ErrInvalidCredentials
 	}
 
+	// OAuth 用户无密码，直接拒绝密码登录
+	if user.PasswordHash == "" {
+		return nil, "", ErrInvalidCredentials
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return nil, "", ErrInvalidCredentials
 	}
@@ -116,6 +121,10 @@ func (s *AuthService) RevokeAPIKey(ctx context.Context, id, userID int64) (bool,
 }
 
 func (s *AuthService) generateKey(ctx context.Context, userID int64, name string) (string, error) {
+	return s.GenerateLoginKey(ctx, userID, name)
+}
+
+func (s *AuthService) GenerateLoginKey(ctx context.Context, userID int64, name string) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", fmt.Errorf("generate random key: %w", err)
@@ -176,4 +185,15 @@ func (s *AuthService) ResetPassword(ctx context.Context, userID int64, newPasswo
 		return fmt.Errorf("hash password: %w", err)
 	}
 	return s.userRepo.UpdatePassword(ctx, userID, string(hash))
+}
+
+func (s *AuthService) HasPassword(ctx context.Context, userID int64) (bool, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("get user: %w", err)
+	}
+	if user == nil {
+		return false, ErrUserNotFound
+	}
+	return user.PasswordHash != "", nil
 }

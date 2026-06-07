@@ -6,6 +6,7 @@ type User struct {
 	Email        string `json:"email"`
 	PasswordHash string `json:"-"`
 	IsAdmin      bool   `json:"-"`
+	AvatarURL    string `json:"avatar_url"`
 	CreatedAt    string `json:"created_at"`
 	UpdatedAt    string `json:"updated_at"`
 }
@@ -26,11 +27,13 @@ type UserResponse struct {
 	ID        int64  `json:"id"`
 	Username  string `json:"username"`
 	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url,omitempty"`
 	CreatedAt string `json:"created_at"`
 }
 
 type UpdateProfileRequest struct {
 	Email *string `json:"email" binding:"omitempty,email"`
+	Code  *string `json:"code,omitempty"`
 }
 
 type ChangePasswordRequest struct {
@@ -43,6 +46,7 @@ func (u *User) ToResponse() UserResponse {
 		ID:        u.ID,
 		Username:  u.Username,
 		Email:     u.Email,
+		AvatarURL: u.AvatarURL,
 		CreatedAt: u.CreatedAt,
 	}
 }

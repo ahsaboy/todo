@@ -1,10 +1,10 @@
 <template>
-  <form class="password-form" @submit.prevent="state.handleSubmit">
-    <div class="form-group">
+  <form class="password-form" @submit.prevent="handleSubmit">
+    <div v-if="hasPassword" class="form-group">
       <label for="password-current">当前密码 *</label>
       <input
         id="password-current"
-        v-model="state.form.old_password"
+        v-model="oldPassword"
         name="current_password"
         type="password"
         required
@@ -16,7 +16,7 @@
       <label for="password-new">新密码 *</label>
       <input
         id="password-new"
-        v-model="state.form.new_password"
+        v-model="newPassword"
         name="new_password"
         type="password"
         required
@@ -35,12 +35,12 @@
         required
         autocomplete="new-password"
       />
-      <span v-if="state.error.value" class="error-text">{{ state.error.value }}</span>
+      <span v-if="error" class="error-text">{{ error }}</span>
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn-primary" :disabled="state.submitting.value">
-        {{ state.submitting.value ? '修改中...' : '修改密码' }}
+      <button type="submit" class="btn-primary" :disabled="submitting">
+        {{ submitting ? '处理中...' : (hasPassword ? '修改密码' : '设置密码') }}
       </button>
     </div>
   </form>
@@ -48,36 +48,74 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useFormState } from '@/shared/composables/useFormState'
-import type { ChangePasswordPayload } from '@/entities/user/model'
 
-const emit = defineEmits<{
-  submit: [payload: ChangePasswordPayload]
+const props = defineProps<{
+  hasPassword: boolean
+  onChangePassword?: (payload: { old_password: string; new_password: string }) => Promise<void>
+  onSetPassword?: (newPassword: string) => Promise<void>
 }>()
 
+const oldPassword = ref('')
+const newPassword = ref('')
 const confirmPassword = ref('')
+const submitting = ref(false)
+const error = ref('')
 
-const state = useFormState<ChangePasswordPayload & { _confirm?: string }>({
-  initialData: { old_password: '', new_password: '' },
-  validate: (data) => {
-    if (data.new_password !== confirmPassword.value) return '两次输入的密码不一致'
-    if (data.new_password.length < 6) return '密码长度至少 6 位'
-    return null
-  },
-  onSubmit: async (data) => {
-    emit('submit', { old_password: data.old_password, new_password: data.new_password })
-    state.reset()
+async function handleSubmit() {
+  error.value = ''
+  if (props.hasPassword && !oldPassword.value) {
+    error.value = '请输入当前密码'
+    return
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    error.value = '两次输入的密码不一致'
+    return
+  }
+  if (newPassword.value.length < 6) {
+    error.value = '密码长度至少 6 位'
+    return
+  }
+
+  submitting.value = true
+  try {
+    if (props.hasPassword && props.onChangePassword) {
+      await props.onChangePassword({ old_password: oldPassword.value, new_password: newPassword.value })
+    } else if (!props.hasPassword && props.onSetPassword) {
+      await props.onSetPassword(newPassword.value)
+    }
+    oldPassword.value = ''
+    newPassword.value = ''
     confirmPassword.value = ''
-  },
-})
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <style scoped>
 .password-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
   max-width: 400px;
 }
 
+.error-text {
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+}
+
+.form-actions {
+  padding-top: 0.25rem;
+}
+
+.btn-primary {
+  min-height: 36px;
+  padding: 0 1.25rem;
+}
+
+.btn-primary:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
 </style>

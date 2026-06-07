@@ -17,22 +17,29 @@ export interface AuthResponse {
     email: string
     id: number
     username: string
+    avatar_url?: string
   }
 }
 
 export interface SendCodePayload {
   email: string
-  purpose: 'register' | 'reset_password'
+  purpose: 'register' | 'reset_password' | 'change_email'
 }
 
 export interface VerifyCodePayload {
   email: string
   code: string
-  purpose: 'register' | 'reset_password'
+  purpose: 'register' | 'reset_password' | 'change_email'
 }
 
 export interface ResetPasswordPayload {
   email: string
   code: string
   password: string
+}
+
+export interface OAuthProvider {
+  name: string
+  label: string
+  icon: string
 }

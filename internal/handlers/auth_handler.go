@@ -273,6 +273,24 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
+	// 邮件服务启用时，更换邮箱需要验证码
+	if h.emailSvc != nil && h.emailSvc.IsEnabled() {
+		if req.Code == nil || *req.Code == "" {
+			utils.RespondLocalizedError(c, http.StatusBadRequest, "profile.email_code_required")
+			return
+		}
+		if err := h.emailSvc.VerifyCode(c.Request.Context(), *req.Email, *req.Code, "change_email"); err != nil {
+			h.handleCodeError(c, err)
+			return
+		}
+		// 检查邮箱是否已被其他用户使用
+		existing, _ := h.svc.GetUserByEmail(c.Request.Context(), *req.Email)
+		if existing != nil && existing.ID != userID {
+			utils.RespondLocalizedError(c, http.StatusConflict, "profile.email_taken")
+			return
+		}
+	}
+
 	if err := h.svc.UpdateProfile(c.Request.Context(), userID, *req.Email); err != nil {
 		utils.RespondLocalizedInternalError(c, "user.update_profile", err)
 		return
@@ -317,6 +335,40 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "password changed"})
+}
+
+// SetPassword 为无密码用户（OAuth 用户）设置初始密码
+func (h *AuthHandler) SetPassword(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		utils.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	hasPwd, err := h.svc.HasPassword(c.Request.Context(), userID)
+	if err != nil {
+		utils.RespondLocalizedInternalError(c, "user.change_password", err)
+		return
+	}
+	if hasPwd {
+		utils.RespondLocalizedError(c, http.StatusConflict, "profile.password_already_set")
+		return
+	}
+
+	var req struct {
+		NewPassword string `json:"new_password" binding:"required,min=6,max=72"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, err.Error(), utils.CodeInvalidInput)
+		return
+	}
+
+	if err := h.svc.ResetPassword(c.Request.Context(), userID, req.NewPassword); err != nil {
+		utils.RespondLocalizedInternalError(c, "user.change_password", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "password set"})
 }
 
 // EmailStatus 返回邮箱服务是否可用

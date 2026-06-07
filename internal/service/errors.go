@@ -23,4 +23,8 @@ var (
 	ErrCodeAttemptsExceeded   = errors.New("too many verification attempts")
 	ErrCodeInvalid            = errors.New("invalid verification code")
 	ErrEmailAlreadyTaken      = errors.New("email is already registered")
+	ErrLastAuthMethod         = errors.New("cannot unlink the last authentication method")
+	ErrOAuthAlreadyLinked     = errors.New("this OAuth account is already linked")
+	ErrOAuthLinkedToOther     = errors.New("this OAuth account is linked to another user")
+	ErrOAuthAccountNotFound   = errors.New("OAuth account not found")
 )

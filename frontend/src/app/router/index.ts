@@ -23,6 +23,12 @@ const router = createRouter({
       meta: { requiresGuest: true, shell: 'auth' },
     },
     {
+      path: '/oauth/callback',
+      name: 'oauth-callback',
+      component: () => import('@/pages/OAuthCallbackPage.vue'),
+      meta: { requiresGuest: true, shell: 'auth' },
+    },
+    {
       path: '/',
       component: AppLayout,
       meta: { requiresAuth: true, shell: 'app' },
@@ -91,6 +97,12 @@ const router = createRouter({
       path: '/admin/login',
       name: 'admin-login',
       component: () => import('@/pages/admin/AdminLoginPage.vue'),
+      meta: { requiresAdminGuest: true },
+    },
+    {
+      path: '/admin/oauth/callback',
+      name: 'admin-oauth-callback',
+      component: () => import('@/pages/admin/AdminOAuthCallbackPage.vue'),
       meta: { requiresAdminGuest: true },
     },
     {

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"net/http"
@@ -26,6 +28,7 @@ import (
 	mcpserver "todo/internal/mcp"
 	"todo/internal/middleware"
 	"todo/internal/models"
+	"todo/internal/oauth"
 	"todo/internal/repository"
 	"todo/internal/service"
 	"todo/internal/timezone"
@@ -204,6 +207,33 @@ func main() {
 
 	authSvc := service.NewAuthService(userRepo, apiKeyRepo)
 	emailSvc := service.NewEmailService(db, cfg, logger)
+
+	// OAuth 初始化
+	oauthRepo := repository.NewOAuthRepo(db)
+	oauthReg := oauth.NewRegistry(cfg)
+	var oauthHandler *handlers.OAuthHandler
+	var oauthSvcInstance *service.OAuthService
+	if cfg.OAuth.Enabled {
+		if cfg.OAuth.StateSecret == "" {
+			secret := make([]byte, 32)
+			rand.Read(secret)
+			cfg.OAuth.StateSecret = hex.EncodeToString(secret)
+			logger.Warn("OAuth state_secret 未配置，已自动生成随机密钥（重启后失效）")
+		}
+		if err := oauthReg.Init(context.Background()); err != nil {
+			logger.Error("OAuth provider 初始化失败", zap.Error(err))
+		}
+		oauthSvcInstance = service.NewOAuthService(userRepo, oauthRepo, apiKeyRepo, oauthReg, authSvc)
+		oauthHandler = handlers.NewOAuthHandler(oauthSvcInstance, oauthReg, cfg)
+	}
+
+	// ProfileHandler 聚合用户资料（含 OAuth 绑定信息）
+	var profileHandler *handlers.ProfileHandler
+	if oauthSvcInstance != nil {
+		profileHandler = handlers.NewProfileHandler(authSvc, oauthSvcInstance)
+	} else {
+		profileHandler = handlers.NewProfileHandler(authSvc, nil)
+	}
 	reminderConfigSvc := service.NewReminderConfigService(reminderConfigRepo)
 	tagSvc := service.NewTagService(tagRepo)
 	taskSvc := service.NewTaskService(taskRepo, reminderConfigRepo, tagSvc)
@@ -262,6 +292,13 @@ func main() {
 		auth.POST("/send-code", authHandler.SendCode)
 		auth.POST("/verify-code", authHandler.VerifyCode)
 		auth.POST("/reset-password", authHandler.ResetPassword)
+
+		// OAuth 社交登录
+		if oauthHandler != nil {
+			auth.GET("/oauth/providers", oauthHandler.GetProviders)
+			auth.GET("/oauth/:provider", oauthHandler.InitiateOAuth)
+			auth.GET("/oauth/:provider/callback", oauthHandler.HandleCallback)
+		}
 	}
 
 	// 需认证路由
@@ -279,9 +316,17 @@ func main() {
 		api.PATCH("/tasks/:id/complete", taskHandler.ToggleComplete)
 
 		// 用户管理
-		api.GET("/user/profile", authHandler.GetProfile)
+		api.GET("/user/profile", profileHandler.GetFullProfile)
 		api.PUT("/user/profile", authHandler.UpdateProfile)
 		api.PUT("/user/password", authHandler.ChangePassword)
+		api.POST("/user/set-password", authHandler.SetPassword)
+
+		// OAuth 账号管理
+		if oauthHandler != nil {
+			api.GET("/user/oauth-accounts", oauthHandler.GetProfileAccounts)
+			api.DELETE("/user/oauth-accounts/:id", oauthHandler.UnlinkOAuthAccount)
+			api.GET("/user/oauth/:provider/link", oauthHandler.InitiateLinkOAuth)
+		}
 
 		// API Key 管理
 		api.GET("/user/keys", authHandler.ListAPIKeys)
@@ -316,7 +361,7 @@ func main() {
 	r.Any("/mcp", gin.WrapH(mcpHandler))
 
 	registerOptionalRoutes(r, logger, cfg.StaticFiles, cfg.Admin.Enabled)
-	registerAdminRoutes(r, db, cfg, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, appConfigSvc, reminderSvc, emailSvc, lockedKeys, logger)
+	registerAdminRoutes(r, db, cfg, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, appConfigSvc, reminderSvc, emailSvc, lockedKeys, logger, oauthHandler, oauthReg)
 
 	// 启动 HTTP 服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -417,6 +462,43 @@ func applyEnvOverrides(cfg *config.Config) error {
 			cfg.CORS.Enabled = true
 			cfg.CORS.AllowedOrigins = origins
 		}
+	}
+
+	// OAuth 环境变量覆盖
+	if value, ok := lookupEnvAny("OAUTH_ENABLED", "oauth_enabled"); ok {
+		if enabled, err := strconv.ParseBool(value); err == nil {
+			cfg.OAuth.Enabled = enabled
+		}
+	}
+	if value, ok := lookupEnvAny("OAUTH_FRONTEND_URL", "oauth_frontend_url"); ok {
+		cfg.OAuth.FrontendURL = value
+	}
+	if value, ok := lookupEnvAny("OAUTH_ADMIN_URL", "oauth_admin_url"); ok {
+		cfg.OAuth.AdminURL = value
+	}
+	if value, ok := lookupEnvAny("OAUTH_STATE_SECRET", "oauth_state_secret"); ok {
+		cfg.OAuth.StateSecret = value
+	}
+	if value, ok := lookupEnvAny("OAUTH_GITHUB_CLIENT_ID", "oauth_github_client_id"); ok {
+		cfg.OAuth.GitHub.ClientID = value
+	}
+	if value, ok := lookupEnvAny("OAUTH_GITHUB_CLIENT_SECRET", "oauth_github_client_secret"); ok {
+		cfg.OAuth.GitHub.ClientSecret = value
+		cfg.OAuth.GitHub.Enabled = true
+	}
+	if value, ok := lookupEnvAny("OAUTH_GOOGLE_CLIENT_ID", "oauth_google_client_id"); ok {
+		cfg.OAuth.Google.ClientID = value
+	}
+	if value, ok := lookupEnvAny("OAUTH_GOOGLE_CLIENT_SECRET", "oauth_google_client_secret"); ok {
+		cfg.OAuth.Google.ClientSecret = value
+		cfg.OAuth.Google.Enabled = true
+	}
+	if value, ok := lookupEnvAny("OAUTH_LINUXDO_CLIENT_ID", "oauth_linuxdo_client_id"); ok {
+		cfg.OAuth.LinuxDo.ClientID = value
+	}
+	if value, ok := lookupEnvAny("OAUTH_LINUXDO_CLIENT_SECRET", "oauth_linuxdo_client_secret"); ok {
+		cfg.OAuth.LinuxDo.ClientSecret = value
+		cfg.OAuth.LinuxDo.Enabled = true
 	}
 
 	return nil
@@ -553,6 +635,8 @@ func registerAdminRoutes(
 	emailSvc service.EmailServiceInterface,
 	lockedKeys map[string]bool,
 	logger *zap.Logger,
+	oauthHandler *handlers.OAuthHandler,
+	oauthReg *oauth.Registry,
 ) {
 	if !cfg.Admin.Enabled {
 		logger.Warn("管理后台已禁用，请在 config.yaml 中配置 admin.enabled=true")
@@ -561,10 +645,22 @@ func registerAdminRoutes(
 	auditLogRepo := repository.NewAuditLogRepo(db)
 	adminH := handlers.NewAdminHandler(db, userRepo, apiKeyRepo, taskRepo, reminderConfigRepo, reminderLogRepo, auditLogRepo, cfg, appConfigSvc, reminderSvc, emailSvc, lockedKeys, func(lang string) {
 		i18n.SetDefaultLang(lang)
+	}, func() {
+		if oauthReg != nil {
+			oauthReg.Reload(context.Background(), cfg)
+		}
 	})
 	adm := r.Group("/admin/api")
 	adm.Use(middleware.LocalhostOnly())
 	adm.POST("/auth/login", middleware.AdminLoginRateLimit(10, time.Minute), adminH.AdminLogin)
+
+	// 管理后台 OAuth 社交登录
+	if oauthHandler != nil {
+		adm.GET("/auth/oauth/providers", oauthHandler.GetProviders)
+		adm.GET("/auth/oauth/:provider", oauthHandler.AdminInitiateOAuth)
+		adm.GET("/auth/oauth/:provider/callback", oauthHandler.AdminHandleCallback)
+	}
+
 	authed := adm.Group("", middleware.AuthMiddleware(apiKeyRepo), middleware.AdminOnlyMiddleware(db))
 	{
 		authed.GET("/stats", adminH.GetStats)
@@ -586,6 +682,7 @@ func registerAdminRoutes(
 		authed.PUT("/config", adminH.UpdateConfig)
 		authed.DELETE("/config/*key", adminH.ResetConfig)
 		authed.POST("/config/test-email", adminH.TestEmail)
+		authed.GET("/oauth/callback-urls", adminH.GetOAuthCallbackURLs)
 		authed.GET("/audit-logs", adminH.ListAuditLogs)
 
 		systemLogH := handlers.NewSystemLogHandler(cfg)

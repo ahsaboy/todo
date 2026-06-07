@@ -41,6 +41,7 @@ type AdminHandler struct {
 	emailSvc           service.EmailServiceInterface
 	lockedKeys         map[string]bool
 	applyI18n          func(string)
+	reloadOAuth        func()
 }
 
 // gracePeriodSetter 是支持运行时更新宽限期的 TaskRepo 子集接口。
@@ -62,6 +63,7 @@ func NewAdminHandler(
 	emailSvc service.EmailServiceInterface,
 	lockedKeys map[string]bool,
 	applyI18n func(string),
+	reloadOAuth func(),
 ) *AdminHandler {
 	return &AdminHandler{
 		db:                 db,
@@ -77,6 +79,7 @@ func NewAdminHandler(
 		emailSvc:           emailSvc,
 		lockedKeys:         lockedKeys,
 		applyI18n:          applyI18n,
+		reloadOAuth:        reloadOAuth,
 	}
 }
 
@@ -715,6 +718,49 @@ func (h *AdminHandler) GetConfig(c *gin.Context) {
 	utils.RespondSuccess(c, gin.H{"groups": h.buildConfigView(dbValues)})
 }
 
+// GetOAuthCallbackURLs 返回各 OAuth provider 的回调地址，供管理员复制到 GitHub/Google/LinuxDo 后台填写。
+func (h *AdminHandler) GetOAuthCallbackURLs(c *gin.Context) {
+	if !h.cfg.OAuth.Enabled {
+		utils.RespondSuccess(c, gin.H{"base_url": "", "callbacks": []any{}})
+		return
+	}
+
+	// 优先从请求中获取实际访问地址（处理反向代理场景）
+	host := c.Request.Host
+
+	// 检测 scheme：反向代理通常通过 X-Forwarded-Proto 传递
+	scheme := "http"
+	if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
+		scheme = proto
+	} else if c.Request.TLS != nil {
+		scheme = "https"
+	} else if h.cfg.Server.Mode == "release" {
+		scheme = "https"
+	}
+
+	base := fmt.Sprintf("%s://%s", scheme, host)
+
+	// 从 OAuth registry 获取已启用的 provider 信息（含 icon）
+	type callbackItem struct {
+		Provider    string `json:"provider"`
+		Label       string `json:"label"`
+		Icon        string `json:"icon"`
+		CallbackURL string `json:"callback_url"`
+	}
+	var callbacks []callbackItem
+	icons := map[string]string{"github": "github", "google": "chrome", "linuxdo": "terminal"}
+	for _, name := range []string{"github", "google", "linuxdo"} {
+		callbacks = append(callbacks, callbackItem{
+			Provider:    name,
+			Label:       map[string]string{"github": "GitHub", "google": "Google", "linuxdo": "LinuxDo"}[name],
+			Icon:        icons[name],
+			CallbackURL: fmt.Sprintf("%s/api/v1/auth/oauth/%s/callback", base, name),
+		})
+	}
+
+	utils.RespondSuccess(c, gin.H{"base_url": base, "callbacks": callbacks})
+}
+
 // buildConfigView 遍历注册表按分组聚合;有 DB 覆盖且未被 CLI 锁定时显示 DB 待生效值,密码脱敏。
 func (h *AdminHandler) buildConfigView(dbValues map[string]string) []configGroupView {
 	groups := []configGroupView{}
@@ -910,6 +956,51 @@ func (h *AdminHandler) applyHotReload(key string, value any) {
 			h.cfg.Reminder.WebhookBodyTemplate = s
 			h.reminderSvc.UpdateTemplate(s)
 		}
+	// —— OAuth 热更新 ——
+	case "oauth.enabled":
+		if b, ok := value.(bool); ok {
+			h.cfg.OAuth.Enabled = b
+		}
+	case "oauth.github.enabled":
+		if b, ok := value.(bool); ok {
+			h.cfg.OAuth.GitHub.Enabled = b
+		}
+	case "oauth.github.client_id":
+		if s, ok := value.(string); ok {
+			h.cfg.OAuth.GitHub.ClientID = s
+		}
+	case "oauth.github.client_secret":
+		if s, ok := value.(string); ok {
+			h.cfg.OAuth.GitHub.ClientSecret = s
+		}
+	case "oauth.google.enabled":
+		if b, ok := value.(bool); ok {
+			h.cfg.OAuth.Google.Enabled = b
+		}
+	case "oauth.google.client_id":
+		if s, ok := value.(string); ok {
+			h.cfg.OAuth.Google.ClientID = s
+		}
+	case "oauth.google.client_secret":
+		if s, ok := value.(string); ok {
+			h.cfg.OAuth.Google.ClientSecret = s
+		}
+	case "oauth.linuxdo.enabled":
+		if b, ok := value.(bool); ok {
+			h.cfg.OAuth.LinuxDo.Enabled = b
+		}
+	case "oauth.linuxdo.client_id":
+		if s, ok := value.(string); ok {
+			h.cfg.OAuth.LinuxDo.ClientID = s
+		}
+	case "oauth.linuxdo.client_secret":
+		if s, ok := value.(string); ok {
+			h.cfg.OAuth.LinuxDo.ClientSecret = s
+		}
+	}
+	// 所有 OAuth key 变更后统一重建 provider 实例
+	if strings.HasPrefix(key, "oauth.") && h.reloadOAuth != nil {
+		h.reloadOAuth()
 	}
 }
 

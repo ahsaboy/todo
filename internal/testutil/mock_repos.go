@@ -95,6 +95,7 @@ func (m *MockTaskRepository) AdminDelete(ctx context.Context, id int64) (bool, e
 
 type MockUserRepository struct {
 	CreateFn             func(ctx context.Context, username, email, passwordHash string) (*models.User, error)
+	CreateOAuthUserFn    func(ctx context.Context, username, email, avatarURL string) (*models.User, error)
 	GetByIDFn            func(ctx context.Context, id int64) (*models.User, error)
 	GetByUsernameFn      func(ctx context.Context, username string) (*models.User, error)
 	GetByEmailFn         func(ctx context.Context, email string) (*models.User, error)
@@ -105,10 +106,17 @@ type MockUserRepository struct {
 	ForceResetPasswordFn func(ctx context.Context, id int64, passwordHash string) error
 	IsAdminFn            func(ctx context.Context, userID int64) (bool, error)
 	SetIsAdminFn         func(ctx context.Context, userID int64, isAdmin bool) error
+	UpdateAvatarFn       func(ctx context.Context, id int64, avatarURL string) error
 }
 
 func (m *MockUserRepository) Create(ctx context.Context, username, email, passwordHash string) (*models.User, error) {
 	return m.CreateFn(ctx, username, email, passwordHash)
+}
+func (m *MockUserRepository) CreateOAuthUser(ctx context.Context, username, email, avatarURL string) (*models.User, error) {
+	if m.CreateOAuthUserFn != nil {
+		return m.CreateOAuthUserFn(ctx, username, email, avatarURL)
+	}
+	return &models.User{ID: 1, Username: username, Email: email, AvatarURL: avatarURL}, nil
 }
 func (m *MockUserRepository) GetByID(ctx context.Context, id int64) (*models.User, error) {
 	return m.GetByIDFn(ctx, id)
@@ -155,6 +163,12 @@ func (m *MockUserRepository) IsAdmin(ctx context.Context, userID int64) (bool, e
 func (m *MockUserRepository) SetIsAdmin(ctx context.Context, userID int64, isAdmin bool) error {
 	if m.SetIsAdminFn != nil {
 		return m.SetIsAdminFn(ctx, userID, isAdmin)
+	}
+	return nil
+}
+func (m *MockUserRepository) UpdateAvatar(ctx context.Context, id int64, avatarURL string) error {
+	if m.UpdateAvatarFn != nil {
+		return m.UpdateAvatarFn(ctx, id, avatarURL)
 	}
 	return nil
 }

@@ -1,17 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Lock } from 'lucide-vue-next'
-import { login, getEmailStatus } from '@/entities/auth/api'
+import { User, Lock, Github, Globe, Terminal, Chrome, MessageCircle } from 'lucide-vue-next'
+import { login, getEmailStatus, getOAuthProviders } from '@/entities/auth/api'
 import { useAuthStore } from '@/app/stores/auth.store'
 import { useFormState } from '@/shared/composables/useFormState'
 import AuthBrandPanel from '@/shared/ui/AuthBrandPanel.vue'
+import { API_BASE_URL } from '@/shared/config/api'
+import type { OAuthProvider } from '@/entities/auth/model'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
 const emailAvailable = ref(false)
+const oauthProviders = ref<OAuthProvider[]>([])
+const oauthError = ref<string | null>(null)
+
+// lucide 图标映射：后端返回的 icon 名 → 组件
+const iconComponents: Record<string, typeof User> = {
+  github: Github,
+  google: Chrome,
+  globe: Globe,
+  terminal: Terminal,
+  message: MessageCircle,
+  user: User,
+}
 
 onMounted(async () => {
   try {
@@ -20,7 +34,26 @@ onMounted(async () => {
   } catch {
     emailAvailable.value = false
   }
+
+  try {
+    const res = await getOAuthProviders()
+    oauthProviders.value = res.data ?? []
+  } catch {
+    oauthProviders.value = []
+  }
+
+  // 检查 URL 中的 OAuth 错误
+  const hash = window.location.hash
+  const errorMatch = hash.match(/[?&]error=([^&]+)/)
+  if (errorMatch) {
+    oauthError.value = decodeURIComponent(errorMatch[1])
+    history.replaceState(null, '', '#/login')
+  }
 })
+
+function handleOAuthLogin(provider: string) {
+  window.location.href = `${API_BASE_URL}/auth/oauth/${provider}?redirect_uri=${encodeURIComponent(window.location.origin)}`
+}
 
 const { form: payload, submitting: isLoading, error, handleSubmit } = useFormState({
   initialData: { account: '', password: '' },
@@ -92,6 +125,26 @@ const { form: payload, submitting: isLoading, error, handleSubmit } = useFormSta
         <p class="auth-link">
           还没有账号？<router-link to="/register">立即注册</router-link>
         </p>
+        <div v-if="oauthProviders.length > 0" class="oauth-section">
+          <div class="oauth-divider">
+            <span>或使用以下方式登录</span>
+          </div>
+          <Transition name="error-slide">
+            <div v-if="oauthError" class="error-message">{{ oauthError }}</div>
+          </Transition>
+          <div class="oauth-buttons">
+            <button
+              v-for="provider in oauthProviders"
+              :key="provider.name"
+              class="oauth-btn"
+              type="button"
+              @click="handleOAuthLogin(provider.name)"
+            >
+              <component :is="iconComponents[provider.icon] || Globe" :size="18" :stroke-width="1.8" aria-hidden="true" />
+              <span>{{ provider.label }}</span>
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   </div>

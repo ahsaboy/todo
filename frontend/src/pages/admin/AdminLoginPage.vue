@@ -1,15 +1,51 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Lock } from 'lucide-vue-next'
+import { User, Lock, Github, Globe, Terminal, Chrome, MessageCircle } from 'lucide-vue-next'
 import { useAdminAuthStore } from '@/app/stores/admin-auth.store'
 import { adminApi } from '@/shared/api/admin-client'
 import { useFormState } from '@/shared/composables/useFormState'
 import type { ApiResponse } from '@/shared/api/types'
+import type { OAuthProvider } from '@/entities/auth/model'
 import AuthBrandPanel from '@/shared/ui/AuthBrandPanel.vue'
+import { ADMIN_API_BASE_URL } from '@/shared/config/api'
 
 const router = useRouter()
 const route = useRoute()
 const adminAuthStore = useAdminAuthStore()
+
+const oauthProviders = ref<OAuthProvider[]>([])
+const oauthError = ref<string | null>(null)
+
+const iconComponents: Record<string, typeof User> = {
+  github: Github,
+  google: Chrome,
+  globe: Globe,
+  terminal: Terminal,
+  message: MessageCircle,
+  user: User,
+}
+
+onMounted(async () => {
+  // 管理后台复用用户端的 providers 接口（通过 localhost 访问）
+  try {
+    const res = await adminApi.get<ApiResponse<OAuthProvider[]>>('/auth/oauth/providers')
+    oauthProviders.value = res.data ?? []
+  } catch {
+    oauthProviders.value = []
+  }
+
+  const hash = window.location.hash
+  const errorMatch = hash.match(/[?&]error=([^&]+)/)
+  if (errorMatch) {
+    oauthError.value = decodeURIComponent(errorMatch[1])
+    history.replaceState(null, '', '#/admin/login')
+  }
+})
+
+function handleOAuthLogin(provider: string) {
+  window.location.href = `${ADMIN_API_BASE_URL}/auth/oauth/${provider}?redirect_uri=${encodeURIComponent(window.location.origin)}`
+}
 
 const { form, submitting: isLoading, error, handleSubmit } = useFormState({
   initialData: { account: '', password: '' },
@@ -75,6 +111,26 @@ const { form, submitting: isLoading, error, handleSubmit } = useFormState({
             {{ isLoading ? '登录中...' : '登录管理后台' }}
           </button>
         </form>
+        <div v-if="oauthProviders.length > 0" class="oauth-section">
+          <div class="oauth-divider">
+            <span>或使用以下方式登录</span>
+          </div>
+          <Transition name="error-slide">
+            <div v-if="oauthError" class="error-message">{{ oauthError }}</div>
+          </Transition>
+          <div class="oauth-buttons">
+            <button
+              v-for="provider in oauthProviders"
+              :key="provider.name"
+              class="oauth-btn"
+              type="button"
+              @click="handleOAuthLogin(provider.name)"
+            >
+              <component :is="iconComponents[provider.icon] || Globe" :size="18" :stroke-width="1.8" aria-hidden="true" />
+              <span>{{ provider.label }}</span>
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   </div>

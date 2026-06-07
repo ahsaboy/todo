@@ -31,6 +31,15 @@ jobs:
         with:
           go-version: 1.25
 
+      - name: Install swag
+        run: |
+          go install github.com/swaggo/swag/cmd/swag@latest
+
+      - name: Generate swagger docs
+        run: |
+          swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+          sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
+
       - name: Vet Go code
         run: go vet ./...
 

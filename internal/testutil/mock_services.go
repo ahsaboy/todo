@@ -49,6 +49,7 @@ type MockAuthService struct {
 	GetUserByEmailFn   func(ctx context.Context, email string) (*models.User, error)
 	ResetPasswordFn    func(ctx context.Context, userID int64, newPassword string) error
 	ListAPIKeysFn      func(ctx context.Context, userID int64) ([]models.APIKey, error)
+	HasPasswordFn      func(ctx context.Context, userID int64) (bool, error)
 }
 
 func (m *MockAuthService) Register(ctx context.Context, req models.RegisterRequest) (*models.UserResponse, string, error) {
@@ -86,6 +87,12 @@ func (m *MockAuthService) ResetPassword(ctx context.Context, userID int64, newPa
 }
 func (m *MockAuthService) ListAPIKeys(ctx context.Context, userID int64) ([]models.APIKey, error) {
 	return m.ListAPIKeysFn(ctx, userID)
+}
+func (m *MockAuthService) HasPassword(ctx context.Context, userID int64) (bool, error) {
+	if m.HasPasswordFn != nil {
+		return m.HasPasswordFn(ctx, userID)
+	}
+	return true, nil
 }
 
 // ---- ReminderConfigServiceInterface mock ----

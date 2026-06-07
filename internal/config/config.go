@@ -21,6 +21,7 @@ type Config struct {
 	StaticFiles bool            `yaml:"static_files"`
 	Email       EmailConfig     `yaml:"email"`
 	I18n        I18nConfig      `yaml:"i18n"`
+	OAuth       OAuthConfig     `yaml:"oauth"`
 }
 
 type I18nConfig struct {
@@ -95,6 +96,23 @@ type EmailConfig struct {
 	FromName     string `yaml:"from_name"`
 }
 
+type OAuthConfig struct {
+	Enabled     bool                `yaml:"enabled"`
+	FrontendURL string              `yaml:"frontend_url"`
+	AdminURL    string              `yaml:"admin_url"`
+	StateSecret string              `yaml:"state_secret"`
+	GitHub      OAuthProviderConfig `yaml:"github"`
+	Google      OAuthProviderConfig `yaml:"google"`
+	LinuxDo     OAuthProviderConfig `yaml:"linuxdo"`
+}
+
+type OAuthProviderConfig struct {
+	Enabled      bool     `yaml:"enabled"`
+	ClientID     string   `yaml:"client_id"`
+	ClientSecret string   `yaml:"client_secret"`
+	Scopes       []string `yaml:"scopes"`
+}
+
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -135,6 +153,9 @@ func Load(path string) (*Config, error) {
 		Email: EmailConfig{
 			SMTPPort: 587,
 			FromName: "TODO 任务管理系统",
+		},
+		OAuth: OAuthConfig{
+			Enabled: false,
 		},
 	}
 

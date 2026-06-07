@@ -170,3 +170,24 @@ func UserTagsView(ts []models.UserTag, loc *time.Location) []models.UserTag {
 	}
 	return out
 }
+
+// ---------- OAuthAccount ----------
+
+// OAuthAccountView 返回新的 OAuthAccountResponse(值类型),时间字段已按 loc 重写。
+func OAuthAccountView(a models.OAuthAccount, loc *time.Location) models.OAuthAccountResponse {
+	resp := a.ToResponse()
+	resp.LinkedAt = utils.FormatOutputTime(resp.LinkedAt, loc)
+	return resp
+}
+
+// OAuthAccountsView 批量转换 OAuthAccount 列表。nil 输入返回 []OAuthAccountResponse{}。
+func OAuthAccountsView(as []models.OAuthAccount, loc *time.Location) []models.OAuthAccountResponse {
+	if as == nil {
+		return []models.OAuthAccountResponse{}
+	}
+	out := make([]models.OAuthAccountResponse, len(as))
+	for i := range as {
+		out[i] = OAuthAccountView(as[i], loc)
+	}
+	return out
+}

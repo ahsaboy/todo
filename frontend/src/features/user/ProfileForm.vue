@@ -1,83 +1,77 @@
 <template>
-  <form class="profile-form" @submit.prevent="handleSubmit">
-    <div class="form-group">
-      <label for="profile-username">用户名</label>
-      <input id="profile-username" :value="user?.username" name="profile_username" disabled />
+  <div class="profile-info">
+    <div class="profile-avatar-section">
+      <UserAvatar :avatar-url="user?.avatarUrl" :username="user?.username" size="xl" />
+      <h3 class="profile-username">{{ user?.username || '—' }}</h3>
     </div>
-
-    <div class="form-group">
-      <label for="profile-email">邮箱</label>
-      <input
-        id="profile-email"
-        v-model="email"
-        name="profile_email"
-        type="email"
-        placeholder="your@email.com"
-        autocomplete="email"
-      />
+    <div class="profile-meta">
+      <div class="meta-row">
+        <span class="meta-label">用户 ID</span>
+        <span class="meta-value">{{ user?.id }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">注册时间</span>
+        <span class="meta-value">{{ formatDate(user?.createdAt) }}</span>
+      </div>
     </div>
-
-    <div class="form-group">
-      <label for="profile-created-at">注册时间</label>
-      <input
-        id="profile-created-at"
-        :value="formatDate(user?.createdAt)"
-        name="profile_created_at"
-        disabled
-      />
-    </div>
-
-    <div class="form-actions">
-      <button type="submit" class="btn-primary" :disabled="submitting || email === user?.email">
-        {{ submitting ? '保存中...' : '保存' }}
-      </button>
-    </div>
-  </form>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import type { User } from '@/entities/user/model'
+import UserAvatar from '@/shared/ui/UserAvatar.vue'
 import { formatDateFull as formatDate } from '@/shared/utils/date'
 
-const props = defineProps<{
+defineProps<{
   user: User | null
 }>()
-
-const emit = defineEmits<{
-  submit: [email: string]
-}>()
-
-const email = ref(props.user?.email || '')
-const submitting = ref(false)
-
-watch(
-  () => props.user,
-  (val) => {
-    if (val) email.value = val.email
-  },
-)
-
-async function handleSubmit() {
-  submitting.value = true
-  try {
-    emit('submit', email.value)
-  } finally {
-    submitting.value = false
-  }
-}
 </script>
 
 <style scoped>
-.profile-form {
+.profile-info {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 400px;
+  align-items: center;
+  gap: 1.25rem;
 }
 
-.form-actions {
-  padding-top: 8px;
-  border-top: none;
+.profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-username {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.profile-meta {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.375rem 0;
+}
+
+.meta-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.meta-value {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-weight: 500;
 }
 </style>

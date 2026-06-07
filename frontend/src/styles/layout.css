@@ -362,6 +362,11 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition:
     background-color var(--motion-duration-fast),
     border-color var(--motion-duration-fast),
@@ -655,7 +660,7 @@
   }
 
   .page-content {
-    padding: 16px 16px calc(var(--bottom-nav-height) + var(--content-padding));
+    padding: 16px 16px 16px;
     overflow-x: clip;
   }
 

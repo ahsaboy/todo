@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"todo/internal/models"
+	"todo/internal/oauth"
 )
 
 type TaskServiceInterface interface {
@@ -26,6 +27,7 @@ type AuthServiceInterface interface {
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	ResetPassword(ctx context.Context, userID int64, newPassword string) error
 	ListAPIKeys(ctx context.Context, userID int64) ([]models.APIKey, error)
+	HasPassword(ctx context.Context, userID int64) (bool, error)
 }
 
 type EmailServiceInterface interface {
@@ -47,4 +49,12 @@ type ReminderConfigServiceInterface interface {
 
 type ReminderLogServiceInterface interface {
 	List(ctx context.Context, userID int64, page, limit int) ([]models.ReminderLog, int64, error)
+}
+
+type OAuthServiceInterface interface {
+	HandleCallback(ctx context.Context, providerName string, code string) (*models.UserResponse, string, error)
+	GetAvailableProviders() []oauth.ProviderDisplayInfo
+	ListUserAccounts(ctx context.Context, userID int64) ([]models.OAuthAccount, error)
+	LinkAccount(ctx context.Context, userID int64, providerName, code string) error
+	UnlinkAccount(ctx context.Context, userID, accountID int64) error
 }

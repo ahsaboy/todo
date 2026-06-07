@@ -289,6 +289,91 @@ var Registry = []FieldSpec{
 	{Key: "admin.username", Group: "admin", Label: "管理员用户名", Type: TypeString, Editable: false, Get: func(c *Config) any { return c.Admin.Username }, Set: readOnlySet},
 	{Key: "admin.email", Group: "admin", Label: "管理员邮箱", Type: TypeString, Editable: false, Get: func(c *Config) any { return c.Admin.Email }, Set: readOnlySet},
 	{Key: "admin.password", Group: "admin", Label: "管理员密码", Type: TypeString, Editable: false, Get: func(c *Config) any { return c.Admin.Password }, Set: readOnlySet},
+
+	// —— oauth ——
+	{Key: "oauth.enabled", Group: "oauth", Label: "启用 OAuth 登录", Type: TypeBool, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.Enabled }, Set: func(c *Config, v any) error {
+		b, err := toBool(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.Enabled = b
+		return nil
+	}},
+	// —— oauth.github ——
+	{Key: "oauth.github.enabled", Group: "oauth", Label: "GitHub OAuth", Type: TypeBool, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.GitHub.Enabled }, Set: func(c *Config, v any) error {
+		b, err := toBool(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.GitHub.Enabled = b
+		return nil
+	}},
+	{Key: "oauth.github.client_id", Group: "oauth", Label: "GitHub Client ID", Type: TypeString, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.GitHub.ClientID }, Set: func(c *Config, v any) error {
+		s, err := toString(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.GitHub.ClientID = s
+		return nil
+	}},
+	{Key: "oauth.github.client_secret", Group: "oauth", Label: "GitHub Client Secret", Type: TypeString, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.GitHub.ClientSecret }, Set: func(c *Config, v any) error {
+		s, err := toString(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.GitHub.ClientSecret = s
+		return nil
+	}},
+	// —— oauth.google ——
+	{Key: "oauth.google.enabled", Group: "oauth", Label: "Google OAuth", Type: TypeBool, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.Google.Enabled }, Set: func(c *Config, v any) error {
+		b, err := toBool(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.Google.Enabled = b
+		return nil
+	}},
+	{Key: "oauth.google.client_id", Group: "oauth", Label: "Google Client ID", Type: TypeString, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.Google.ClientID }, Set: func(c *Config, v any) error {
+		s, err := toString(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.Google.ClientID = s
+		return nil
+	}},
+	{Key: "oauth.google.client_secret", Group: "oauth", Label: "Google Client Secret", Type: TypeString, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.Google.ClientSecret }, Set: func(c *Config, v any) error {
+		s, err := toString(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.Google.ClientSecret = s
+		return nil
+	}},
+	// —— oauth.linuxdo ——
+	{Key: "oauth.linuxdo.enabled", Group: "oauth", Label: "LinuxDo OAuth", Type: TypeBool, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.LinuxDo.Enabled }, Set: func(c *Config, v any) error {
+		b, err := toBool(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.LinuxDo.Enabled = b
+		return nil
+	}},
+	{Key: "oauth.linuxdo.client_id", Group: "oauth", Label: "LinuxDo Client ID", Type: TypeString, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.LinuxDo.ClientID }, Set: func(c *Config, v any) error {
+		s, err := toString(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.LinuxDo.ClientID = s
+		return nil
+	}},
+	{Key: "oauth.linuxdo.client_secret", Group: "oauth", Label: "LinuxDo Client Secret", Type: TypeString, Editable: true, HotReload: true, Get: func(c *Config) any { return c.OAuth.LinuxDo.ClientSecret }, Set: func(c *Config, v any) error {
+		s, err := toString(v)
+		if err != nil {
+			return err
+		}
+		c.OAuth.LinuxDo.ClientSecret = s
+		return nil
+	}},
 }
 
 // RegistryByKey 返回 key→*FieldSpec 的索引(指向 Registry 元素)。

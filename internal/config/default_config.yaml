@@ -95,3 +95,22 @@ admin:
 # ==============================
 i18n:
   default_lang: zh-CN       # 默认语言: zh-CN(中文)、en(英文)
+
+# ==============================
+# OAuth 社交登录配置
+# ==============================
+oauth:
+  enabled: false
+  # frontend_url / admin_url / state_secret 由系统自动管理，无需手动配置
+  github:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+  google:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+  linuxdo:
+    enabled: false
+    client_id: ""
+    client_secret: ""

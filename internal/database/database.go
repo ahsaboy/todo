@@ -1,10 +1,12 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -14,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     email TEXT,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT,
     is_admin INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
@@ -128,6 +130,18 @@ CREATE TABLE IF NOT EXISTS email_verification_codes (
     expires_at TEXT NOT NULL,
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
+
+CREATE TABLE IF NOT EXISTS user_oauth_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    provider TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    display_name TEXT,
+    avatar_url TEXT,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(provider, provider_user_id)
+);
 `
 
 const indexes = `
@@ -151,6 +165,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_reminder_logs_task_config
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ev_codes_email_purpose ON email_verification_codes(email, purpose);
 CREATE INDEX IF NOT EXISTS idx_ev_codes_expires_at ON email_verification_codes(expires_at);
+CREATE INDEX IF NOT EXISTS idx_user_oauth_accounts_user_id ON user_oauth_accounts(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_oauth_accounts_provider_id ON user_oauth_accounts(provider, provider_user_id);
 `
 
 func Init(dbPath string) (*sql.DB, error) {
@@ -242,8 +258,174 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	// 添加 avatar_url 列到 users 表
+	var hasAvatarURL int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='avatar_url'`).Scan(&hasAvatarURL); err != nil {
+		return fmt.Errorf("check users.avatar_url: %w", err)
+	}
+	if hasAvatarURL == 0 {
+		if _, err := tx.Exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT`); err != nil {
+			return fmt.Errorf("add users.avatar_url: %w", err)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit migration: %w", err)
 	}
+
+	// password_hash nullable 迁移需要重建表，必须在独立事务中处理
+	// （SQLite 限制：不能在事务内修改 FK 约束的表）
+	if err := migratePasswordHashNullable(db); err != nil {
+		return fmt.Errorf("migrate password_hash nullable: %w", err)
+	}
+
+	// 扩展 email_verification_codes 表的 purpose CHECK 约束
+	if err := migrateEmailVerificationPurpose(db); err != nil {
+		return fmt.Errorf("migrate email purpose check: %w", err)
+	}
+
+	return nil
+}
+
+// migratePasswordHashNullable 通过表重建将 users.password_hash 从 NOT NULL 改为 nullable。
+// SQLite 不支持 ALTER COLUMN 去除 NOT NULL 约束，必须重建表。
+// 使用 db.Conn 获取专用连接，确保 PRAGMA foreign_keys = OFF 作用在同一连接上。
+func migratePasswordHashNullable(db *sql.DB) error {
+	// 检查 password_hash 是否仍有 NOT NULL 约束
+	var notNull int
+	if err := db.QueryRow(`SELECT "notnull" FROM pragma_table_info('users') WHERE name='password_hash'`).Scan(&notNull); err != nil {
+		return fmt.Errorf("check password_hash constraint: %w", err)
+	}
+	if notNull == 0 {
+		return nil // 已经是 nullable，跳过
+	}
+
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("get dedicated conn: %w", err)
+	}
+	defer conn.Close()
+
+	// 在专用连接上关闭外键约束
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		return fmt.Errorf("disable foreign_keys: %w", err)
+	}
+	defer conn.ExecContext(ctx, `PRAGMA foreign_keys = ON`)
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin nullable migration: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 创建新表（password_hash 无 NOT NULL）
+	if _, err := tx.Exec(`
+		CREATE TABLE users_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT NOT NULL UNIQUE,
+			email TEXT,
+			password_hash TEXT,
+			is_admin INTEGER DEFAULT 0,
+			avatar_url TEXT,
+			created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+			updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+		)
+	`); err != nil {
+		return fmt.Errorf("create users_new: %w", err)
+	}
+
+	// 复制数据
+	if _, err := tx.Exec(`INSERT INTO users_new (id, username, email, password_hash, is_admin, avatar_url, created_at, updated_at)
+		SELECT id, username, email, password_hash, is_admin, avatar_url, created_at, updated_at FROM users`); err != nil {
+		return fmt.Errorf("copy users data: %w", err)
+	}
+
+	// 替换旧表
+	if _, err := tx.Exec(`DROP TABLE users`); err != nil {
+		return fmt.Errorf("drop old users: %w", err)
+	}
+	if _, err := tx.Exec(`ALTER TABLE users_new RENAME TO users`); err != nil {
+		return fmt.Errorf("rename users_new: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit nullable migration: %w", err)
+	}
+
+	return nil
+}
+
+// migrateEmailVerificationPurpose 通过表重建扩展 email_verification_codes 表的 purpose CHECK 约束，
+// 增加 'change_email' 选项。
+func migrateEmailVerificationPurpose(db *sql.DB) error {
+	// 检查当前 CHECK 约束是否已包含 change_email
+	var sqlText string
+	err := db.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name='email_verification_codes'`).Scan(&sqlText)
+	if err != nil {
+		return fmt.Errorf("read table schema: %w", err)
+	}
+	if strings.Contains(sqlText, "change_email") {
+		return nil // 已经包含，跳过
+	}
+
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("get dedicated conn: %w", err)
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		return fmt.Errorf("disable foreign_keys: %w", err)
+	}
+	defer conn.ExecContext(ctx, `PRAGMA foreign_keys = ON`)
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin purpose check migration: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`
+		CREATE TABLE email_verification_codes_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			email TEXT NOT NULL,
+			code_hash TEXT NOT NULL,
+			purpose TEXT NOT NULL CHECK(purpose IN ('register', 'reset_password', 'change_email')),
+			attempts INTEGER NOT NULL DEFAULT 0,
+			max_attempts INTEGER NOT NULL DEFAULT 5,
+			used INTEGER NOT NULL DEFAULT 0,
+			expires_at TEXT NOT NULL,
+			created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+		)
+	`); err != nil {
+		return fmt.Errorf("create email_verification_codes_new: %w", err)
+	}
+
+	if _, err := tx.Exec(`INSERT INTO email_verification_codes_new (id, email, code_hash, purpose, attempts, max_attempts, used, expires_at, created_at)
+		SELECT id, email, code_hash, purpose, attempts, max_attempts, used, expires_at, created_at FROM email_verification_codes`); err != nil {
+		return fmt.Errorf("copy email_verification_codes data: %w", err)
+	}
+
+	if _, err := tx.Exec(`DROP TABLE email_verification_codes`); err != nil {
+		return fmt.Errorf("drop old email_verification_codes: %w", err)
+	}
+	if _, err := tx.Exec(`ALTER TABLE email_verification_codes_new RENAME TO email_verification_codes`); err != nil {
+		return fmt.Errorf("rename email_verification_codes_new: %w", err)
+	}
+
+	// 重建索引
+	if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_ev_codes_email_purpose ON email_verification_codes(email, purpose)`); err != nil {
+		return fmt.Errorf("recreate index ev_codes_email_purpose: %w", err)
+	}
+	if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_ev_codes_expires_at ON email_verification_codes(expires_at)`); err != nil {
+		return fmt.Errorf("recreate index ev_codes_expires_at: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit purpose check migration: %w", err)
+	}
+
 	return nil
 }

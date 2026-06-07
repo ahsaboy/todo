@@ -28,17 +28,26 @@ type TaskRepository interface {
 
 type UserRepository interface {
 	Create(ctx context.Context, username, email, passwordHash string) (*models.User, error)
+	CreateOAuthUser(ctx context.Context, username, email, avatarURL string) (*models.User, error)
 	GetByID(ctx context.Context, id int64) (*models.User, error)
 	GetByUsername(ctx context.Context, username string) (*models.User, error)
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	UpdateProfile(ctx context.Context, id int64, email string) error
 	UpdatePassword(ctx context.Context, id int64, passwordHash string) error
+	UpdateAvatar(ctx context.Context, id int64, avatarURL string) error
 	// Admin methods
 	ListAll(ctx context.Context, page, limit int, search string) ([]models.User, int64, error)
 	Delete(ctx context.Context, id int64) error
 	ForceResetPassword(ctx context.Context, id int64, passwordHash string) error
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 	SetIsAdmin(ctx context.Context, userID int64, isAdmin bool) error
+}
+
+type OAuthAccountRepository interface {
+	Create(ctx context.Context, userID int64, provider, providerUserID, displayName, avatarURL string) error
+	GetByProvider(ctx context.Context, provider, providerUserID string) (*models.OAuthAccount, error)
+	GetByUserID(ctx context.Context, userID int64) ([]models.OAuthAccount, error)
+	Delete(ctx context.Context, id, userID int64) (bool, error)
 }
 
 type APIKeyRepository interface {

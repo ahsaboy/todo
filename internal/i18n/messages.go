@@ -150,6 +150,40 @@ var messages = map[string]map[string]string{
 		"en":    "No fields to update",
 		"zh-CN": "没有需要更新的字段",
 	},
+	"profile.not_found": {
+		"en":    "User profile not found",
+		"zh-CN": "未找到用户资料",
+	},
+	"profile.email_code_required": {
+		"en":    "Verification code is required to change email",
+		"zh-CN": "更换邮箱需要验证码",
+	},
+	"profile.email_taken": {
+		"en":    "Email is already in use by another account",
+		"zh-CN": "该邮箱已被其他账号使用",
+	},
+	"profile.password_already_set": {
+		"en":    "Password is already set, use change password instead",
+		"zh-CN": "已设置过密码，请使用修改密码功能",
+	},
+
+	// --- OAuth ---
+	"oauth.unlink_last_method": {
+		"en":    "Cannot unlink: you must keep at least one login method",
+		"zh-CN": "无法解绑：至少需要保留一种登录方式",
+	},
+	"oauth.already_linked": {
+		"en":    "This account is already linked",
+		"zh-CN": "该账号已经绑定过了",
+	},
+	"oauth.linked_to_other": {
+		"en":    "This account is linked to another user",
+		"zh-CN": "该账号已绑定到其他用户",
+	},
+	"oauth.account_not_found": {
+		"en":    "OAuth account not found",
+		"zh-CN": "未找到 OAuth 账号",
+	},
 
 	// --- 邮箱验证 ---
 	"email.not_configured": {
@@ -375,6 +409,26 @@ var internalMessages = map[string]map[string]string{
 	"email.test_connection": {
 		"en":    "Failed to test email connection",
 		"zh-CN": "测试邮箱连接失败",
+	},
+
+	// --- OAuth ---
+	"oauth.link": {
+		"en":    "Failed to link OAuth account",
+		"zh-CN": "绑定 OAuth 账号失败",
+	},
+	"oauth.unlink": {
+		"en":    "Failed to unlink OAuth account",
+		"zh-CN": "解绑 OAuth 账号失败",
+	},
+	"oauth.list": {
+		"en":    "Failed to list OAuth accounts",
+		"zh-CN": "获取 OAuth 账号列表失败",
+	},
+
+	// --- 用户资料 ---
+	"profile.get": {
+		"en":    "Failed to get profile",
+		"zh-CN": "获取用户资料失败",
 	},
 
 	// --- 系统统计 ---
