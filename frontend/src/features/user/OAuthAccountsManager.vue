@@ -6,6 +6,7 @@ import type { OAuthProvider } from '@/entities/auth/model'
 import { unlinkOAuthAccount } from '@/entities/user/api'
 import { api } from '@/shared/api/client'
 import type { ApiResponse } from '@/shared/api/types'
+import { getBaseRedirectUri } from '@/shared/utils/url'
 
 const props = defineProps<{
   accounts: OAuthAccount[]
@@ -52,7 +53,7 @@ async function handleUnlink(account: OAuthAccount) {
 
 async function handleLink(provider: string) {
   try {
-    const redirectUri = encodeURIComponent(window.location.origin)
+    const redirectUri = encodeURIComponent(getBaseRedirectUri())
     const res = await api.get<ApiResponse<{ auth_url: string }>>(`/user/oauth/${provider}/link?redirect_uri=${redirectUri}`)
     if (res.data?.auth_url) {
       window.location.href = res.data.auth_url

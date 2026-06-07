@@ -7,6 +7,7 @@ import { useAuthStore } from '@/app/stores/auth.store'
 import { useFormState } from '@/shared/composables/useFormState'
 import AuthBrandPanel from '@/shared/ui/AuthBrandPanel.vue'
 import { API_BASE_URL } from '@/shared/config/api'
+import { getBaseRedirectUri } from '@/shared/utils/url'
 import type { OAuthProvider } from '@/entities/auth/model'
 
 const router = useRouter()
@@ -52,7 +53,7 @@ onMounted(async () => {
 })
 
 function handleOAuthLogin(provider: string) {
-  window.location.href = `${API_BASE_URL}/auth/oauth/${provider}?redirect_uri=${encodeURIComponent(window.location.origin)}`
+  window.location.href = `${API_BASE_URL}/auth/oauth/${provider}?redirect_uri=${encodeURIComponent(getBaseRedirectUri())}`
 }
 
 const { form: payload, submitting: isLoading, error, handleSubmit } = useFormState({

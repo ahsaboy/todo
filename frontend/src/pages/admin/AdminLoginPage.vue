@@ -9,6 +9,7 @@ import type { ApiResponse } from '@/shared/api/types'
 import type { OAuthProvider } from '@/entities/auth/model'
 import AuthBrandPanel from '@/shared/ui/AuthBrandPanel.vue'
 import { ADMIN_API_BASE_URL } from '@/shared/config/api'
+import { getBaseRedirectUri } from '@/shared/utils/url'
 
 const router = useRouter()
 const route = useRoute()
@@ -44,7 +45,7 @@ onMounted(async () => {
 })
 
 function handleOAuthLogin(provider: string) {
-  window.location.href = `${ADMIN_API_BASE_URL}/auth/oauth/${provider}?redirect_uri=${encodeURIComponent(window.location.origin)}`
+  window.location.href = `${ADMIN_API_BASE_URL}/auth/oauth/${provider}?redirect_uri=${encodeURIComponent(getBaseRedirectUri())}`
 }
 
 const { form, submitting: isLoading, error, handleSubmit } = useFormState({

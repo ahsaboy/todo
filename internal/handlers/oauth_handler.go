@@ -15,8 +15,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"todo/internal/config"
+	"todo/internal/logging"
 	"todo/internal/middleware"
 	"todo/internal/oauth"
 	"todo/internal/service"
@@ -148,11 +150,12 @@ func (h *OAuthHandler) initiate(c *gin.Context, scope, redirectURI string, retur
 		return
 	}
 
-	authURL := oauth2Cfg.AuthCodeURL(sig)
+	// 完整 state 同时放入 cookie 和 OAuth state 参数（防跨域 cookie 丢失）
+	fullState := payload + "|" + sig
 	if returnURL {
-		utils.RespondSuccess(c, gin.H{"auth_url": authURL})
+		utils.RespondSuccess(c, gin.H{"auth_url": oauth2Cfg.AuthCodeURL(fullState)})
 	} else {
-		c.Redirect(http.StatusTemporaryRedirect, authURL)
+		c.Redirect(http.StatusTemporaryRedirect, oauth2Cfg.AuthCodeURL(fullState))
 	}
 }
 
@@ -163,24 +166,28 @@ func (h *OAuthHandler) callback(c *gin.Context) {
 	errorParam := c.Query("error")
 
 	if errorParam != "" {
-		h.redirectWithError(c, h.cfg.OAuth.FrontendURL, "user", errorParam)
+		h.redirectWithError(c, "", "user", errorParam)
 		return
 	}
 	if code == "" {
-		h.redirectWithError(c, h.cfg.OAuth.FrontendURL, "user", "missing_code")
+		h.redirectWithError(c, "", "user", "missing_code")
 		return
 	}
 
-	// 读取并清除 state cookie
-	cookieVal, err := c.Cookie(oauthStateCookie)
-	if err != nil || cookieVal == "" {
-		h.redirectWithError(c, h.cfg.OAuth.FrontendURL, "user", "invalid_state")
+	// 读取 state：优先 cookie，fallback 到 OAuth state query parameter（跨域兼容）
+	cookieVal, cookieErr := c.Cookie(oauthStateCookie)
+	if cookieErr != nil || cookieVal == "" {
+		// cookie 丢失（跨域），从 state query parameter 解析完整 state
+		cookieVal = stateParam
+	}
+	if cookieVal == "" {
+		h.redirectWithError(c, "", "user", "invalid_state")
 		return
 	}
 	// 先读取 scope 以确定清除路径
 	firstPipe := strings.Index(cookieVal, "|")
 	if firstPipe < 0 {
-		h.redirectWithError(c, h.cfg.OAuth.FrontendURL, "user", "invalid_state")
+		h.redirectWithError(c, "", "user", "invalid_state")
 		return
 	}
 	cookieScope := cookieVal[:firstPipe]
@@ -200,7 +207,7 @@ func (h *OAuthHandler) callback(c *gin.Context) {
 	// 解析 cookie: scope|provider|timestamp|nonce|redirect_uri_b64|signature
 	parts := strings.SplitN(cookieVal, "|", 6)
 	if len(parts) != 6 {
-		h.redirectWithError(c, h.cfg.OAuth.FrontendURL, "user", "invalid_state")
+		h.redirectWithError(c, "", "user", "invalid_state")
 		return
 	}
 	cookieProvider, tsStr, _, redirectB64, cookieSig := parts[1], parts[2], parts[3], parts[4], parts[5]
@@ -208,7 +215,7 @@ func (h *OAuthHandler) callback(c *gin.Context) {
 	// 解码 redirect_uri
 	redirectBytes, err := base64.RawURLEncoding.DecodeString(redirectB64)
 	if err != nil {
-		h.redirectWithError(c, h.cfg.OAuth.FrontendURL, "user", "invalid_state")
+		h.redirectWithError(c, "", "user", "invalid_state")
 		return
 	}
 	redirectURI := string(redirectBytes)
@@ -230,8 +237,8 @@ func (h *OAuthHandler) callback(c *gin.Context) {
 		h.redirectWithError(c, redirectURI, "user", "state_expired")
 		return
 	}
-	// 验证 state 参数匹配
-	if stateParam != cookieSig {
+	// 验证 state 参数与 cookie 一致（防止 CSRF）
+	if stateParam != cookieVal {
 		h.redirectWithError(c, redirectURI, "user", "state_mismatch")
 		return
 	}
@@ -239,6 +246,10 @@ func (h *OAuthHandler) callback(c *gin.Context) {
 	// 调用 service
 	_, apiKey, err := h.oauthSvc.HandleCallback(c.Request.Context(), providerName, code)
 	if err != nil {
+		logging.LoggerFromContext(c).Error("oauth callback failed",
+			zap.String("provider", providerName),
+			zap.Error(err),
+		)
 		h.redirectWithError(c, redirectURI, "user", "callback_failed")
 		return
 	}
@@ -249,19 +260,17 @@ func (h *OAuthHandler) callback(c *gin.Context) {
 
 // handleLinkCallback 处理 OAuth 绑定回调（scope=link）。
 func (h *OAuthHandler) handleLinkCallback(c *gin.Context, providerName, code, stateParam, cookieVal string) {
-	frontendBase := h.cfg.OAuth.FrontendURL
-
 	// 解析: link|provider|timestamp|nonce|redirect_uri_b64|userID|signature
 	parts := strings.SplitN(cookieVal, "|", 8)
 	if len(parts) != 7 {
-		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s#/profile?oauth_link_error=invalid_state", frontendBase))
+		h.redirectWithError(c, "", "user", "invalid_state")
 		return
 	}
 	cookieProvider, tsStr, _, redirectB64, userIDStr, cookieSig := parts[1], parts[2], parts[3], parts[4], parts[5], parts[6]
 
 	redirectBytes, err := base64.RawURLEncoding.DecodeString(redirectB64)
 	if err != nil {
-		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s#/profile?oauth_link_error=invalid_state", frontendBase))
+		h.redirectWithError(c, "", "user", "invalid_state")
 		return
 	}
 	redirectURI := string(redirectBytes)
@@ -282,7 +291,7 @@ func (h *OAuthHandler) handleLinkCallback(c *gin.Context, providerName, code, st
 		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s#/profile?oauth_link_error=state_expired", redirectURI))
 		return
 	}
-	if stateParam != cookieSig {
+	if stateParam != cookieVal {
 		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s#/profile?oauth_link_error=state_mismatch", redirectURI))
 		return
 	}
@@ -296,6 +305,11 @@ func (h *OAuthHandler) handleLinkCallback(c *gin.Context, providerName, code, st
 
 	// 执行绑定
 	if err := h.oauthSvc.LinkAccount(c.Request.Context(), userID, providerName, code); err != nil {
+		logging.LoggerFromContext(c).Error("oauth link failed",
+			zap.Int64("user_id", userID),
+			zap.String("provider", providerName),
+			zap.Error(err),
+		)
 		errMsg := "link_failed"
 		switch {
 		case errors.Is(err, service.ErrOAuthAlreadyLinked):
@@ -317,7 +331,11 @@ func (h *OAuthHandler) adminRedirectBase() string {
 	return h.cfg.OAuth.FrontendURL
 }
 
-func (h *OAuthHandler) redirectWithError(c *gin.Context, base, scope, errMsg string) {
+func (h *OAuthHandler) redirectWithError(c *gin.Context, overrideBase, scope, errMsg string) {
+	base := h.cfg.OAuth.FrontendURL
+	if overrideBase != "" {
+		base = overrideBase
+	}
 	loginPath := "/login"
 	if scope == "admin" {
 		loginPath = "/admin/login"

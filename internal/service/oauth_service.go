@@ -44,8 +44,8 @@ func (s *OAuthService) GetAvailableProviders() []oauth.ProviderDisplayInfo {
 
 // HandleCallback 处理 OAuth 回调：换取 token → 获取用户信息 → 创建/关联用户 → 生成 API Key。
 func (s *OAuthService) HandleCallback(ctx context.Context, providerName string, code string) (*models.UserResponse, string, error) {
-	// 整个 OAuth 流程 10 秒超时
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	// 独立超时，不依赖 request context（反向代理可能提前取消）
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	provider, ok := s.oauthReg.Get(providerName)
@@ -195,7 +195,7 @@ func (s *OAuthService) ListUserAccounts(ctx context.Context, userID int64) ([]mo
 
 // LinkAccount 将 OAuth 账号绑定到已认证用户。
 func (s *OAuthService) LinkAccount(ctx context.Context, userID int64, providerName, code string) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	provider, ok := s.oauthReg.Get(providerName)
