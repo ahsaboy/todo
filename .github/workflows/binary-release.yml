@@ -63,11 +63,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y upx-ucl
 
-      - name: Generate swagger docs
-        run: |
-          swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
-          sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
-
       - name: Build release binaries
         run: |
           mkdir -p artifacts
