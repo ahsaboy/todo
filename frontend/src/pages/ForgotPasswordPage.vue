@@ -43,7 +43,7 @@ async function handleSendCode() {
   stepError.value = ''
   sendingCode.value = true
   try {
-    await sendVerificationCode({ email: email.value, purpose: 'reset_password' })
+    await sendVerificationCode({ email: email.value })
     startCooldown()
     step.value = 2
   } catch (e: unknown) {

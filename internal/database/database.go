@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -123,7 +122,6 @@ CREATE TABLE IF NOT EXISTS email_verification_codes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL,
     code_hash TEXT NOT NULL,
-    purpose TEXT NOT NULL CHECK(purpose IN ('register', 'reset_password')),
     attempts INTEGER NOT NULL DEFAULT 0,
     max_attempts INTEGER NOT NULL DEFAULT 5,
     used INTEGER NOT NULL DEFAULT 0,
@@ -163,7 +161,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_reminder_logs_task_config
     ON reminder_logs(task_id, reminder_config_id)
     WHERE reminder_config_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ev_codes_email_purpose ON email_verification_codes(email, purpose);
+CREATE INDEX IF NOT EXISTS idx_ev_codes_email ON email_verification_codes(email);
 CREATE INDEX IF NOT EXISTS idx_ev_codes_expires_at ON email_verification_codes(expires_at);
 CREATE INDEX IF NOT EXISTS idx_user_oauth_accounts_user_id ON user_oauth_accounts(user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_oauth_accounts_provider_id ON user_oauth_accounts(provider, provider_user_id);
@@ -279,9 +277,9 @@ func migrate(db *sql.DB) error {
 		return fmt.Errorf("migrate password_hash nullable: %w", err)
 	}
 
-	// 扩展 email_verification_codes 表的 purpose CHECK 约束
-	if err := migrateEmailVerificationPurpose(db); err != nil {
-		return fmt.Errorf("migrate email purpose check: %w", err)
+	// 删除 email_verification_codes 表的 purpose 列（验证码统一管理，不再区分用途）
+	if err := migrateDropVerificationPurpose(db); err != nil {
+		return fmt.Errorf("migrate drop verification purpose: %w", err)
 	}
 
 	return nil
@@ -356,17 +354,16 @@ func migratePasswordHashNullable(db *sql.DB) error {
 	return nil
 }
 
-// migrateEmailVerificationPurpose 通过表重建扩展 email_verification_codes 表的 purpose CHECK 约束，
-// 增加 'change_email' 选项。
-func migrateEmailVerificationPurpose(db *sql.DB) error {
-	// 检查当前 CHECK 约束是否已包含 change_email
-	var sqlText string
-	err := db.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name='email_verification_codes'`).Scan(&sqlText)
+// migrateDropVerificationPurpose 通过表重建删除 email_verification_codes 表的 purpose 列。
+func migrateDropVerificationPurpose(db *sql.DB) error {
+	// 检查当前表是否已有 purpose 列
+	var count int
+	err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('email_verification_codes') WHERE name='purpose'`).Scan(&count)
 	if err != nil {
-		return fmt.Errorf("read table schema: %w", err)
+		return fmt.Errorf("check purpose column: %w", err)
 	}
-	if strings.Contains(sqlText, "change_email") {
-		return nil // 已经包含，跳过
+	if count == 0 {
+		return nil // 已无 purpose 列，跳过
 	}
 
 	ctx := context.Background()
@@ -383,7 +380,7 @@ func migrateEmailVerificationPurpose(db *sql.DB) error {
 
 	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("begin purpose check migration: %w", err)
+		return fmt.Errorf("begin drop purpose migration: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -392,7 +389,6 @@ func migrateEmailVerificationPurpose(db *sql.DB) error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			email TEXT NOT NULL,
 			code_hash TEXT NOT NULL,
-			purpose TEXT NOT NULL CHECK(purpose IN ('register', 'reset_password', 'change_email')),
 			attempts INTEGER NOT NULL DEFAULT 0,
 			max_attempts INTEGER NOT NULL DEFAULT 5,
 			used INTEGER NOT NULL DEFAULT 0,
@@ -403,8 +399,8 @@ func migrateEmailVerificationPurpose(db *sql.DB) error {
 		return fmt.Errorf("create email_verification_codes_new: %w", err)
 	}
 
-	if _, err := tx.Exec(`INSERT INTO email_verification_codes_new (id, email, code_hash, purpose, attempts, max_attempts, used, expires_at, created_at)
-		SELECT id, email, code_hash, purpose, attempts, max_attempts, used, expires_at, created_at FROM email_verification_codes`); err != nil {
+	if _, err := tx.Exec(`INSERT INTO email_verification_codes_new (id, email, code_hash, attempts, max_attempts, used, expires_at, created_at)
+		SELECT id, email, code_hash, attempts, max_attempts, used, expires_at, created_at FROM email_verification_codes`); err != nil {
 		return fmt.Errorf("copy email_verification_codes data: %w", err)
 	}
 
@@ -416,15 +412,15 @@ func migrateEmailVerificationPurpose(db *sql.DB) error {
 	}
 
 	// 重建索引
-	if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_ev_codes_email_purpose ON email_verification_codes(email, purpose)`); err != nil {
-		return fmt.Errorf("recreate index ev_codes_email_purpose: %w", err)
+	if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_ev_codes_email ON email_verification_codes(email)`); err != nil {
+		return fmt.Errorf("recreate index ev_codes_email: %w", err)
 	}
 	if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_ev_codes_expires_at ON email_verification_codes(expires_at)`); err != nil {
 		return fmt.Errorf("recreate index ev_codes_expires_at: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit purpose check migration: %w", err)
+		return fmt.Errorf("commit drop purpose migration: %w", err)
 	}
 
 	return nil

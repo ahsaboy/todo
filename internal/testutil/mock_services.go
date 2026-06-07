@@ -140,8 +140,8 @@ func (m *MockReminderLogService) List(ctx context.Context, userID int64, page, l
 type MockEmailService struct {
 	IsEnabledFn              func() bool
 	SetEnabledFn             func(b bool)
-	SendVerificationCodeFn   func(ctx context.Context, email, purpose string) error
-	VerifyCodeFn             func(ctx context.Context, email, code, purpose string) error
+	SendVerificationCodeFn   func(ctx context.Context, email string) error
+	VerifyCodeFn             func(ctx context.Context, email, code string) error
 	TestConnectionFn         func(ctx context.Context) error
 }
 
@@ -156,11 +156,11 @@ func (m *MockEmailService) SetEnabled(b bool) {
 		m.SetEnabledFn(b)
 	}
 }
-func (m *MockEmailService) SendVerificationCode(ctx context.Context, email, purpose string) error {
-	return m.SendVerificationCodeFn(ctx, email, purpose)
+func (m *MockEmailService) SendVerificationCode(ctx context.Context, email string) error {
+	return m.SendVerificationCodeFn(ctx, email)
 }
-func (m *MockEmailService) VerifyCode(ctx context.Context, email, code, purpose string) error {
-	return m.VerifyCodeFn(ctx, email, code, purpose)
+func (m *MockEmailService) VerifyCode(ctx context.Context, email, code string) error {
+	return m.VerifyCodeFn(ctx, email, code)
 }
 func (m *MockEmailService) TestConnection(ctx context.Context) error {
 	if m.TestConnectionFn != nil {

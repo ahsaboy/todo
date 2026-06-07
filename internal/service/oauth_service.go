@@ -76,6 +76,10 @@ func (s *OAuthService) HandleCallback(ctx context.Context, providerName string, 
 		if err != nil || user == nil {
 			return nil, "", fmt.Errorf("get linked user: %w", err)
 		}
+		// 每次 OAuth 登录时同步头像
+		if info.AvatarURL != "" && info.AvatarURL != user.AvatarURL {
+			_ = s.userRepo.UpdateAvatar(ctx, user.ID, info.AvatarURL)
+		}
 		apiKey, err := s.generateOAuthLoginKey(ctx, user.ID, providerName)
 		if err != nil {
 			return nil, "", err
@@ -96,6 +100,10 @@ func (s *OAuthService) HandleCallback(ctx context.Context, providerName string, 
 	if user != nil {
 		if err := s.oauthRepo.Create(ctx, user.ID, providerName, info.ProviderID, info.Username, info.AvatarURL); err != nil {
 			return nil, "", fmt.Errorf("link oauth account: %w", err)
+		}
+		// 邮箱匹配的用户无头像时，自动使用 OAuth 头像
+		if info.AvatarURL != "" && user.AvatarURL == "" {
+			_ = s.userRepo.UpdateAvatar(ctx, user.ID, info.AvatarURL)
 		}
 		apiKey, err := s.generateOAuthLoginKey(ctx, user.ID, providerName)
 		if err != nil {
@@ -220,12 +228,9 @@ func (s *OAuthService) LinkAccount(ctx context.Context, userID int64, providerNa
 		return fmt.Errorf("link oauth account: %w", err)
 	}
 
-	// 若用户无头像，自动使用 OAuth 头像
+	// OAuth 头像始终优先同步
 	if info.AvatarURL != "" {
-		user, err := s.userRepo.GetByID(ctx, userID)
-		if err == nil && user != nil && user.AvatarURL == "" {
-			_ = s.userRepo.UpdateAvatar(ctx, userID, info.AvatarURL)
-		}
+		_ = s.userRepo.UpdateAvatar(ctx, userID, info.AvatarURL)
 	}
 
 	return nil

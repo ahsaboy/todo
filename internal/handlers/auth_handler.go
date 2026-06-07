@@ -52,7 +52,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_required")
 			return
 		}
-		if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code, "register"); err != nil {
+		if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code); err != nil {
 			h.handleCodeError(c, err)
 			return
 		}
@@ -279,7 +279,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 			utils.RespondLocalizedError(c, http.StatusBadRequest, "profile.email_code_required")
 			return
 		}
-		if err := h.emailSvc.VerifyCode(c.Request.Context(), *req.Email, *req.Code, "change_email"); err != nil {
+		if err := h.emailSvc.VerifyCode(c.Request.Context(), *req.Email, *req.Code); err != nil {
 			h.handleCodeError(c, err)
 			return
 		}
@@ -390,20 +390,7 @@ func (h *AuthHandler) SendCode(c *gin.Context) {
 		return
 	}
 
-	// 注册时检查邮箱是否已被占用
-	if req.Purpose == "register" {
-		existing, err := h.svc.GetUserByEmail(c.Request.Context(), req.Email)
-		if err != nil {
-			utils.RespondLocalizedInternalError(c, "email.send_code", err)
-			return
-		}
-		if existing != nil {
-			utils.RespondLocalizedError(c, http.StatusConflict, "auth.email_taken")
-			return
-		}
-	}
-
-	if err := h.emailSvc.SendVerificationCode(c.Request.Context(), req.Email, req.Purpose); err != nil {
+	if err := h.emailSvc.SendVerificationCode(c.Request.Context(), req.Email); err != nil {
 		if errors.Is(err, service.ErrCodeCooldown) {
 			utils.RespondLocalizedError(c, http.StatusTooManyRequests, "email.code_cooldown")
 			return
@@ -432,7 +419,7 @@ func (h *AuthHandler) VerifyCode(c *gin.Context) {
 		return
 	}
 
-	if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code, req.Purpose); err != nil {
+	if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code); err != nil {
 		h.handleCodeError(c, err)
 		return
 	}
@@ -454,7 +441,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	// 验证码校验
-	if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code, "reset_password"); err != nil {
+	if err := h.emailSvc.VerifyCode(c.Request.Context(), req.Email, req.Code); err != nil {
 		h.handleCodeError(c, err)
 		return
 	}
@@ -483,6 +470,8 @@ func (h *AuthHandler) handleCodeError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, service.ErrCodeNotFound):
 		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_not_found")
+	case errors.Is(err, service.ErrCodeUsed):
+		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_used")
 	case errors.Is(err, service.ErrCodeExpired):
 		utils.RespondLocalizedError(c, http.StatusBadRequest, "email.code_expired")
 	case errors.Is(err, service.ErrCodeAttemptsExceeded):

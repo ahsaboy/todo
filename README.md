@@ -16,14 +16,14 @@
 ## 功能特性
 
 - 用户注册/登录，个人 API Key 管理（支持 `Authorization: Bearer`、`api-key`、`X-API-Key` 三种请求头）
+- OAuth 社交登录（GitHub / Google / LinuxDo），支持账号绑定与解绑
 - 任务按用户隔离，每人只能看到自己的任务
 - 任务 CRUD、分页、排序、筛选、关键字搜索，支持优先级（高/中/低）与截止/提醒时间
 - 标签管理（颜色/图标/排序）、看板视图、专注计时
-- 设置了提醒时间的任务需配置至少一个已启用的提醒渠道
 - 后台定时扫描，按用户多渠道推送提醒（飞书/钉钉/企业微信/Gotify 等 webhook）
 - 重复任务（daily/weekly/monthly/yearly），完成时自动生成下一次
 - **MCP 服务器**：暴露 `/mcp` 端点，可被 LLM 客户端直接调用（12 个工具）
-- **管理后台**（localhost-only）：仪表盘、用户/任务/提醒管理、系统/操作日志、系统配置查看
+- **管理后台**（localhost-only）：仪表盘、用户/任务/提醒管理、系统配置、操作日志
 - **国际化**（i18n）：中英文错误消息本地化，通过 Accept-Language 头自动切换
 - 健康检查端点、Swagger API 文档、优雅退出、Docker Compose 部署
 
@@ -31,166 +31,45 @@
 
 ### 配置文件
 
-项目提供配置示例文件 `config.example.yaml`。首次运行前需要复制并配置：
-
 ```bash
-# 复制配置文件
 cp config.example.yaml config.yaml
-
 # 按需编辑 config.yaml（端口、时区、管理员账号、提醒模板等）
 ```
 
-管理后台使用用户名/密码认证：在 `config.yaml` 的 `admin` 段填写 `username` / `password`，首次启动时会自动创建管理员账号。
-
-**重要**：`config.yaml` 包含敏感信息（如管理员密码），已被添加到 `.gitignore`，不会被 Git 跟踪。
+> `config.yaml` 包含敏感信息（如管理员密码），已被添加到 `.gitignore`，不会被 Git 跟踪。
 
 ### 本地运行
 
 ```bash
-# 编译（自动生成 Swagger 文档）
-make build
-
-# 运行
-make run
-
-# 或直接运行（go run，不生成二进制）
-make dev
-```
-
-### 交叉编译
-
-编译输出文件名自动带 OS-ARCH 后缀（如 `server-linux-amd64`）。
-
-```bash
-make build           # 编译当前平台
-make build-linux     # 交叉编译 Linux (amd64)
-make build-windows   # 交叉编译 Windows (amd64)
-make build-darwin    # 交叉编译 macOS (arm64)
-```
-
-`make build` 会先构建 `frontend/dist`，复制到 `web/dist`，再由 Go `embed` 打包进最终二进制。前端构建产物里可能包含 `_` 开头的文件，因此嵌入规则使用 `//go:embed all:dist`。
-
-> 项目使用纯 Go SQLite 驱动（modernc.org/sqlite），无需 CGO，所有平台均可直接交叉编译。
-
-### UPX 压缩
-
-编译时会自动检测系统是否安装了 [UPX](https://upx.github.io/)。如果已安装，会自动对二进制文件进行压缩（约减少 60% 体积）。
-
-```bash
-# 安装 UPX（可选）
-# Windows: choco install upx
-# macOS:   brew install upx
-# Linux:   apt install upx   或  yum install upx
+make build   # 编译（自动生成 Swagger 文档）
+make run     # 编译并运行
+make dev     # 直接运行（go run，不生成二进制）
 ```
 
 ### Docker 部署
 
-默认只保留单体部署：`Dockerfile` 会先构建 Vue 前端，再由 Go 后端把静态资源 embed 到同一个镜像和二进制里。
-
 ```bash
-# 本地二进制单体构建
-make build
-
-# 本地构建单体 Docker 镜像
-make docker-build
-
-# 直接使用已发布的 GHCR 镜像启动
-docker compose up -d
+make docker-build              # 本地构建 Docker 镜像
+docker compose up -d           # 使用已发布的 GHCR 镜像启动
 ```
 
-发布镜像地址：
-
-```text
-ghcr.io/ahsaboy/todo:latest
-ghcr.io/ahsaboy/todo:vX.Y.Z
-```
-
-如需临时切换 compose 使用的镜像 tag，可覆盖环境变量：
-
-```bash
-TODO_IMAGE=ghcr.io/ahsaboy/todo:v1.2.3 docker compose up -d
-```
-
-`docker-compose.yml` 还支持用环境变量覆盖配置文件中的部分运行参数，且优先级高于 `config.yaml`：
-
-```bash
-PORT=9090 \
-HOST=0.0.0.0 \
-STATIC_FILES=false \
-CORS=https://todo.example.com,https://admin.example.com \
-docker compose up -d
-```
-
-**Docker 部署配置文件说明**：
-
-Docker 镜像默认使用 `config.example.yaml` 作为配置模板。生产环境需要通过 volume 挂载实际的 `config.yaml`：
-
-```bash
-# 方式1：通过 docker run 挂载
-docker run -d \
-  -v $(pwd)/config.yaml:/app/config.yaml \
-  -p 8080:8080 \
-  ghcr.io/ahsaboy/todo:latest
-
-# 方式2：在 docker-compose.yml 中配置
-services:
-  todo:
-    image: ghcr.io/ahsaboy/todo:latest
-    volumes:
-      - ./config.yaml:/app/config.yaml
-    ports:
-      - "8080:8080"
-```
-
-### 独立前端构建
-
-如果需要把前端单独部署到其他静态站点或 CDN，保留一个独立构建命令。它通过 `API_BASE_URL` 指定浏览器访问后端 API 的地址；该值会在 Vite 构建阶段写入前端产物，对应环境变量为 `VITE_API_BASE_URL`。
-
-```bash
-# 本地构建前端 dist，不复制到 web/dist
-make frontend-build-standalone API_BASE_URL=http://localhost:8080/api/v1
-
-# 构建 nginx 静态前端镜像
-docker build -f frontend/Dockerfile \
-  --build-arg API_BASE_URL=http://localhost:8080/api/v1 \
-  -t todo-frontend:latest \
-  ./frontend
-```
-
-如果生产环境把独立前端部署到非同源域名，需要在后端 `config.yaml` 中允许前端来源：
-
-```yaml
-cors:
-  enabled: true
-  allowed_origins:
-    - "https://todo.example.com"
-```
-
-### CLI 参数
-
-```
-todo-server [选项]
-
-选项:
-  -c, --config <path>  配置文件路径 (默认: config.yaml)
-  -p, --port <port>    覆盖服务端口号
-  --host <addr>        覆盖监听地址
-  --mode <mode>        覆盖运行模式 (debug/release)
-  --log-path <path>    覆盖日志存储路径
-  --log-max-days <n>   覆盖日志保留天数
-  --log-file-enabled   启用日志文件输出
-  --log-file-disabled  禁用日志文件输出
-  --static-files-enabled   启用前端静态文件与 Swagger 路由
-  --static-files-disabled  禁用前端静态文件与 Swagger 路由
-  -v, --version        显示版本号
-  -h, --help           显示帮助信息
-```
+发布镜像：`ghcr.io/ahsaboy/todo:latest` / `ghcr.io/ahsaboy/todo:vX.Y.Z`
 
 ## API 接口
 
 > 服务启动后访问 Swagger 文档：`http://localhost:8080/docs/index.html`
->
-## MCP 服务器
+
+## 技术栈
+
+- **后端**: Go + Gin + SQLite（纯 Go 驱动，无需 CGO）+ zap 日志
+- **前端**: Vue 3 + TypeScript + Pinia + Vite
+- **API 文档**: Swagger (swaggo)
+- **协议**: REST API + MCP (Model Context Protocol)
+
+---
+
+<details>
+<summary><h3 style="display:inline">MCP 服务器</h3></summary>
 
 除 REST API 外，本服务同时暴露一个基于 [Model Context Protocol](https://modelcontextprotocol.io/) 的端点，可被 LLM 客户端直接调用。
 
@@ -300,9 +179,10 @@ curl -X POST http://localhost:8080/mcp \
 ```
 
 无 `api-key` 直接访问会返回 `401`，错误结构与 REST API 一致（`success:false, code:"UNAUTHORIZED"`）。
+</details>
 
-
-## 配置文件
+<details>
+<summary><h3 style="display:inline">配置文件详解</h3></summary>
 
 `config.yaml` 包含所有可配置项。首先复制示例配置：
 
@@ -360,6 +240,22 @@ admin:
 # 国际化配置（错误消息本地化）
 i18n:
   default_lang: zh-CN  # 默认语言: zh-CN(中文)、en(英文)
+
+# OAuth 社交登录
+oauth:
+  enabled: false
+  github:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+  google:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+  linuxdo:
+    enabled: false
+    client_id: ""
+    client_secret: ""
 ```
 
 说明：
@@ -371,18 +267,10 @@ i18n:
 - `default_templates` 只提供模板参考，不会直接作为发送目标。
 - **管理后台认证**：首次启动时根据 `admin.username` 和 `admin.password` 自动创建管理员账号。后续登录使用用户名密码认证。
 - **国际化**：错误消息支持中英文自动切换，客户端通过 `Accept-Language` 头指定语言偏好，服务端自动回退到配置的默认语言。
+</details>
 
-### 日志配置
-
-- 服务端日志始终输出到终端。
-- `logging.file_enabled=true` 时，服务端日志还会按天写入 `backend-YYYY-MM-DD.log`，文件位置由 `logging.path` 决定。
-- `logging.max_days` 控制日志保留天数；仅在 `logging.file_enabled=true` 时，启动时会清理早于保留窗口的历史日志文件。
-- 所有 HTTP 请求都会进入统一访问日志，包括 API、静态资源、404、401 和健康检查。
-- 日志输出不再包含全局 `logger` 字段，也不再生成或透传 `request_id`；`caller` 是主要定位字段。
-- 普通 API 的 access log 会记录状态码、耗时、响应字节数以及请求上下文等详细字段；静态资源 access log 使用精简字段集，只保留 `method`、`path`、`status`、`latency`、`response_bytes` 等必要信息。
-- repository 层会记录数据库操作日志，包含 `repository`、`operation`、`duration` 和结果摘要；错误路径会附带 `error`，但不会记录完整 API Key、密码哈希或错误消息原文等敏感内容。
-
-### Webhook 模板变量
+<details>
+<summary><h3 style="display:inline">Webhook 模板变量</h3></summary>
 
 | 变量                | 说明       | 示例(`server.timezone=Asia/Shanghai`) |
 | ------------------- | ---------- | -------------------- |
@@ -397,8 +285,10 @@ i18n:
 | `{{.CreatedAt}}`    | 创建时间   | `"5月9日 周日 10:00"` |
 
 > `DueAt` / `RemindAt` / `CreatedAt` 已在服务端按 `server.timezone` 格式化为 `M月D日 周X HH:MM`,直接渲染到模板。其他字段原样输出。
+</details>
 
-## 时间契约
+<details>
+<summary><h3 style="display:inline">时间契约</h3></summary>
 
 所有时间字段统一遵循"存 UTC,传 RFC3339,展示按配置时区输出"。
 
@@ -427,7 +317,6 @@ server:
 MCP 调用支持 per-request 覆盖输出时区,优先级:**请求头 > `server.timezone` 配置 > Local**。
 
 ```bash
-# 用 America/New_York 时区返回 list_tasks 结果
 curl -X POST http://localhost:8080/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
@@ -440,17 +329,167 @@ curl -X POST http://localhost:8080/mcp \
 非法值会被静默忽略,工具回落到全局配置(不返回 4xx,保证客户端健壮性)。
 
 > 数据库中可能存在旧格式(`YYYY-MM-DD HH:MM:SS`)的历史数据,读取路径兼容,但新写入数据统一为 UTC RFC3339。
+</details>
 
-## 业务约束
+<details>
+<summary><h3 style="display:inline">业务约束</h3></summary>
 
 - 创建任务时如果设置了提醒时间（`remind_at`），则必须存在至少一个已启用的提醒渠道。
 - 未设置 `remind_at` 的任务不需要提醒渠道，可直接创建。
 - 禁用某个用户的全部提醒渠道后，该用户任务不会回退到任何全局 webhook。
 - 提醒只有在该任务的所有已启用渠道都发送成功后，才会标记为已发送。
 - 注册接口在并发下如果用户名冲突，会稳定返回 `409 Conflict`。
+</details>
 
 <details>
-<summary>管理后台</summary>
+<summary><h3 style="display:inline">构建与部署</h3></summary>
+
+### 交叉编译
+
+编译输出文件名自动带 OS-ARCH 后缀（如 `server-linux-amd64`）。
+
+```bash
+make build           # 编译当前平台
+make build-linux     # 交叉编译 Linux (amd64)
+make build-windows   # 交叉编译 Windows (amd64)
+make build-darwin    # 交叉编译 macOS (arm64)
+```
+
+> 项目使用纯 Go SQLite 驱动（modernc.org/sqlite），无需 CGO，所有平台均可直接交叉编译。
+
+### UPX 压缩
+
+编译时会自动检测系统是否安装了 [UPX](https://upx.github.io/)。如果已安装，会自动对二进制文件进行压缩（约减少 60% 体积）。
+
+### Docker 部署详情
+
+`Dockerfile` 会先构建 Vue 前端，再由 Go 后端把静态资源 embed 到同一个镜像和二进制里。
+
+```bash
+# 本地构建单体 Docker 镜像
+make docker-build
+
+# 直接使用已发布的 GHCR 镜像启动
+docker compose up -d
+```
+
+发布镜像地址：
+
+```text
+ghcr.io/ahsaboy/todo:latest
+ghcr.io/ahsaboy/todo:vX.Y.Z
+```
+
+如需临时切换 compose 使用的镜像 tag，可覆盖环境变量：
+
+```bash
+TODO_IMAGE=ghcr.io/ahsaboy/todo:v1.2.3 docker compose up -d
+```
+
+`docker-compose.yml` 还支持用环境变量覆盖配置文件中的部分运行参数，且优先级高于 `config.yaml`：
+
+```bash
+PORT=9090 \
+HOST=0.0.0.0 \
+STATIC_FILES=false \
+CORS=https://todo.example.com,https://admin.example.com \
+docker compose up -d
+```
+
+**Docker 部署配置文件说明**：
+
+Docker 镜像默认使用 `config.example.yaml` 作为配置模板。生产环境需要通过 volume 挂载实际的 `config.yaml`：
+
+```bash
+# 方式1：通过 docker run 挂载
+docker run -d \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  -p 8080:8080 \
+  ghcr.io/ahsaboy/todo:latest
+
+# 方式2：在 docker-compose.yml 中配置
+services:
+  todo:
+    image: ghcr.io/ahsaboy/todo:latest
+    volumes:
+      - ./config.yaml:/app/config.yaml
+    ports:
+      - "8080:8080"
+```
+
+### 独立前端构建
+
+如果需要把前端单独部署到其他静态站点或 CDN，保留一个独立构建命令。它通过 `API_BASE_URL` 指定浏览器访问后端 API 的地址；该值会在 Vite 构建阶段写入前端产物，对应环境变量为 `VITE_API_BASE_URL`。
+
+```bash
+# 本地构建前端 dist，不复制到 web/dist
+make frontend-build-standalone API_BASE_URL=http://localhost:8080/api/v1
+
+# 构建 nginx 静态前端镜像
+docker build -f frontend/Dockerfile \
+  --build-arg API_BASE_URL=http://localhost:8080/api/v1 \
+  -t todo-frontend:latest \
+  ./frontend
+```
+
+如果生产环境把独立前端部署到非同源域名，需要在后端 `config.yaml` 中允许前端来源：
+
+```yaml
+cors:
+  enabled: true
+  allowed_origins:
+    - "https://todo.example.com"
+```
+
+### CLI 参数
+
+```
+todo-server [选项]
+
+选项:
+  -c, --config <path>  配置文件路径 (默认: config.yaml)
+  -p, --port <port>    覆盖服务端口号
+  --host <addr>        覆盖监听地址
+  --mode <mode>        覆盖运行模式 (debug/release)
+  --log-path <path>    覆盖日志存储路径
+  --log-max-days <n>   覆盖日志保留天数
+  --log-file-enabled   启用日志文件输出
+  --log-file-disabled  禁用日志文件输出
+  --static-files-enabled   启用前端静态文件与 Swagger 路由
+  --static-files-disabled  禁用前端静态文件与 Swagger 路由
+  -v, --version        显示版本号
+  -h, --help           显示帮助信息
+```
+
+### Makefile 命令
+
+```bash
+make build          # 编译当前平台（自动生成 Swagger 文档，支持 UPX 压缩）
+make build-linux    # 交叉编译 Linux amd64
+make build-windows  # 交叉编译 Windows amd64
+make build-darwin   # 交叉编译 macOS arm64
+make frontend-build-standalone API_BASE_URL=http://localhost:8080/api/v1  # 仅构建独立前端 dist
+make run            # 编译并运行
+make test           # 运行测试
+make dev            # 本地开发（go run，自动生成 Swagger 文档）
+make swag           # 仅重新生成 Swagger 文档
+make clean          # 清理构建产物和数据库文件
+make docker-build   # 构建 Docker 镜像（默认标签 ghcr.io/ahsaboy/todo:latest）
+make docker-up      # Docker Compose 启动
+make docker-down    # Docker Compose 停止
+make docker-logs    # 查看 Docker 日志
+```
+
+### 日志配置
+
+- 服务端日志始终输出到终端。
+- `logging.file_enabled=true` 时，服务端日志还会按天写入 `backend-YYYY-MM-DD.log`，文件位置由 `logging.path` 决定。
+- `logging.max_days` 控制日志保留天数；仅在 `logging.file_enabled=true` 时，启动时会清理早于保留窗口的历史日志文件。
+- 所有 HTTP 请求都会进入统一访问日志，包括 API、静态资源、404、401 和健康检查。
+</details>
+
+<details>
+<summary><h3 style="display:inline">管理后台</h3></summary>
 
 系统提供 localhost-only 的管理后台界面，用于系统管理和监控。
 
@@ -492,7 +531,7 @@ http://localhost:8080/admin/login
 | 提醒日志 | 提醒发送记录、状态、错误信息 |
 | 系统日志 | 按文件查看/下载服务端日志，可按级别筛选 |
 | 操作日志 | 管理员操作审计记录 |
-| 系统配置 | 当前系统配置查看（只读，隐藏敏感信息） |
+| 系统配置 | 当前系统配置查看与编辑（支持热更新） |
 
 ### API 端点
 
@@ -528,6 +567,8 @@ GET    /admin/api/reminder-logs?page=1&limit=20
 
 # 系统配置 / 日志 / 审计
 GET /admin/api/config
+PUT /admin/api/config
+DELETE /admin/api/config/*key
 GET /admin/api/audit-logs?page=1&limit=20
 GET /admin/api/system-logs
 GET /admin/api/system-logs/:filename/entries?page=1&limit=50&level=<level>
@@ -536,133 +577,42 @@ GET /admin/api/system-logs/:filename/download
 </details>
 
 <details>
-<summary>项目结构</summary>
+<summary><h3 style="display:inline">项目结构</h3></summary>
 
 ```
 TODO/
 ├── cmd/server/main.go              # 入口：配置加载、路由注册、优雅退出
 ├── internal/
-│   ├── config/config.go            # YAML 配置加载
+│   ├── config/                     # YAML 配置加载 + 动态注册表
 │   ├── logging/                    # 日志初始化、日志路径和保留清理
 │   ├── database/database.go        # SQLite 连接 + WAL 模式 + 自动建表
 │   ├── i18n/                       # 国际化模块（错误消息本地化）
-│   │   ├── i18n.go                 # 核心翻译 API（T/TL 函数）
-│   │   ├── messages.go             # 消息注册表（中文/英文）
-│   │   ├── lang.go                 # 语言检测和上下文管理
-│   │   └── i18n_test.go            # 单元测试
-│   ├── models/
-│   │   ├── task.go                 # 任务数据模型
-│   │   ├── user.go                 # 用户数据模型
-│   │   ├── api_key.go              # API Key 数据模型
-│   │   ├── tag.go                  # 标签数据模型
-│   │   └── reminder_config.go      # 提醒配置数据模型
-│   ├── handlers/
-│   │   ├── auth_handler.go         # 认证 HTTP 处理（注册/登录/Key管理）
-│   │   ├── task_handler.go         # 任务 HTTP 处理
-│   │   ├── tag_handler.go          # 标签 CRUD HTTP 处理
-│   │   ├── reminder_config_handler.go  # 提醒配置 CRUD
-│   │   ├── reminder_log_handler.go # 提醒日志查询
-│   │   ├── system_log_handler.go   # 系统日志查询
-│   │   └── admin_handler.go        # 管理后台接口
-│   ├── repository/
-│   │   ├── logging.go              # repository 数据库操作日志辅助
-│   │   ├── user_repo.go            # 用户数据库操作
-│   │   ├── api_key_repo.go         # API Key 数据库操作
-│   │   ├── task_repo.go            # 任务数据库操作
-│   │   ├── tag_repo.go             # 标签数据库操作
-│   │   ├── reminder_config_repo.go # 提醒配置数据库操作
-│   │   ├── reminder_log_repo.go    # 提醒日志数据库操作
-│   │   └── audit_log_repo.go       # 管理员操作审计日志
-│   ├── service/
-│   │   ├── auth_service.go         # 认证逻辑
-│   │   ├── task_service.go         # 业务逻辑
-│   │   ├── tag_service.go          # 标签管理逻辑
-│   │   ├── reminder_service.go     # 后台提醒（按用户多渠道）
-│   │   ├── reminder_config_service.go  # 提醒配置管理
-│   │   └── reminder_log_service.go # 提醒日志管理
-│   ├── middleware/
-│   │   ├── requestid.go            # 请求 ID 注入
-│   │   ├── auth.go                 # 认证中间件（Bearer/api-key/X-API-Key）
-│   │   ├── admin_auth.go           # 管理后台认证中间件
-│   │   ├── localhost.go            # 本地访问限制中间件
-│   │   ├── ratelimit.go            # API 限流中间件
-│   │   └── admin_rate_limit.go     # 管理后台限流中间件
-│   ├── mcp/                        # MCP 服务器（Streamable HTTP）
-│   │   ├── server.go               # MCP 服务注册与传输
-│   │   ├── auth.go                 # api-key 认证
-│   │   ├── context.go              # 请求上下文（时区/选项 Header）
-│   │   ├── tools_task.go           # 任务工具（6 个）
-│   │   ├── tools_reminder.go       # 提醒配置工具（5 个）
-│   │   ├── tools_user.go           # 用户信息工具（1 个）
-│   │   └── tools_helpers.go        # 工具公共辅助
+│   ├── models/                     # 数据模型（task/user/tag/reminder/oauth）
+│   ├── handlers/                   # HTTP 处理层（auth/task/tag/reminder/admin/oauth/profile）
+│   ├── repository/                 # 数据库操作层
+│   ├── service/                    # 业务逻辑层
+│   ├── middleware/                  # 中间件（认证/限流/localhost/admin）
+│   ├── mcp/                        # MCP 服务器（Streamable HTTP，12 个工具）
+│   ├── oauth/                      # OAuth provider（GitHub/Google/LinuxDo）
 │   ├── views/                      # 视图层（API 出参转换）
-│   │   └── views.go                # TaskView/UserResponseView 等视图函数
-│   ├── utils/
-│   │   ├── response.go             # 统一响应格式（含本地化响应）
-│   │   ├── validator.go            # 参数校验
-│   │   └── time.go                 # 时间解析工具
+│   ├── utils/                      # 响应格式/校验/时间工具
 │   ├── timezone/                   # 时区处理模块
-│   │   └── timezone.go             # 时区解析、格式化、上下文管理
 │   └── testutil/                   # 测试用 mock repo/service
-├── docs/                           # Swagger 文档（自动生成）
-├── frontend/                       # Vue 前端源码
-│   ├── Dockerfile                  # 分离部署前端 nginx 镜像
-│   ├── nginx.conf                  # 前端 SPA fallback 配置
-│   ├── src/pages/admin/            # 管理后台页面
-│   │   ├── AdminLoginPage.vue      # 登录页
-│   │   ├── AdminDashboardPage.vue  # 仪表盘
-│   │   ├── AdminUsersPage.vue      # 用户管理
-│   │   ├── AdminTasksPage.vue      # 任务管理
-│   │   ├── AdminReminderConfigsPage.vue  # 提醒配置
-│   │   ├── AdminReminderLogsPage.vue     # 提醒日志
-│   │   ├── AdminSystemLogsPage.vue       # 系统日志
-│   │   ├── AdminAuditLogsPage.vue        # 操作日志
-│   │   └── AdminConfigPage.vue     # 系统配置
-│   └── src/widgets/
-│       ├── AdminLayout.vue         # 管理后台布局（折叠 + 移动端抽屉）
-│       ├── AdminSidebar.vue        # 管理后台侧边栏
-│       ├── AdminTopbar.vue         # 管理后台顶栏（主题切换 + 管理员菜单）
-│       ├── AdminMobileBottomNav.vue  # 管理后台移动端底部导航
-│       └── admin-common.css        # 管理后台公共样式
+├── frontend/                       # Vue 3 + TypeScript 前端
+│   ├── src/app/                    # 路由、stores、guards
+│   ├── src/entities/               # 领域实体（model + api + mapper）
+│   ├── src/features/               # 业务组件 + composables
+│   ├── src/pages/                  # 页面（含 admin/ 子目录）
+│   ├── src/shared/                 # API client、composables、UI 组件
+│   ├── src/widgets/                # 布局壳（sidebar、topbar、bottomNav）
+│   └── src/styles/                 # 全局 CSS（variables、motion、layout、theme）
 ├── web/                            # Go embed 前端构建产物入口
-│   ├── embed.go                    # 使用 //go:embed all:dist
-│   └── dist/                       # make build 生成并复制的静态文件
-├── scripts/                        # 构建和部署脚本
-│   ├── check-api-paths.mjs         # 校验前端 API 路径与后端路由一致
-│   └── buildkitd.toml              # BuildKit 守护进程配置
-├── config.example.yaml             # 配置示例文件（敏感信息已隐藏）
+├── docs/                           # Swagger 文档（自动生成）
+├── config.example.yaml             # 配置示例文件
 ├── Dockerfile                      # 单体镜像多阶段构建
-├── docker-compose.yml              # 默认容器编排（直接使用 ghcr.io 单体镜像）
+├── docker-compose.yml              # 容器编排
 └── Makefile                        # 构建命令
 ```
 
 **注意**：`config.yaml` 包含敏感信息，已被 Git 忽略。首次运行前需要复制 `config.example.yaml`。
 </details>
-
-## Makefile 命令
-
-```bash
-make build          # 编译当前平台（自动生成 Swagger 文档，支持 UPX 压缩）
-make build-linux    # 交叉编译 Linux amd64
-make build-windows  # 交叉编译 Windows amd64
-make build-darwin   # 交叉编译 macOS arm64
-make frontend-build-standalone API_BASE_URL=http://localhost:8080/api/v1  # 仅构建独立前端 dist
-make run            # 编译并运行
-make test           # 运行测试
-make dev            # 本地开发（go run，自动生成 Swagger 文档）
-make swag           # 仅重新生成 Swagger 文档
-make clean          # 清理构建产物和数据库文件
-make docker-build   # 构建 Docker 镜像（默认标签 ghcr.io/ahsaboy/todo:latest）
-make docker-up      # Docker Compose 启动
-make docker-down    # Docker Compose 停止
-make docker-logs    # 查看 Docker 日志
-```
-
-## 技术栈
-
-- **语言**: Go
-- **Web 框架**: Gin
-- **数据库**: SQLite（纯 Go 驱动，无需 CGO）
-- **日志**: zap
-- **配置**: YAML
-- **API 文档**: Swagger (swaggo)

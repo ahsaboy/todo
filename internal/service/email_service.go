@@ -143,20 +143,23 @@ func hashCode(code string) string {
 	return hex.EncodeToString(h[:])
 }
 
-func (s *EmailService) SendVerificationCode(ctx context.Context, email, purpose string) error {
+func (s *EmailService) SendVerificationCode(ctx context.Context, email string) error {
 	if !s.IsEnabled() {
 		return ErrEmailNotConfigured
 	}
 
+	// 统一 email 小写
+	email = strings.ToLower(email)
+
 	now := time.Now().UTC()
 	cooldownThreshold := now.Add(-time.Duration(cooldownSeconds) * time.Second).Format(time.RFC3339)
 
-	// 冷却检查：同 email+purpose 60 秒内不能重复发送
+	// 冷却检查：同 email 60 秒内不能重复发送
 	var count int
 	err := s.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM email_verification_codes
-		 WHERE email = ? AND purpose = ? AND created_at > ?`,
-		email, purpose, cooldownThreshold,
+		 WHERE email = ? AND created_at > ?`,
+		email, cooldownThreshold,
 	).Scan(&count)
 	if err != nil {
 		return fmt.Errorf("check cooldown: %w", err)
@@ -174,26 +177,16 @@ func (s *EmailService) SendVerificationCode(ctx context.Context, email, purpose 
 	codeHash := hashCode(code)
 
 	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO email_verification_codes (email, code_hash, purpose, max_attempts, expires_at, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		email, codeHash, purpose, maxCodeAttempts, expiresAt, now.Format(time.RFC3339),
+		`INSERT INTO email_verification_codes (email, code_hash, max_attempts, expires_at, created_at)
+		 VALUES (?, ?, ?, ?, ?)`,
+		email, codeHash, maxCodeAttempts, expiresAt, now.Format(time.RFC3339),
 	)
 	if err != nil {
 		return fmt.Errorf("insert code: %w", err)
 	}
 
-	var subject, body string
-	switch purpose {
-	case "register":
-		subject = "注册验证码"
-		body = fmt.Sprintf(`<p>您的注册验证码是：<strong>%s</strong></p><p>%d 分钟内有效。</p>`, code, codeExpiryMinutes)
-	case "reset_password":
-		subject = "密码重置验证码"
-		body = fmt.Sprintf(`<p>您的密码重置验证码是：<strong>%s</strong></p><p>%d 分钟内有效。如非本人操作，请忽略此邮件。</p>`, code, codeExpiryMinutes)
-	default:
-		subject = "验证码"
-		body = fmt.Sprintf(`<p>您的验证码是：<strong>%s</strong></p><p>%d 分钟内有效。</p>`, code, codeExpiryMinutes)
-	}
+	subject := "验证码"
+	body := fmt.Sprintf(`<p>您的验证码是：<strong>%s</strong></p><p>%d 分钟内有效。</p>`, code, codeExpiryMinutes)
 
 	if err := s.sendEmail(email, subject, body); err != nil {
 		s.logger.Error("发送验证码邮件失败", zap.String("email", email), zap.Error(err))
@@ -203,7 +196,10 @@ func (s *EmailService) SendVerificationCode(ctx context.Context, email, purpose 
 	return nil
 }
 
-func (s *EmailService) VerifyCode(ctx context.Context, email, code, purpose string) error {
+func (s *EmailService) VerifyCode(ctx context.Context, email, code string) error {
+	// 统一 email 小写
+	email = strings.ToLower(email)
+
 	var id int
 	var codeHash string
 	var attempts, maxAttempts int
@@ -213,9 +209,9 @@ func (s *EmailService) VerifyCode(ctx context.Context, email, code, purpose stri
 	err := s.db.QueryRowContext(ctx,
 		`SELECT id, code_hash, attempts, max_attempts, used, expires_at
 		 FROM email_verification_codes
-		 WHERE email = ? AND purpose = ?
+		 WHERE email = ?
 		 ORDER BY id DESC LIMIT 1`,
-		email, purpose,
+		email,
 	).Scan(&id, &codeHash, &attempts, &maxAttempts, &used, &expiresAt)
 
 	if err == sql.ErrNoRows {
@@ -226,7 +222,7 @@ func (s *EmailService) VerifyCode(ctx context.Context, email, code, purpose stri
 	}
 
 	if used {
-		return ErrCodeNotFound
+		return ErrCodeUsed
 	}
 
 	expires, err := time.Parse(time.RFC3339, expiresAt)

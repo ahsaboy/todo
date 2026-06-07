@@ -62,7 +62,7 @@ func (h *OAuthHandler) InitiateOAuth(c *gin.Context) {
 	if redirectURI == "" {
 		redirectURI = h.cfg.OAuth.FrontendURL
 	}
-	h.initiate(c, "user", redirectURI)
+	h.initiate(c, "user", redirectURI, false)
 }
 
 // HandleCallback 处理用户端 OAuth 回调。
@@ -76,7 +76,7 @@ func (h *OAuthHandler) AdminInitiateOAuth(c *gin.Context) {
 	if redirectURI == "" {
 		redirectURI = h.adminRedirectBase()
 	}
-	h.initiate(c, "admin", redirectURI)
+	h.initiate(c, "admin", redirectURI, false)
 }
 
 // AdminHandleCallback 处理管理后台 OAuth 回调。
@@ -84,7 +84,7 @@ func (h *OAuthHandler) AdminHandleCallback(c *gin.Context) {
 	h.callback(c)
 }
 
-func (h *OAuthHandler) initiate(c *gin.Context, scope, redirectURI string) {
+func (h *OAuthHandler) initiate(c *gin.Context, scope, redirectURI string, returnURL bool) {
 	providerName := c.Param("provider")
 	if providerName == "" {
 		utils.RespondError(c, http.StatusBadRequest, "provider is required", utils.CodeInvalidInput)
@@ -149,7 +149,11 @@ func (h *OAuthHandler) initiate(c *gin.Context, scope, redirectURI string) {
 	}
 
 	authURL := oauth2Cfg.AuthCodeURL(sig)
-	c.Redirect(http.StatusTemporaryRedirect, authURL)
+	if returnURL {
+		utils.RespondSuccess(c, gin.H{"auth_url": authURL})
+	} else {
+		c.Redirect(http.StatusTemporaryRedirect, authURL)
+	}
 }
 
 func (h *OAuthHandler) callback(c *gin.Context) {
@@ -396,6 +400,6 @@ func (h *OAuthHandler) InitiateLinkOAuth(c *gin.Context) {
 	if redirectURI == "" {
 		redirectURI = h.cfg.OAuth.FrontendURL
 	}
-	h.initiate(c, "link", redirectURI)
+	h.initiate(c, "link", redirectURI, true)
 }
 

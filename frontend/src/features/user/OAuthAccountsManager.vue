@@ -4,7 +4,8 @@ import { Github, Chrome, Terminal, Globe, Link, Unlink, AlertCircle } from 'luci
 import type { OAuthAccount } from '@/entities/user/model'
 import type { OAuthProvider } from '@/entities/auth/model'
 import { unlinkOAuthAccount } from '@/entities/user/api'
-import { API_BASE_URL } from '@/shared/config/api'
+import { api } from '@/shared/api/client'
+import type { ApiResponse } from '@/shared/api/types'
 
 const props = defineProps<{
   accounts: OAuthAccount[]
@@ -49,9 +50,16 @@ async function handleUnlink(account: OAuthAccount) {
   }
 }
 
-function handleLink(provider: string) {
-  const redirectUri = encodeURIComponent(window.location.origin)
-  window.location.href = `${API_BASE_URL}/user/oauth/${provider}/link?redirect_uri=${redirectUri}`
+async function handleLink(provider: string) {
+  try {
+    const redirectUri = encodeURIComponent(window.location.origin)
+    const res = await api.get<ApiResponse<{ auth_url: string }>>(`/user/oauth/${provider}/link?redirect_uri=${redirectUri}`)
+    if (res.data?.auth_url) {
+      window.location.href = res.data.auth_url
+    }
+  } catch {
+    emit('error', '发起绑定失败')
+  }
 }
 </script>
 

@@ -56,7 +56,7 @@ async function handleSendCode() {
   sendCodeError.value = ''
   sendingCode.value = true
   try {
-    await sendVerificationCode({ email: payload.email, purpose: 'register' })
+    await sendVerificationCode({ email: payload.email })
     startCooldown()
   } catch (e: unknown) {
     sendCodeError.value = e instanceof Error ? e.message : '验证码发送失败，请稍后重试'

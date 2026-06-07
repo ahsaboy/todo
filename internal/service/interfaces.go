@@ -33,8 +33,8 @@ type AuthServiceInterface interface {
 type EmailServiceInterface interface {
 	IsEnabled() bool
 	SetEnabled(b bool)
-	SendVerificationCode(ctx context.Context, email, purpose string) error
-	VerifyCode(ctx context.Context, email, code, purpose string) error
+	SendVerificationCode(ctx context.Context, email string) error
+	VerifyCode(ctx context.Context, email, code string) error
 	TestConnection(ctx context.Context) error
 }
 

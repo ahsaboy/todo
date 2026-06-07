@@ -218,6 +218,10 @@ var messages = map[string]map[string]string{
 		"en":    "No valid verification code found, please request a new one",
 		"zh-CN": "未找到有效验证码，请重新获取",
 	},
+	"email.code_used": {
+		"en":    "Verification code already used, please request a new one",
+		"zh-CN": "验证码已使用，请重新获取",
+	},
 	"auth.email_taken": {
 		"en":    "Email is already registered",
 		"zh-CN": "该邮箱已被注册",

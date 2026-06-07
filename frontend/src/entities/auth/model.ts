@@ -23,13 +23,11 @@ export interface AuthResponse {
 
 export interface SendCodePayload {
   email: string
-  purpose: 'register' | 'reset_password' | 'change_email'
 }
 
 export interface VerifyCodePayload {
   email: string
   code: string
-  purpose: 'register' | 'reset_password' | 'change_email'
 }
 
 export interface ResetPasswordPayload {

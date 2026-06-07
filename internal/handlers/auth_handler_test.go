@@ -224,12 +224,12 @@ func TestAuthHandler_SendCode_Success(t *testing.T) {
 	}
 	emailSvc := &testutil.MockEmailService{
 		IsEnabledFn:            func() bool { return true },
-		SendVerificationCodeFn: func(_ context.Context, _, _ string) error { return nil },
+		SendVerificationCodeFn: func(_ context.Context, _ string) error { return nil },
 	}
 	r := newAuthRouterWithEmail(svc, emailSvc)
 
 	w := httptest.NewRecorder()
-	body := toJSON(t, map[string]any{"email": "test@example.com", "purpose": "register"})
+	body := toJSON(t, map[string]any{"email": "test@example.com"})
 	req, _ := http.NewRequest(http.MethodPost, "/auth/send-code", body)
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
@@ -246,7 +246,7 @@ func TestAuthHandler_SendCode_NotConfigured(t *testing.T) {
 	r := newAuthRouterWithEmail(svc, emailSvc)
 
 	w := httptest.NewRecorder()
-	body := toJSON(t, map[string]any{"email": "test@example.com", "purpose": "register"})
+	body := toJSON(t, map[string]any{"email": "test@example.com"})
 	req, _ := http.NewRequest(http.MethodPost, "/auth/send-code", body)
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
@@ -254,36 +254,16 @@ func TestAuthHandler_SendCode_NotConfigured(t *testing.T) {
 	assertStatus(t, http.StatusBadRequest, w.Code)
 }
 
-func TestAuthHandler_SendCode_EmailTaken(t *testing.T) {
-	svc := &testutil.MockAuthService{
-		GetUserByEmailFn: func(_ context.Context, _ string) (*models.User, error) {
-			return &models.User{ID: 1}, nil
-		},
-	}
-	emailSvc := &testutil.MockEmailService{
-		IsEnabledFn: func() bool { return true },
-	}
-	r := newAuthRouterWithEmail(svc, emailSvc)
-
-	w := httptest.NewRecorder()
-	body := toJSON(t, map[string]any{"email": "taken@example.com", "purpose": "register"})
-	req, _ := http.NewRequest(http.MethodPost, "/auth/send-code", body)
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
-
-	assertStatus(t, http.StatusConflict, w.Code)
-}
-
 func TestAuthHandler_VerifyCode_Success(t *testing.T) {
 	svc := &testutil.MockAuthService{}
 	emailSvc := &testutil.MockEmailService{
 		IsEnabledFn:  func() bool { return true },
-		VerifyCodeFn: func(_ context.Context, _, _, _ string) error { return nil },
+		VerifyCodeFn: func(_ context.Context, _, _ string) error { return nil },
 	}
 	r := newAuthRouterWithEmail(svc, emailSvc)
 
 	w := httptest.NewRecorder()
-	body := toJSON(t, map[string]any{"email": "test@example.com", "code": "123456", "purpose": "register"})
+	body := toJSON(t, map[string]any{"email": "test@example.com", "code": "123456"})
 	req, _ := http.NewRequest(http.MethodPost, "/auth/verify-code", body)
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
@@ -295,12 +275,12 @@ func TestAuthHandler_VerifyCode_Invalid(t *testing.T) {
 	svc := &testutil.MockAuthService{}
 	emailSvc := &testutil.MockEmailService{
 		IsEnabledFn:  func() bool { return true },
-		VerifyCodeFn: func(_ context.Context, _, _, _ string) error { return service.ErrCodeInvalid },
+		VerifyCodeFn: func(_ context.Context, _, _ string) error { return service.ErrCodeInvalid },
 	}
 	r := newAuthRouterWithEmail(svc, emailSvc)
 
 	w := httptest.NewRecorder()
-	body := toJSON(t, map[string]any{"email": "test@example.com", "code": "000000", "purpose": "register"})
+	body := toJSON(t, map[string]any{"email": "test@example.com", "code": "000000"})
 	req, _ := http.NewRequest(http.MethodPost, "/auth/verify-code", body)
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
@@ -317,7 +297,7 @@ func TestAuthHandler_ResetPassword_Success(t *testing.T) {
 	}
 	emailSvc := &testutil.MockEmailService{
 		IsEnabledFn:  func() bool { return true },
-		VerifyCodeFn: func(_ context.Context, _, _, _ string) error { return nil },
+		VerifyCodeFn: func(_ context.Context, _, _ string) error { return nil },
 	}
 	r := newAuthRouterWithEmail(svc, emailSvc)
 
@@ -337,7 +317,7 @@ func TestAuthHandler_ResetPassword_UserNotFound(t *testing.T) {
 	}
 	emailSvc := &testutil.MockEmailService{
 		IsEnabledFn:  func() bool { return true },
-		VerifyCodeFn: func(_ context.Context, _, _, _ string) error { return nil },
+		VerifyCodeFn: func(_ context.Context, _, _ string) error { return nil },
 	}
 	r := newAuthRouterWithEmail(svc, emailSvc)
 
